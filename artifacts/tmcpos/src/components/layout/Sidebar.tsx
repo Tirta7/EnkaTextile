@@ -82,7 +82,7 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
             <div className="w-8 h-8 rounded bg-sidebar-primary flex items-center justify-center text-white">
               <Package size={18} />
             </div>
-            TMCpos
+            VOCpos
           </div>
           <Button variant="ghost" size="icon" className="ml-auto lg:hidden text-sidebar-foreground" onClick={() => setOpen(false)}>
             <X size={20} />

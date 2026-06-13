@@ -1,6 +1,7 @@
 {
-  "name": "TMCpos",
-  "short_name": "TMCpos",
+  "name": "VOCpos",
+  "short_name": "VOCpos",
+  "description": "Virtual Operational Control — Sistem POS/ERP Tekstil",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

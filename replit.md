@@ -1,4 +1,4 @@
-# TMCpos — Textile POS/ERP
+# VOCpos — Virtual Operational Control
 
 A next-generation wholesale textile POS/ERP system for Enka Textile. Covers inventory, sales, purchases, stock mutations, receivables, payables, cash book, and reporting — all in Indonesian.
 

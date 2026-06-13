@@ -1,9 +1,15 @@
-import { Menu } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { cn } from "@/lib/utils";
 
-export function Header({ onMenuClick }: { onMenuClick: () => void }) {
+interface HeaderProps {
+  onMenuClick: () => void;
+  theme: "light" | "dark";
+  onThemeToggle: () => void;
+}
+
+export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
   const { isConnected } = useWebSocket();
 
   return (
@@ -13,21 +19,31 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <Menu size={20} />
         </Button>
         
-        <div className="font-semibold text-lg hidden sm:block">
+        <div className="font-semibold text-lg hidden sm:block text-foreground">
           Enka Textile
         </div>
       </div>
       
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <div className={cn(
             "w-2 h-2 rounded-full",
             isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-red-500"
           )} />
-          <span className={isConnected ? "text-foreground" : "text-muted-foreground"}>
+          <span className={cn("hidden sm:inline", isConnected ? "text-foreground" : "text-muted-foreground")}>
             {isConnected ? "Live" : "Offline"}
           </span>
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onThemeToggle}
+          className="text-muted-foreground hover:text-foreground"
+          title={theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </Button>
         
         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
           A

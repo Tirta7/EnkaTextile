@@ -1,0 +1,204 @@
+import { useState } from "react";
+import { useListPayables, useAddPayablePayment, getListPayablesQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, Receipt, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { formatRupiah, formatDate } from "@/lib/utils";
+
+const STATUS_COLORS: Record<string, string> = {
+  lunas: "bg-green-100 text-green-700 border-green-200",
+  partial: "bg-amber-100 text-amber-700 border-amber-200",
+  belum_bayar: "bg-red-100 text-red-700 border-red-200",
+};
+
+export default function Hutang() {
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("tunai");
+  const [payNotes, setPayNotes] = useState("");
+
+  const { data: payables, isLoading } = useListPayables({}, { query: { queryKey: getListPayablesQueryKey({}) } });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const payMutation = useAddPayablePayment({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListPayablesQueryKey({}) });
+        setIsOpen(false);
+        setSelectedId(null);
+        setPayAmount("");
+        toast({ title: "Pembayaran hutang berhasil dicatat" });
+      }
+    }
+  });
+
+  const openPayment = (id: number) => { setSelectedId(id); setIsOpen(true); };
+  const selectedPay = payables?.find(p => p.id === selectedId);
+
+  const handlePay = () => {
+    if (!selectedId || !payAmount) return;
+    payMutation.mutate({ id: selectedId, data: { amount: parseFloat(payAmount), paymentMethod: payMethod as any, notes: payNotes || undefined } });
+  };
+
+  const filtered = payables?.filter(p => {
+    const q = search.toLowerCase();
+    const matchSearch = (p as any).supplierName?.toLowerCase().includes(q) || (p as any).invoiceNumber?.toLowerCase().includes(q);
+    const matchStatus = filterStatus === "all" || p.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const totalHutang = payables?.filter(p => p.status !== "lunas").reduce((sum, p) => sum + ((p as any).remainingAmount ?? 0), 0) ?? 0;
+  const overdueCount = payables?.filter(p => (p as any).isOverdue).length ?? 0;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Hutang</h1>
+        <p className="text-muted-foreground mt-1">Kelola hutang dan pembayaran ke supplier.</p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Hutang Aktif</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-destructive">{formatRupiah(totalHutang)}</div></CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Tagihan Aktif</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{payables?.filter(p => p.status !== "lunas").length ?? 0}</div></CardContent>
+        </Card>
+        <Card className={overdueCount > 0 ? "bg-destructive/10 border-destructive/30" : ""}>
+          <CardHeader className="pb-2"><CardTitle className={`text-sm font-medium ${overdueCount > 0 ? "text-destructive" : "text-muted-foreground"}`}>Jatuh Tempo</CardTitle></CardHeader>
+          <CardContent><div className={`text-2xl font-bold ${overdueCount > 0 ? "text-destructive" : ""}`}>{overdueCount} Tagihan</div></CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <CardTitle className="text-lg font-medium flex-1">Daftar Hutang</CardTitle>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                <SelectItem value="belum_bayar">Belum Bayar</SelectItem>
+                <SelectItem value="partial">Sebagian</SelectItem>
+                <SelectItem value="lunas">Lunas</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1 sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Cari supplier / invoice..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>No. PO</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Tgl. Pembelian</TableHead>
+                <TableHead>Jatuh Tempo</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-[100px]">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
+              ) : filtered?.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <Receipt className="mx-auto mb-2 h-8 w-8 opacity-30" />
+                    Tidak ada hutang
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtered?.map((p) => {
+                  const total = (p as any).totalAmount ?? 0;
+                  const paid = (p as any).paidAmount ?? 0;
+                  const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+                  return (
+                    <TableRow key={p.id} className={(p as any).isOverdue && p.status !== "lunas" ? "bg-red-50/50 dark:bg-red-900/10" : ""}>
+                      <TableCell className="font-mono text-sm">{(p as any).invoiceNumber || `#${p.id}`}</TableCell>
+                      <TableCell className="font-medium">{(p as any).supplierName || "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate((p as any).createdAt)}</TableCell>
+                      <TableCell className={`text-sm ${(p as any).isOverdue && p.status !== "lunas" ? "text-destructive font-medium" : "text-muted-foreground"}`}>{formatDate((p as any).dueDate)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatRupiah(total)}</TableCell>
+                      <TableCell className="w-[120px]">
+                        <div className="space-y-1">
+                          <Progress value={pct} className="h-2" />
+                          <div className="text-xs text-muted-foreground">{pct}% ({formatRupiah(paid)})</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[p.status ?? "belum_bayar"] || "bg-gray-100 text-gray-700"}`}>{p.status?.replace("_", " ")}</span>
+                      </TableCell>
+                      <TableCell>
+                        {p.status !== "lunas" && (
+                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openPayment(p.id)}>
+                            <Plus className="mr-1 h-3 w-3" /> Bayar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Bayar Hutang</DialogTitle></DialogHeader>
+          {selectedPay && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Supplier:</span><span className="font-medium">{(selectedPay as any).supplierName}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Sisa Hutang:</span><span className="font-bold text-destructive">{formatRupiah((selectedPay as any).remainingAmount)}</span></div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Jumlah Bayar (Rp)</label>
+                <Input type="number" min={0} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
+                <Select value={payMethod} onValueChange={setPayMethod}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tunai">Tunai</SelectItem>
+                    <SelectItem value="transfer">Transfer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Catatan</label>
+                <Input placeholder="Catatan opsional" value={payNotes} onChange={e => setPayNotes(e.target.value)} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
+            <Button onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

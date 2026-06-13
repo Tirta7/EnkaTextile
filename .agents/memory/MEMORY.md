@@ -1,0 +1,4 @@
+- [Drizzle numeric columns](drizzle-numeric.md) — numeric() columns require String(value) on insert/update, never raw numbers; they return strings from DB
+- [Express 5 async return types](express5-async.md) — handlers must either return responses OR be typed as Promise<void> to avoid TS7030 errors
+- [TMCpos lib rebuild order](tmcpos-lib-rebuild.md) — after schema changes in lib/db, always run typecheck:libs before api-server typecheck or you get false "no export" errors
+- [Cash entries schema](cash-entries-schema.md) — cash_entries has no category column; uses reference; type values are "income"/"expense" not "masuk"/"keluar"

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "TMCpos — Textile POS/ERP"
+version = "1.0.0"
+id = "artifacts/tmcpos"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19557
+
+[services.development]
+run = "pnpm --filter @workspace/tmcpos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tmcpos", "run", "build" ]
+publicDir = "artifacts/tmcpos/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19557"
+BASE_PATH = "/"

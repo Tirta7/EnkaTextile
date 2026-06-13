@@ -3,20 +3,44 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TMCpos Textile POS/ERP API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Dashboard & analytics
+  - name: categories
+    description: Product categories
+  - name: products
+    description: Textile products (barang)
+  - name: customers
+    description: Customer management
+  - name: suppliers
+    description: Supplier management
+  - name: sales
+    description: Sales transactions (penjualan)
+  - name: purchases
+    description: Purchase transactions (pembelian)
+  - name: mutations
+    description: Stock mutations (mutasi)
+  - name: receivables
+    description: Accounts receivable (piutang)
+  - name: payables
+    description: Accounts payable (hutang)
+  - name: cashbook
+    description: Cash book entries (buku kas)
+  - name: reports
+    description: Reports & analytics
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +48,895 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Dashboard
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/sales-chart:
+    get:
+      operationId: getDashboardSalesChart
+      tags: [dashboard]
+      summary: Get monthly sales chart data
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: month
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sales chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalesChartPoint"
+
+  /dashboard/recent-transactions:
+    get:
+      operationId: getDashboardRecentTransactions
+      tags: [dashboard]
+      summary: Get recent transactions feed
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecentTransaction"
+
+  /dashboard/top-products:
+    get:
+      operationId: getDashboardTopProducts
+      tags: [dashboard]
+      summary: Get top selling products
+      responses:
+        "200":
+          description: Top products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopProduct"
+
+  /dashboard/receivables-summary:
+    get:
+      operationId: getDashboardReceivablesSummary
+      tags: [dashboard]
+      summary: Get overdue receivables summary
+      responses:
+        "200":
+          description: Receivables summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceivablesSummary"
+
+  # Categories
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    get:
+      operationId: getCategory
+      tags: [categories]
+      summary: Get a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryUpdate"
+      responses:
+        "200":
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete a category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Products (Barang)
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    patch:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Customers (Pelanggan)
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List all customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: overLimit
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    patch:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerUpdate"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /customers/{id}/credit-status:
+    get:
+      operationId: getCustomerCreditStatus
+      tags: [customers]
+      summary: Get customer credit limit and usage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Credit status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreditStatus"
+
+  # Suppliers
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List all suppliers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Create a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    patch:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierUpdate"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+    delete:
+      operationId: deleteSupplier
+      tags: [suppliers]
+      summary: Delete a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Sales (Penjualan)
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List all sales
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sale"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a sale transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleInput"
+      responses:
+        "201":
+          description: Created sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/{id}:
+    get:
+      operationId: getSale
+      tags: [sales]
+      summary: Get a sale with line items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sale detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleDetail"
+    delete:
+      operationId: deleteSale
+      tags: [sales]
+      summary: Cancel/delete a sale
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Purchases (Pembelian)
+  /purchases:
+    get:
+      operationId: listPurchases
+      tags: [purchases]
+      summary: List all purchases
+      parameters:
+        - name: supplierId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of purchases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Purchase"
+    post:
+      operationId: createPurchase
+      tags: [purchases]
+      summary: Create a purchase transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseInput"
+      responses:
+        "201":
+          description: Created purchase
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Purchase"
+
+  /purchases/{id}:
+    get:
+      operationId: getPurchase
+      tags: [purchases]
+      summary: Get a purchase with line items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseDetail"
+
+  # Mutations (Mutasi)
+  /mutations:
+    get:
+      operationId: listMutations
+      tags: [mutations]
+      summary: List stock mutations
+      parameters:
+        - name: productId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of mutations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMutation"
+    post:
+      operationId: createMutation
+      tags: [mutations]
+      summary: Create a stock mutation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMutationInput"
+      responses:
+        "201":
+          description: Created mutation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMutation"
+
+  # Receivables (Piutang)
+  /receivables:
+    get:
+      operationId: listReceivables
+      tags: [receivables]
+      summary: List all receivables
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: overdue
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of receivables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receivable"
+
+  /receivables/{id}:
+    get:
+      operationId: getReceivable
+      tags: [receivables]
+      summary: Get receivable with payment history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Receivable detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceivableDetail"
+
+  /receivables/{id}/payments:
+    post:
+      operationId: addReceivablePayment
+      tags: [receivables]
+      summary: Add a payment to a receivable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  # Payables (Hutang)
+  /payables:
+    get:
+      operationId: listPayables
+      tags: [payables]
+      summary: List all payables
+      parameters:
+        - name: supplierId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of payables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Payable"
+
+  /payables/{id}/payments:
+    post:
+      operationId: addPayablePayment
+      tags: [payables]
+      summary: Add a payment to a payable
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+
+  # Cash Book (Buku Kas)
+  /cashbook:
+    get:
+      operationId: listCashEntries
+      tags: [cashbook]
+      summary: List cash book entries
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cash book entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CashEntry"
+    post:
+      operationId: createCashEntry
+      tags: [cashbook]
+      summary: Create a cash entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashEntryInput"
+      responses:
+        "201":
+          description: Created cash entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashEntry"
+
+  /cashbook/balance:
+    get:
+      operationId: getCashBalance
+      tags: [cashbook]
+      summary: Get current cash balance
+      responses:
+        "200":
+          description: Cash balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashBalance"
+
+  # Reports
+  /reports/sales-summary:
+    get:
+      operationId: getSalesSummaryReport
+      tags: [reports]
+      summary: Sales summary report
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sales summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSummaryReport"
+
+  /reports/stock-summary:
+    get:
+      operationId: getStockSummaryReport
+      tags: [reports]
+      summary: Stock summary report
+      responses:
+        "200":
+          description: Stock summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockSummaryItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +947,714 @@ components:
       required:
         - status
 
+    DashboardSummary:
+      type: object
+      required: [todayRevenue, todayTransactions, totalReceivables, totalPayables, lowStockCount, overdueReceivables]
+      properties:
+        todayRevenue:
+          type: number
+        todayTransactions:
+          type: integer
+        totalReceivables:
+          type: number
+        totalPayables:
+          type: number
+        lowStockCount:
+          type: integer
+        overdueReceivables:
+          type: integer
+        monthRevenue:
+          type: number
+        cashBalance:
+          type: number
+
+    SalesChartPoint:
+      type: object
+      required: [date, revenue, transactions]
+      properties:
+        date:
+          type: string
+        revenue:
+          type: number
+        transactions:
+          type: integer
+
+    RecentTransaction:
+      type: object
+      required: [id, type, description, amount, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        description:
+          type: string
+        amount:
+          type: number
+        createdAt:
+          type: string
+        customerName:
+          type: ["string", "null"]
+
+    TopProduct:
+      type: object
+      required: [productId, productName, totalRolls, totalMeters, totalRevenue]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        totalRolls:
+          type: number
+        totalMeters:
+          type: number
+        totalRevenue:
+          type: number
+
+    ReceivablesSummary:
+      type: object
+      required: [totalAmount, overdueAmount, overdueCount]
+      properties:
+        totalAmount:
+          type: number
+        overdueAmount:
+          type: number
+        overdueCount:
+          type: integer
+
+    Category:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        productCount:
+          type: integer
+        createdAt:
+          type: string
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    CategoryUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    Product:
+      type: object
+      required: [id, name, categoryId, lotNumber, rackLocation, pricePerMeter, rollStock, meterStock, minStock, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        categoryId:
+          type: integer
+        categoryName:
+          type: ["string", "null"]
+        lotNumber:
+          type: string
+        rackLocation:
+          type: string
+        pricePerMeter:
+          type: number
+        pricePerRoll:
+          type: ["number", "null"]
+        rollStock:
+          type: number
+        meterStock:
+          type: number
+        minStock:
+          type: number
+        isLowStock:
+          type: boolean
+        createdAt:
+          type: string
+
+    ProductInput:
+      type: object
+      required: [name, categoryId, lotNumber, rackLocation, pricePerMeter, rollStock, meterStock]
+      properties:
+        name:
+          type: string
+        categoryId:
+          type: integer
+        lotNumber:
+          type: string
+        rackLocation:
+          type: string
+        pricePerMeter:
+          type: number
+        pricePerRoll:
+          type: number
+        rollStock:
+          type: number
+        meterStock:
+          type: number
+        minStock:
+          type: number
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        categoryId:
+          type: integer
+        lotNumber:
+          type: string
+        rackLocation:
+          type: string
+        pricePerMeter:
+          type: number
+        pricePerRoll:
+          type: number
+        minStock:
+          type: number
+
+    Customer:
+      type: object
+      required: [id, name, phone, creditLimit, currentDebt, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        creditLimit:
+          type: number
+        currentDebt:
+          type: number
+        isOverLimit:
+          type: boolean
+        createdAt:
+          type: string
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        creditLimit:
+          type: number
+
+    CustomerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        creditLimit:
+          type: number
+
+    CreditStatus:
+      type: object
+      required: [customerId, creditLimit, currentDebt, available, isOverLimit]
+      properties:
+        customerId:
+          type: integer
+        creditLimit:
+          type: number
+        currentDebt:
+          type: number
+        available:
+          type: number
+        isOverLimit:
+          type: boolean
+
+    Supplier:
+      type: object
+      required: [id, name, phone, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        contactPerson:
+          type: ["string", "null"]
+        currentDebt:
+          type: number
+        createdAt:
+          type: string
+
+    SupplierInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        contactPerson:
+          type: string
+
+    SupplierUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        contactPerson:
+          type: string
+
+    SaleLineItem:
+      type: object
+      required: [productId, rolls, meters, pricePerMeter, subtotal]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: ["string", "null"]
+        rolls:
+          type: number
+        meters:
+          type: number
+        pricePerMeter:
+          type: number
+        subtotal:
+          type: number
+
+    Sale:
+      type: object
+      required: [id, invoiceNumber, customerId, paymentType, totalAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        paymentType:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SaleDetail:
+      type: object
+      required: [id, invoiceNumber, customerId, paymentType, totalAmount, status, createdAt, items]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        customerId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        paymentType:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleLineItem"
+
+    SaleInput:
+      type: object
+      required: [paymentType, items]
+      properties:
+        customerId:
+          type: integer
+        paymentType:
+          type: string
+        dueDate:
+          type: string
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleLineItem"
+
+    Purchase:
+      type: object
+      required: [id, invoiceNumber, supplierId, paymentType, totalAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        supplierId:
+          type: integer
+        supplierName:
+          type: ["string", "null"]
+        paymentType:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    PurchaseLineItem:
+      type: object
+      required: [productId, rolls, meters, pricePerMeter, subtotal]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: ["string", "null"]
+        rolls:
+          type: number
+        meters:
+          type: number
+        pricePerMeter:
+          type: number
+        subtotal:
+          type: number
+
+    PurchaseDetail:
+      type: object
+      required: [id, invoiceNumber, supplierId, paymentType, totalAmount, status, createdAt, items]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        supplierId:
+          type: integer
+        supplierName:
+          type: ["string", "null"]
+        paymentType:
+          type: string
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseLineItem"
+
+    PurchaseInput:
+      type: object
+      required: [supplierId, paymentType, items]
+      properties:
+        supplierId:
+          type: integer
+        paymentType:
+          type: string
+        dueDate:
+          type: string
+        notes:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PurchaseLineItem"
+
+    StockMutation:
+      type: object
+      required: [id, productId, type, rolls, meters, description, createdAt]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: ["string", "null"]
+        type:
+          type: string
+        rolls:
+          type: number
+        meters:
+          type: number
+        description:
+          type: string
+        reference:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    StockMutationInput:
+      type: object
+      required: [productId, type, rolls, meters, description]
+      properties:
+        productId:
+          type: integer
+        type:
+          type: string
+        rolls:
+          type: number
+        meters:
+          type: number
+        description:
+          type: string
+        reference:
+          type: string
+
+    Receivable:
+      type: object
+      required: [id, saleId, customerId, totalAmount, paidAmount, remainingAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        saleId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        customerId:
+          type: integer
+        customerName:
+          type: ["string", "null"]
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        isOverdue:
+          type: boolean
+        createdAt:
+          type: string
+
+    ReceivableDetail:
+      type: object
+      required: [id, saleId, customerId, totalAmount, paidAmount, remainingAmount, status, createdAt, payments]
+      properties:
+        id:
+          type: integer
+        saleId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        customerId:
+          type: integer
+        customerName:
+          type: ["string", "null"]
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        isOverdue:
+          type: boolean
+        createdAt:
+          type: string
+        payments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+
+    Payable:
+      type: object
+      required: [id, purchaseId, supplierId, totalAmount, paidAmount, remainingAmount, status, createdAt]
+      properties:
+        id:
+          type: integer
+        purchaseId:
+          type: integer
+        invoiceNumber:
+          type: ["string", "null"]
+        supplierId:
+          type: integer
+        supplierName:
+          type: ["string", "null"]
+        totalAmount:
+          type: number
+        paidAmount:
+          type: number
+        remainingAmount:
+          type: number
+        status:
+          type: string
+        dueDate:
+          type: ["string", "null"]
+        isOverdue:
+          type: boolean
+        createdAt:
+          type: string
+
+    Payment:
+      type: object
+      required: [id, amount, paymentMethod, paidAt]
+      properties:
+        id:
+          type: integer
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        notes:
+          type: ["string", "null"]
+        paidAt:
+          type: string
+
+    PaymentInput:
+      type: object
+      required: [amount, paymentMethod]
+      properties:
+        amount:
+          type: number
+        paymentMethod:
+          type: string
+        notes:
+          type: string
+
+    CashEntry:
+      type: object
+      required: [id, type, amount, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        reference:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CashEntryInput:
+      type: object
+      required: [type, amount, description]
+      properties:
+        type:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        reference:
+          type: string
+
+    CashBalance:
+      type: object
+      required: [balance, totalIn, totalOut]
+      properties:
+        balance:
+          type: number
+        totalIn:
+          type: number
+        totalOut:
+          type: number
+
+    SalesSummaryReport:
+      type: object
+      required: [totalRevenue, totalTransactions, totalRolls, totalMeters, cashRevenue, tempoRevenue]
+      properties:
+        totalRevenue:
+          type: number
+        totalTransactions:
+          type: integer
+        totalRolls:
+          type: number
+        totalMeters:
+          type: number
+        cashRevenue:
+          type: number
+        tempoRevenue:
+          type: number
+
+    StockSummaryItem:
+      type: object
+      required: [productId, productName, categoryName, rollStock, meterStock, value]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        categoryName:
+          type: ["string", "null"]
+        rackLocation:
+          type: string
+        rollStock:
+          type: number
+        meterStock:
+          type: number
+        value:
+          type: number
+        isLowStock:
+          type: boolean

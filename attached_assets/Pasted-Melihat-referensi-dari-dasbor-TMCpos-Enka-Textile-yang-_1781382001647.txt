@@ -1,0 +1,68 @@
+Melihat referensi dari dasbor **TMCpos (Enka Textile)** yang Anda lampirkan, aplikasi POS/ERP untuk grosir atau gudang kain memang memiliki karakteristik unik. Berbeda dengan retail biasa, penjualan kain sering kali melibatkan perhitungan berbasis gulung/roll (yard/meter), manajemen piutang (pembayaran tempo), serta pergerakan stok antar rak atau gudang (*mutasi*).
+
+Agar aplikasi berbasis **PWA (Progressive Web App)** ini berjalan responsif, memiliki performa tinggi, dan mendukung **Web Push Notification** langsung ke HP Anda sebagai *owner*, berikut adalah blueprint arsitektur dan alur sistematisnya.
+
+---
+
+## 1. Manajemen Stok Kain (Multi-Satuan & Mutasi)
+
+Sistem inventaris kain harus mampu menangani variasi produk secara spesifik.
+
+* **Sistem Desentralisasi & Pelacakan Rak:** Kain memiliki variasi warna (*lot*) dan motif. Setiap kain yang masuk wajib dicatat berdasarkan kategori, nomor *lot* produksi, dan lokasi rak di gudang.
+* **Dual-Unit Quantities:** Penjualan kain sering kali membutuhkan pencatatan ganda, misalnya: **Jumlah Roll** (untuk stok fisik umum) dan **Panjang Total (Meter/Yard)** (untuk nilai riil penjualan).
+* **Alur Mutasi:** Menu **Mutasi** di sistem Anda harus melacak perpindahan stok, baik dari Gudang Utama ke Toko Fisik, maupun penyesuaian stok saat ditemukan kain yang cacat (*reject*).
+
+---
+
+## 2. Sistem Pembayaran Tempo / Cicilan (Piutang)
+
+Untuk menangani pelanggan grosir yang tidak langsung melunasi pembayaran:
+
+* **Pencatatan Invoice & Jatuh Tempo:** Setiap transaksi tempo akan menghasilkan status *Unpaid* atau *Partially Paid*, lengkap dengan *Due Date* (tanggal jatuh tempo).
+* **Log Cicilan (History):** Di dalam menu **Piutang**, buat sub-tabel yang mencatat tanggal bayar, nominal cicilan, sisa piutang, dan metode pembayaran (misal: Transfer Bank atau Cashless).
+* **Limit Kredit Pelanggan:** Batasi maksimal piutang per pelanggan (misal: pelanggan A hanya boleh memiliki maksimal piutang Rp 50.000.000). Jika melewati limit, sistem otomatis mengunci transaksi tempo baru hingga cicilan dibayar.
+
+---
+
+## 3. Aplikasi Berbasis PWA (Bisa Diinstal di HP)
+
+PWA memungkinkan web *TMCpos* Anda diinstal di Android, iOS, maupun Windows Desktop tanpa perlu masuk ke Play Store/App Store.
+
+* **Web App Manifest (`manifest.json`):** File konfigurasi ini memberi tahu browser bahwa web Anda adalah aplikasi yang dapat diinstal. Di sinilah Anda mengatur nama aplikasi, ikon yang muncul di layar utama (*homescreen*), warna tema, dan mode tampilan (`standalone` agar menyembunyikan *address bar* browser).
+* **Service Worker:** Skrip di latar belakang yang mendeteksi jaringan. Jika internet gudang sedang tidak stabil, *Service Worker* bisa mengizinkan kasir/staf tetap membuka halaman dasbor atau melihat daftar barang menggunakan data cache lokal (**Offline Capability**).
+
+---
+
+## 4. Web Push Notification (Notifikasi Langsung ke HP Owner)
+
+Sebagai pemilik, Anda bisa menerima notifikasi langsung di HP (bahkan saat browser atau aplikasi sedang ditutup) untuk aktivitas kritis seperti: *Omset harian, pengajuan piutang baru, atau stok kain yang kritis.*
+
+```
+[Backend Server (NestJS)] 
+       │
+       ▼ (Mengirim Payload via VAPID Key)
+[Web Push Service (Google/Mozilla)] 
+       │
+       ▼ (Mengirim Push Event ke Perangkat)
+[Service Worker di HP Owner] ──► Menampilkan Notifikasi Sistem
+
+```
+
+* **Arsitektur VAPID Keys:** Menggunakan protokol Web Push standar dengan kunci publik dan privat untuk mengamankan pengiriman notifikasi dari server backend ke browser HP Anda.
+* **Alur Kerja Sistem:**
+1. Saat Anda pertama kali membuka PWA di HP, aplikasi akan meminta izin (*Permission Request*) untuk mematikan notifikasi.
+2. Jika diizinkan, browser menghasilkan token unik (*Subscription Object*). Token ini disimpan ke dalam database server Anda dan dikaitkan dengan akun Anda (*Owner*).
+3. Ketika ada staf gudang yang menginput transaksi besar atau pembayaran piutang, backend akan mengambil token tersebut dan menembakkan notifikasi via layanan push ke HP Anda.
+
+
+
+---
+
+## 5. Rekomendasi Teknologi (Tech Stack)
+
+Untuk performa yang cepat, sinkronisasi data *real-time*, dan skalabilitas jangka panjang:
+
+* **Frontend:** **React** atau **Next.js** yang dikombinasikan dengan **Tailwind CSS** untuk antarmuka yang bersih dan responsif seperti pada contoh gambar. Gunakan pustaka `@serwist/next` atau `workbox` untuk mempermudah konfigurasi PWA.
+* **Backend:** **NestJS** (menggunakan arsitektur modular). Sangat kokoh untuk menangani logika bisnis yang kompleks seperti pembagian komisi, laporan keuangan, dan integrasi push notification menggunakan *library* `web-push`.
+* **Database:** **PostgreSQL** atau **MySQL** untuk menjaga konsistensi relasi data antara tabel Barang, Pelanggan, Piutang, dan Transaksi.
+* **Real-time Update:** Tambahkan **Socket.io** jika Anda ingin grafik penjualan bulanan di dasbor Anda (seperti pada bagian bawah screenshoot 2) otomatis bergerak naik secara *real-time* setiap kali ada kain yang terjual di gudang.

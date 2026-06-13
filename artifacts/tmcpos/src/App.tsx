@@ -1,9 +1,11 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Kategori from "@/pages/Kategori";
 import Barang from "@/pages/Barang";
@@ -16,6 +18,8 @@ import Piutang from "@/pages/Piutang";
 import Hutang from "@/pages/Hutang";
 import BukuKas from "@/pages/BukuKas";
 import Laporan from "@/pages/Laporan";
+import Pengaturan from "@/pages/Pengaturan";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +29,28 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center"
+        style={{ background: "linear-gradient(135deg, #0d0a1f 0%, #07090f 100%)" }}>
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 size={32} className="animate-spin text-violet-400" />
+          <p className="text-white/40 text-sm">Memuat sistem...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
+  return <>{children}</>;
+}
 
 function Router() {
   return (
@@ -42,6 +68,7 @@ function Router() {
         <Route path="/hutang" component={Hutang} />
         <Route path="/buku-kas" component={BukuKas} />
         <Route path="/laporan" component={Laporan} />
+        <Route path="/pengaturan" component={Pengaturan} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
@@ -53,7 +80,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
+          <AuthGate>
+            <Router />
+          </AuthGate>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

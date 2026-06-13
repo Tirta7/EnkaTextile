@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingBag, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
+import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 type PurchaseItem = { productId: number; productName: string; rolls: number; meters: number; pricePerMeter: number; subtotal: number; };
 
@@ -24,6 +25,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Pembelian() {
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [supplierId, setSupplierId] = useState<string>("");
@@ -34,6 +37,7 @@ export default function Pembelian() {
   const { data: purchases, isLoading } = useListPurchases({}, { query: { queryKey: getListPurchasesQueryKey({}) } });
   const { data: suppliers } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
+  const { data: paymentMethods = [] } = useListPaymentMethods({}, { query: { queryKey: getListPaymentMethodsQueryKey({}) } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -83,10 +87,14 @@ export default function Pembelian() {
     });
   };
 
-  const filtered = purchases?.filter(p => {
-    const q = search.toLowerCase();
-    return p.invoiceNumber?.toLowerCase().includes(q) || (p as any).supplierName?.toLowerCase().includes(q);
-  });
+  const filtered = filterByDateRange(
+    purchases?.filter(p => {
+      const q = search.toLowerCase();
+      return p.invoiceNumber?.toLowerCase().includes(q) || (p as any).supplierName?.toLowerCase().includes(q);
+    }) ?? [],
+    dateFrom,
+    dateTo,
+  );
 
   return (
     <div className="space-y-6">
@@ -99,12 +107,15 @@ export default function Pembelian() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Daftar Pembelian</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari invoice / supplier..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <CardHeader className="py-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CardTitle className="text-lg font-medium flex-1">Daftar Pembelian</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Cari invoice / supplier..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -168,9 +179,18 @@ export default function Pembelian() {
                 <Select value={paymentType} onValueChange={setPaymentType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tunai">Tunai</SelectItem>
-                    <SelectItem value="transfer">Transfer</SelectItem>
-                    <SelectItem value="kredit">Kredit</SelectItem>
+                    {paymentMethods.filter(m => m.isActive).length > 0
+                      ? paymentMethods.filter(m => m.isActive).map(m => (
+                          <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
+                        ))
+                      : (
+                          <>
+                            <SelectItem value="tunai">Tunai</SelectItem>
+                            <SelectItem value="transfer">Transfer</SelectItem>
+                            <SelectItem value="kredit">Kredit</SelectItem>
+                          </>
+                        )
+                    }
                   </SelectContent>
                 </Select>
               </div>

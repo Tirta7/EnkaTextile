@@ -420,6 +420,28 @@ export interface StockSummaryItem {
   isLowStock?: boolean;
 }
 
+export interface PaymentMethod {
+  id: number;
+  code: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface PaymentMethodInput {
+  code: string;
+  name: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface PaymentMethodUpdate {
+  name?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
 export type GetDashboardSalesChartParams = {
 year?: number;
 month?: number;

@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Receipt, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
+import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -22,6 +23,8 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Hutang() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [payAmount, setPayAmount] = useState("");
@@ -52,12 +55,16 @@ export default function Hutang() {
     payMutation.mutate({ id: selectedId, data: { amount: parseFloat(payAmount), paymentMethod: payMethod as any, notes: payNotes || undefined } });
   };
 
-  const filtered = payables?.filter(p => {
-    const q = search.toLowerCase();
-    const matchSearch = (p as any).supplierName?.toLowerCase().includes(q) || (p as any).invoiceNumber?.toLowerCase().includes(q);
-    const matchStatus = filterStatus === "all" || p.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const filtered = filterByDateRange(
+    payables?.filter(p => {
+      const q = search.toLowerCase();
+      const matchSearch = (p as any).supplierName?.toLowerCase().includes(q) || (p as any).invoiceNumber?.toLowerCase().includes(q);
+      const matchStatus = filterStatus === "all" || p.status === filterStatus;
+      return matchSearch && matchStatus;
+    }) ?? [],
+    dateFrom,
+    dateTo,
+  );
 
   const totalHutang = payables?.filter(p => p.status !== "lunas").reduce((sum, p) => sum + ((p as any).remainingAmount ?? 0), 0) ?? 0;
   const overdueCount = payables?.filter(p => (p as any).isOverdue).length ?? 0;
@@ -85,23 +92,26 @@ export default function Hutang() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Daftar Hutang</CardTitle>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="belum_bayar">Belum Bayar</SelectItem>
-                <SelectItem value="partial">Sebagian</SelectItem>
-                <SelectItem value="lunas">Lunas</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari supplier / invoice..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <CardHeader className="py-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CardTitle className="text-lg font-medium flex-1">Daftar Hutang</CardTitle>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="belum_bayar">Belum Bayar</SelectItem>
+                  <SelectItem value="partial">Sebagian</SelectItem>
+                  <SelectItem value="lunas">Lunas</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Cari supplier / invoice..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
             </div>
           </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

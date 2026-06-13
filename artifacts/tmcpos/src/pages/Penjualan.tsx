@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListSales, useCreateSale, useListCustomers, useListProducts, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingCart, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
+import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 type SaleItem = { productId: number; productName: string; unit: "meter" | "roll"; rolls: number; meters: number; pricePerUnit: number; subtotal: number; };
 
@@ -24,6 +25,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function Penjualan() {
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [items, setItems] = useState<SaleItem[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
@@ -34,6 +37,7 @@ export default function Penjualan() {
   const { data: sales, isLoading } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const { data: customers } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
+  const { data: paymentMethods = [] } = useListPaymentMethods({}, { query: { queryKey: getListPaymentMethodsQueryKey({}) } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -107,10 +111,14 @@ export default function Penjualan() {
     });
   };
 
-  const filtered = sales?.filter(s => {
-    const q = search.toLowerCase();
-    return s.invoiceNumber?.toLowerCase().includes(q) || (s as any).customerName?.toLowerCase().includes(q);
-  });
+  const filtered = filterByDateRange(
+    sales?.filter(s => {
+      const q = search.toLowerCase();
+      return s.invoiceNumber?.toLowerCase().includes(q) || (s as any).customerName?.toLowerCase().includes(q);
+    }) ?? [],
+    dateFrom,
+    dateTo,
+  );
 
   return (
     <div className="space-y-6">
@@ -123,12 +131,15 @@ export default function Penjualan() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Daftar Penjualan</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari invoice / pelanggan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <CardHeader className="py-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CardTitle className="text-lg font-medium flex-1">Daftar Penjualan</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Cari invoice / pelanggan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -195,10 +206,18 @@ export default function Penjualan() {
                 <Select value={paymentType} onValueChange={setPaymentType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tunai">Tunai</SelectItem>
-                    <SelectItem value="transfer">Transfer</SelectItem>
-                    <SelectItem value="cashless">Cashless/QRIS</SelectItem>
-                    <SelectItem value="kredit">Kredit</SelectItem>
+                    {paymentMethods.filter(m => m.isActive).length > 0
+                      ? paymentMethods.filter(m => m.isActive).map(m => (
+                          <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
+                        ))
+                      : (
+                          <>
+                            <SelectItem value="tunai">Tunai</SelectItem>
+                            <SelectItem value="transfer">Transfer</SelectItem>
+                            <SelectItem value="kredit">Kredit</SelectItem>
+                          </>
+                        )
+                    }
                   </SelectContent>
                 </Select>
               </div>

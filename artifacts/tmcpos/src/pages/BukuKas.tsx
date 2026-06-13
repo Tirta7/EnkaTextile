@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatRupiah, formatDate } from "@/lib/utils";
+import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 const schema = z.object({
   type: z.enum(["income", "expense"]),
@@ -28,6 +29,8 @@ type FormData = z.infer<typeof schema>;
 export default function BukuKas() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const { data: entries, isLoading } = useListCashEntries({}, { query: { queryKey: getListCashEntriesQueryKey({}) } });
@@ -54,11 +57,12 @@ export default function BukuKas() {
 
   const onSubmit = (data: FormData) => createMutation.mutate({ data });
 
-  const filtered = entries?.filter(e => {
+  const filteredBase = entries?.filter(e => {
     const matchSearch = e.description.toLowerCase().includes(search.toLowerCase());
     const matchType = filterType === "all" || e.type === filterType;
     return matchSearch && matchType;
   });
+  const filtered = filterByDateRange(filteredBase ?? [], dateFrom, dateTo);
 
   const totalIn = entries?.filter(e => e.type === "income").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
   const totalOut = entries?.filter(e => e.type === "expense").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
@@ -89,22 +93,25 @@ export default function BukuKas() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Riwayat Transaksi</CardTitle>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="income">Pemasukan</SelectItem>
-                <SelectItem value="expense">Pengeluaran</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari keterangan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <CardHeader className="py-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CardTitle className="text-lg font-medium flex-1">Riwayat Transaksi</CardTitle>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="income">Pemasukan</SelectItem>
+                  <SelectItem value="expense">Pengeluaran</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Cari keterangan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
             </div>
           </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

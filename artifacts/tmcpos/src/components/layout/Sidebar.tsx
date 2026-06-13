@@ -15,9 +15,13 @@ import {
   BarChart3,
   Zap,
   X,
+  Settings,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const navigation = [
   {
@@ -52,15 +56,30 @@ const navigation = [
     ]
   },
   {
-    title: "Laporan",
+    title: "Laporan & Pengaturan",
     items: [
       { name: "Laporan", href: "/laporan", icon: BarChart3 },
+      { name: "Pengaturan", href: "/pengaturan", icon: Settings },
     ]
   }
 ];
 
 export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: boolean) => void }) {
   const [location] = useLocation();
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    await logout();
+    toast({ title: "Berhasil keluar" });
+  };
+
+  const initials = user?.fullName
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2) ?? "A";
 
   return (
     <>
@@ -168,19 +187,26 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
           </nav>
         </ScrollArea>
 
-        {/* Footer */}
+        {/* Footer — user info + logout */}
         <div className="px-4 py-4 border-t border-white/5 shrink-0">
           <div className="flex items-center gap-3 px-2">
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
               style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
             >
-              E
+              {initials}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-medium text-white/60 truncate">Enka Textile</div>
-              <div className="text-[10px] text-white/25 truncate">vocpos.app</div>
+              <div className="text-xs font-medium text-white/70 truncate">{user?.fullName ?? "Admin"}</div>
+              <div className="text-[10px] text-white/25 truncate">{user?.username ?? ""}</div>
             </div>
+            <button
+              onClick={handleLogout}
+              className="text-white/25 hover:text-red-400 transition-colors duration-200 shrink-0 p-1 rounded-lg hover:bg-red-500/10"
+              title="Keluar"
+            >
+              <LogOut size={15} />
+            </button>
           </div>
         </div>
       </div>

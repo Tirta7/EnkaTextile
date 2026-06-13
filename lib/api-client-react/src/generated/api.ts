@@ -46,6 +46,9 @@ import type {
   Payable,
   Payment,
   PaymentInput,
+  PaymentMethod,
+  PaymentMethodInput,
+  PaymentMethodUpdate,
   Product,
   ProductInput,
   ProductUpdate,
@@ -3587,4 +3590,294 @@ export function useGetStockSummaryReport<TData = Awaited<ReturnType<typeof getSt
 
 
 
+
+export const getListPaymentMethodsUrl = () => {
+
+
+
+
+  return `/api/payment-methods`
+}
+
+/**
+ * @summary List all payment methods
+ */
+export const listPaymentMethods = async ( options?: RequestInit): Promise<PaymentMethod[]> => {
+
+  return customFetch<PaymentMethod[]>(getListPaymentMethodsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPaymentMethodsQueryKey = () => {
+    return [
+    `/api/payment-methods`
+    ] as const;
+    }
+
+
+export const getListPaymentMethodsQueryOptions = <TData = Awaited<ReturnType<typeof listPaymentMethods>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPaymentMethods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPaymentMethodsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPaymentMethods>>> = ({ signal }) => listPaymentMethods({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPaymentMethods>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPaymentMethodsQueryResult = NonNullable<Awaited<ReturnType<typeof listPaymentMethods>>>
+export type ListPaymentMethodsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all payment methods
+ */
+
+export function useListPaymentMethods<TData = Awaited<ReturnType<typeof listPaymentMethods>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPaymentMethods>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPaymentMethodsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePaymentMethodUrl = () => {
+
+
+
+
+  return `/api/payment-methods`
+}
+
+/**
+ * @summary Create a payment method
+ */
+export const createPaymentMethod = async (paymentMethodInput: PaymentMethodInput, options?: RequestInit): Promise<PaymentMethod> => {
+
+  return customFetch<PaymentMethod>(getCreatePaymentMethodUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paymentMethodInput,)
+  }
+);}
+
+
+
+
+export const getCreatePaymentMethodMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaymentMethod>>, TError,{data: BodyType<PaymentMethodInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPaymentMethod>>, TError,{data: BodyType<PaymentMethodInput>}, TContext> => {
+
+const mutationKey = ['createPaymentMethod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPaymentMethod>>, {data: BodyType<PaymentMethodInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPaymentMethod(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePaymentMethodMutationResult = NonNullable<Awaited<ReturnType<typeof createPaymentMethod>>>
+    export type CreatePaymentMethodMutationBody = BodyType<PaymentMethodInput>
+    export type CreatePaymentMethodMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a payment method
+ */
+export const useCreatePaymentMethod = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPaymentMethod>>, TError,{data: BodyType<PaymentMethodInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPaymentMethod>>,
+        TError,
+        {data: BodyType<PaymentMethodInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePaymentMethodMutationOptions(options));
+    }
+
+export const getUpdatePaymentMethodUrl = (id: number,) => {
+
+
+
+
+  return `/api/payment-methods/${id}`
+}
+
+/**
+ * @summary Update a payment method
+ */
+export const updatePaymentMethod = async (id: number,
+    paymentMethodUpdate: PaymentMethodUpdate, options?: RequestInit): Promise<PaymentMethod> => {
+
+  return customFetch<PaymentMethod>(getUpdatePaymentMethodUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      paymentMethodUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdatePaymentMethodMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePaymentMethod>>, TError,{id: number;data: BodyType<PaymentMethodUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePaymentMethod>>, TError,{id: number;data: BodyType<PaymentMethodUpdate>}, TContext> => {
+
+const mutationKey = ['updatePaymentMethod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePaymentMethod>>, {id: number;data: BodyType<PaymentMethodUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePaymentMethod(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePaymentMethodMutationResult = NonNullable<Awaited<ReturnType<typeof updatePaymentMethod>>>
+    export type UpdatePaymentMethodMutationBody = BodyType<PaymentMethodUpdate>
+    export type UpdatePaymentMethodMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a payment method
+ */
+export const useUpdatePaymentMethod = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePaymentMethod>>, TError,{id: number;data: BodyType<PaymentMethodUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePaymentMethod>>,
+        TError,
+        {id: number;data: BodyType<PaymentMethodUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePaymentMethodMutationOptions(options));
+    }
+
+export const getDeletePaymentMethodUrl = (id: number,) => {
+
+
+
+
+  return `/api/payment-methods/${id}`
+}
+
+/**
+ * @summary Delete a payment method
+ */
+export const deletePaymentMethod = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePaymentMethodUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeletePaymentMethodMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePaymentMethod>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePaymentMethod>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deletePaymentMethod'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePaymentMethod>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deletePaymentMethod(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePaymentMethodMutationResult = NonNullable<Awaited<ReturnType<typeof deletePaymentMethod>>>
+
+    export type DeletePaymentMethodMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a payment method
+ */
+export const useDeletePaymentMethod = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePaymentMethod>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePaymentMethod>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeletePaymentMethodMutationOptions(options));
+    }
 

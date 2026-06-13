@@ -205,3 +205,29 @@ export const cashEntriesTable = pgTable("cash_entries", {
 export const insertCashEntrySchema = createInsertSchema(cashEntriesTable).omit({ id: true, createdAt: true });
 export type InsertCashEntry = z.infer<typeof insertCashEntrySchema>;
 export type CashEntry = typeof cashEntriesTable.$inferSelect;
+
+// Users (for authentication)
+export const usersTable = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  fullName: text("full_name").notNull(),
+  role: text("role").notNull().default("admin"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type User = typeof usersTable.$inferSelect;
+
+// Payment Methods (Pengaturan Metode Pembayaran)
+export const paymentMethodsTable = pgTable("payment_methods", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethodsTable).omit({ id: true, createdAt: true });
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+export type PaymentMethod = typeof paymentMethodsTable.$inferSelect;

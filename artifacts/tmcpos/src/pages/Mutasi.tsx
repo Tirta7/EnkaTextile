@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 const schema = z.object({
   productId: z.number({ required_error: "Barang wajib dipilih" }),
@@ -36,6 +37,8 @@ const TYPE_CONFIG: Record<string, { label: string; color: string; icon: any }> =
 
 export default function Mutasi() {
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const { data: mutations, isLoading } = useListMutations({}, { query: { queryKey: getListMutationsQueryKey({}) } });
@@ -62,10 +65,14 @@ export default function Mutasi() {
 
   const onSubmit = (data: FormData) => createMutation.mutate({ data });
 
-  const filtered = mutations?.filter(m => {
-    const q = search.toLowerCase();
-    return (m as any).productName?.toLowerCase().includes(q) || m.description?.toLowerCase().includes(q);
-  });
+  const filtered = filterByDateRange(
+    mutations?.filter(m => {
+      const q = search.toLowerCase();
+      return (m as any).productName?.toLowerCase().includes(q) || m.description?.toLowerCase().includes(q);
+    }) ?? [],
+    dateFrom,
+    dateTo,
+  );
 
   return (
     <div className="space-y-6">
@@ -78,12 +85,15 @@ export default function Mutasi() {
       </div>
 
       <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Riwayat Mutasi</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari barang..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <CardHeader className="py-4 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <CardTitle className="text-lg font-medium flex-1">Riwayat Mutasi</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Cari barang..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
           </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

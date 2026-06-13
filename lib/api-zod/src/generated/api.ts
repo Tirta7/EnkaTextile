@@ -822,3 +822,59 @@ export const GetStockSummaryReportResponseItem = zod.object({
 export const GetStockSummaryReportResponse = zod.array(GetStockSummaryReportResponseItem)
 
 
+/**
+ * @summary List all payment methods
+ */
+export const ListPaymentMethodsResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.string()
+})
+export const ListPaymentMethodsResponse = zod.array(ListPaymentMethodsResponseItem)
+
+
+/**
+ * @summary Create a payment method
+ */
+export const CreatePaymentMethodBody = zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+
+/**
+ * @summary Update a payment method
+ */
+export const UpdatePaymentMethodParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePaymentMethodBody = zod.object({
+  "name": zod.string().optional(),
+  "isActive": zod.boolean().optional(),
+  "sortOrder": zod.number().optional()
+})
+
+export const UpdatePaymentMethodResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "sortOrder": zod.number(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a payment method
+ */
+export const DeletePaymentMethodParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

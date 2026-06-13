@@ -12,6 +12,7 @@ import receivablesRouter from "./receivables";
 import payablesRouter from "./payables";
 import cashbookRouter from "./cashbook";
 import reportsRouter from "./reports";
+import paymentMethodsRouter from "./payment-methods";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(receivablesRouter);
 router.use(payablesRouter);
 router.use(cashbookRouter);
 router.use(reportsRouter);
+router.use(paymentMethodsRouter);
 
 export default router;

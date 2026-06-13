@@ -937,6 +937,77 @@ paths:
                 items:
                   $ref: "#/components/schemas/StockSummaryItem"
 
+  # Payment Methods (Pengaturan)
+  /payment-methods:
+    get:
+      operationId: listPaymentMethods
+      tags: [payment-methods]
+      summary: List all payment methods
+      responses:
+        "200":
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentMethod"
+    post:
+      operationId: createPaymentMethod
+      tags: [payment-methods]
+      summary: Create a payment method
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentMethodInput"
+      responses:
+        "201":
+          description: Created payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+
+  /payment-methods/{id}:
+    put:
+      operationId: updatePaymentMethod
+      tags: [payment-methods]
+      summary: Update a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentMethodUpdate"
+      responses:
+        "200":
+          description: Updated payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+    delete:
+      operationId: deletePaymentMethod
+      tags: [payment-methods]
+      summary: Delete a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -1658,3 +1729,43 @@ components:
           type: number
         isLowStock:
           type: boolean
+
+    PaymentMethod:
+      type: object
+      required: [id, code, name, isActive, sortOrder, createdAt]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+
+    PaymentMethodInput:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer
+
+    PaymentMethodUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: integer

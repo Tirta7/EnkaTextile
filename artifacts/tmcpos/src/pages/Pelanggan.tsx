@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, getListCustomersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function Pelanggan() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -68,7 +70,7 @@ export default function Pelanggan() {
           <CardTitle className="text-lg font-medium flex-1">Daftar Pelanggan</CardTitle>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari nama / telepon..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="Cari nama / telepon..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -95,7 +97,7 @@ export default function Pelanggan() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((c) => (
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground">{c.phone || "-"}</TableCell>
@@ -120,6 +122,7 @@ export default function Pelanggan() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

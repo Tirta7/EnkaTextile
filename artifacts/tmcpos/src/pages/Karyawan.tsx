@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListUsers, useCreateUser, useUpdateUser, useDeleteUser, getListUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function Karyawan() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data: users, isLoading } = useListUsers({ query: { queryKey: getListUsersQueryKey() } });
   
@@ -134,7 +136,7 @@ export default function Karyawan() {
               placeholder="Cari nama/username..." 
               className="pl-9"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             />
           </div>
         </CardHeader>
@@ -167,7 +169,7 @@ export default function Karyawan() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers?.map((u) => (
+                filteredUsers?.slice((currentPage - 1) * 20, currentPage * 20).map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -201,6 +203,7 @@ export default function Karyawan() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filteredUsers?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

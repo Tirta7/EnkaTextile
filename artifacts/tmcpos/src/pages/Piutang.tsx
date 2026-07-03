@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListReceivables, useAddReceivablePayment, getListReceivablesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Piutang() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -105,7 +107,7 @@ export default function Piutang() {
               </Select>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari pelanggan / invoice..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+                <Input placeholder="Cari pelanggan / invoice..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
               </div>
             </div>
           </div>
@@ -136,7 +138,7 @@ export default function Piutang() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((r) => {
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((r) => {
                   const pct = (r as any).totalAmount > 0 ? Math.round(((r as any).paidAmount / (r as any).totalAmount) * 100) : 0;
                   return (
                     <TableRow key={r.id} className={(r as any).isOverdue && r.status !== "lunas" ? "bg-red-50/50 dark:bg-red-900/10" : ""}>
@@ -167,6 +169,7 @@ export default function Piutang() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

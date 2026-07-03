@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function Kategori() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data: categories, isLoading } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
   
@@ -112,7 +114,7 @@ export default function Kategori() {
               placeholder="Cari kategori..." 
               className="pl-9"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             />
           </div>
         </CardHeader>
@@ -143,7 +145,7 @@ export default function Kategori() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredCategories?.map((cat) => (
+                filteredCategories?.slice((currentPage - 1) * 20, currentPage * 20).map((cat) => (
                   <TableRow key={cat.id}>
                     <TableCell className="font-medium">{cat.name}</TableCell>
                     <TableCell className="text-muted-foreground">{cat.description || "-"}</TableCell>
@@ -165,6 +167,7 @@ export default function Kategori() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filteredCategories?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

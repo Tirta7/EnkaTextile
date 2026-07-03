@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListPayables, useAddPayablePayment, getListPayablesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Hutang() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -105,7 +107,7 @@ export default function Hutang() {
               </Select>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari supplier / invoice..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+                <Input placeholder="Cari supplier / invoice..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
               </div>
             </div>
           </div>
@@ -136,7 +138,7 @@ export default function Hutang() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((p) => {
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => {
                   const total = (p as any).totalAmount ?? 0;
                   const paid = (p as any).paidAmount ?? 0;
                   const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
@@ -169,6 +171,7 @@ export default function Hutang() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

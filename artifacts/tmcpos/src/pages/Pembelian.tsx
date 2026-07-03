@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Pembelian() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -123,7 +125,7 @@ export default function Pembelian() {
             <CardTitle className="text-lg font-medium flex-1">Daftar Pembelian</CardTitle>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari invoice / supplier..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Cari invoice / supplier..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
             </div>
           </div>
           <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
@@ -152,7 +154,7 @@ export default function Pembelian() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((p) => (
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
                   <TableRow key={p.id}>
                     <TableCell className="font-mono font-medium">{p.invoiceNumber}</TableCell>
                     <TableCell>{(p as any).supplierName || "-"}</TableCell>
@@ -168,6 +170,7 @@ export default function Pembelian() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

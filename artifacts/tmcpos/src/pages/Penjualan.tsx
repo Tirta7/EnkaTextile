@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,6 +162,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
 }
 
 export default function Penjualan() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -315,7 +317,7 @@ export default function Penjualan() {
             <CardTitle className="text-lg font-medium flex-1">Daftar Penjualan</CardTitle>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari invoice / pelanggan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+              <Input placeholder="Cari invoice / pelanggan..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
             </div>
           </div>
           <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
@@ -345,7 +347,7 @@ export default function Penjualan() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((s) => (
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-mono font-medium">{s.invoiceNumber}</TableCell>
                     <TableCell>{(s as any).customerName || <span className="text-muted-foreground">Umum</span>}</TableCell>
@@ -368,6 +370,7 @@ export default function Penjualan() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

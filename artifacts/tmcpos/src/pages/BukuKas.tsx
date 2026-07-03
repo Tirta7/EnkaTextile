@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListCashEntries, useGetCashBalance, useCreateCashEntry, getListCashEntriesQueryKey, getGetCashBalanceQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +29,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function BukuKas() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -106,7 +108,7 @@ export default function BukuKas() {
               </Select>
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari keterangan..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+                <Input placeholder="Cari keterangan..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
               </div>
             </div>
           </div>
@@ -134,7 +136,7 @@ export default function BukuKas() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((e) => (
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e) => (
                   <TableRow key={e.id}>
                     <TableCell className="text-muted-foreground">{formatDate(e.createdAt)}</TableCell>
                     <TableCell className="font-medium">{e.description}</TableCell>
@@ -158,6 +160,7 @@ export default function BukuKas() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

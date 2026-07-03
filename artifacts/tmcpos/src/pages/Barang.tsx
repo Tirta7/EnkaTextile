@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
+import { PaginationControl } from "../components/PaginationControl";
 import { useListProducts, useListCategories, useListUnits, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, getListCategoriesQueryKey, getListUnitsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function Barang() {
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -165,7 +167,7 @@ export default function Barang() {
           <CardTitle className="text-lg font-medium flex-1">Daftar Barang</CardTitle>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari nama / no lot..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+            <Input placeholder="Cari nama / no lot..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -198,7 +200,7 @@ export default function Barang() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered?.map((p) => (
+                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
                   <TableRow key={p.id} className={p.isLowStock ? "bg-amber-50/50 dark:bg-amber-900/10" : ""}>
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell><Badge variant="secondary">{p.categoryName || "-"}</Badge></TableCell>
@@ -226,6 +228,7 @@ export default function Barang() {
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </CardContent>
       </Card>
 

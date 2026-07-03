@@ -194,7 +194,7 @@ export default function Mutasi() {
                 <FormItem><FormLabel>Referensi (Opsional)</FormLabel><FormControl><Input placeholder="No. dokumen" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <DrawerFooter className="px-0 pt-4 flex-row gap-2">
-                <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsOpen(false)}>Batal</Button>
+                <Button type="button" variant="ghost" className="text-muted-foreground flex-1" onClick={() => setIsOpen(false)}>Batal</Button>
                 <Button type="submit" className="flex-1" disabled={createMutation.isPending}>Simpan</Button>
               </DrawerFooter>
             </form>

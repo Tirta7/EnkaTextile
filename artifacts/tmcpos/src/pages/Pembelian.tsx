@@ -272,7 +272,7 @@ export default function Pembelian() {
             )}
           </div>
           <DrawerFooter className="px-0 pt-4 mt-4 flex-row gap-2">
-            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+            <Button type="button" variant="ghost" className="text-muted-foreground flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
             <Button className="flex-1" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Pembelian</Button>
           </DrawerFooter>
         </DrawerContent>

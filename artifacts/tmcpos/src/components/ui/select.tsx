@@ -81,6 +81,7 @@ const SelectContent = React.forwardRef<
         className
       )}
       position={position}
+      data-vaul-no-drag="true"
       {...props}
     >
       <SelectScrollUpButton />
@@ -90,6 +91,7 @@ const SelectContent = React.forwardRef<
           position === "popper" &&
             "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
         )}
+        data-vaul-no-drag="true"
       >
         {children}
       </SelectPrimitive.Viewport>

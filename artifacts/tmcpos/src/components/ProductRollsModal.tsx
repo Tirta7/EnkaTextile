@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,16 +106,16 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>Detail Roll - {productName}</DialogTitle>
+    <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2">
+        <DrawerHeader>
+          <DrawerTitle>Daftar Roll/Gulungan - {productName}</DrawerTitle>
           {!isAdding && (
-            <Button size="sm" onClick={() => setIsAdding(true)} className="mr-8">
+            <Button size="sm" onClick={() => setIsAdding(true)} className="mr-8 w-fit ml-auto">
               <Plus className="h-4 w-4 mr-2" /> Tambah Roll Baru
             </Button>
           )}
-        </DialogHeader>
+        </DrawerHeader>
         <div className="flex-1 overflow-y-auto mt-4">
           <Table>
             <TableHeader>
@@ -251,7 +251,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
             </TableBody>
           </Table>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }

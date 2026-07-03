@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Truck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -114,11 +114,12 @@ export default function Supplier() {
         </CardContent>
       </Card>
 
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
-        <DialogContent className="max-w-md w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader><DialogTitle>{editingId ? "Edit Supplier" : "Tambah Supplier"}</DialogTitle></DialogHeader>
+      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader><DrawerTitle>{editingId ? "Edit Supplier" : "Tambah Supplier"}</DrawerTitle></DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>Nama Supplier</FormLabel><FormControl><Input placeholder="Nama perusahaan/toko" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -131,14 +132,15 @@ export default function Supplier() {
               <FormField control={form.control} name="address" render={({ field }) => (
                 <FormItem><FormLabel>Alamat</FormLabel><FormControl><Input placeholder="Alamat lengkap" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
-              </DialogFooter>
+              <DrawerFooter className="px-0 pt-4">
+                <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
+              </DrawerFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

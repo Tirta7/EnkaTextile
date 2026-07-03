@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt } from "lucide-react";
@@ -627,11 +627,11 @@ export default function Pengaturan() {
       </Card>
 
       {/* Add Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader>
-            <DialogTitle>Tambah Metode Pembayaran</DialogTitle>
-          </DialogHeader>
+      <Drawer open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle>Tambah Metode Pembayaran</DrawerTitle>
+          </DrawerHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Kode <span className="text-muted-foreground text-xs">(unik, otomatis lowercase)</span></Label>
@@ -658,24 +658,25 @@ export default function Pengaturan() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4">
+            <Button variant="outline" className="w-full" onClick={() => setIsAddOpen(false)}>Batal</Button>
             <Button
+              className="w-full"
               onClick={handleAdd}
               disabled={!newCode.trim() || !newName.trim() || createMutation.isPending}
             >
               {createMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
-        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader>
-            <DialogTitle>Edit Metode Pembayaran</DialogTitle>
-          </DialogHeader>
+      <Drawer open={!!editItem} onOpenChange={() => setEditItem(null)}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle>Edit Metode Pembayaran</DrawerTitle>
+          </DrawerHeader>
           {editItem && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5">
@@ -702,21 +703,21 @@ export default function Pengaturan() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditItem(null)}>Batal</Button>
-            <Button onClick={handleEditSave} disabled={updateMutation.isPending}>
+          <DrawerFooter className="px-0 pt-4">
+            <Button variant="outline" className="w-full" onClick={() => setEditItem(null)}>Batal</Button>
+            <Button className="w-full" onClick={handleEditSave} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Add Unit Dialog */}
-      <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
-        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader>
-            <DialogTitle>Tambah Satuan</DialogTitle>
-          </DialogHeader>
+      <Drawer open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle>Tambah Satuan</DrawerTitle>
+          </DrawerHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Nama Satuan</Label>
@@ -735,24 +736,25 @@ export default function Pengaturan() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddUnitOpen(false)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4">
+            <Button variant="outline" className="w-full" onClick={() => setIsAddUnitOpen(false)}>Batal</Button>
             <Button
+              className="w-full"
               onClick={handleAddUnit}
               disabled={!newUnitName.trim() || !newUnitSymbol.trim() || createUnitMutation.isPending}
             >
               {createUnitMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
 
       {/* Edit Unit Dialog */}
-      <Dialog open={!!editUnitItem} onOpenChange={() => setEditUnitItem(null)}>
-        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader>
-            <DialogTitle>Edit Satuan</DialogTitle>
-          </DialogHeader>
+      <Drawer open={!!editUnitItem} onOpenChange={() => setEditUnitItem(null)}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle>Edit Satuan</DrawerTitle>
+          </DrawerHeader>
           {editUnitItem && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5">
@@ -771,14 +773,14 @@ export default function Pengaturan() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUnitItem(null)}>Batal</Button>
-            <Button onClick={handleEditUnitSave} disabled={updateUnitMutation.isPending}>
+          <DrawerFooter className="px-0 pt-4">
+            <Button variant="outline" className="w-full" onClick={() => setEditUnitItem(null)}>Batal</Button>
+            <Button className="w-full" onClick={handleEditUnitSave} disabled={updateUnitMutation.isPending}>
               {updateUnitMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

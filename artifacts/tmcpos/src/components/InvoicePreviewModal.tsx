@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
 import { useState } from "react";
-import html2canvas from "html2canvas";
+import * as htmlToImage from "html-to-image";
 import { Printer, Loader2, QrCode, Download } from "lucide-react";
 import { useGetSale, getGetSaleQueryKey } from "@workspace/api-client-react";
 
@@ -58,15 +58,21 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2, // High resolution for better text clarity
-        useCORS: true,
+      // Small delay to ensure all fonts/styles are loaded before rendering
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      const dataUrl = await htmlToImage.toJpeg(element, {
+        quality: 0.95,
+        pixelRatio: 2, // High resolution
         backgroundColor: "#ffffff",
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left'
+        }
       });
       
-      const image = canvas.toDataURL("image/jpeg", 0.9);
       const link = document.createElement("a");
-      link.href = image;
+      link.href = dataUrl;
       link.download = `Invoice-${displayData?.invoiceNumber || "Draft"}.jpg`;
       link.click();
     } catch (error) {

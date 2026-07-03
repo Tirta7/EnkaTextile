@@ -116,9 +116,12 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
       }
       
       /* Mobile Zoom for exact PC layout preview */
-      @media screen and (max-width: 640px) {
+      @media screen and (max-width: 800px) {
         #printable-invoice {
-          zoom: 0.45; /* Scales the entire layout down to fit mobile screens perfectly */
+          width: 800px !important;
+          max-width: 800px !important;
+          /* Automatically calculate scale based on screen width (with some padding) */
+          zoom: calc(100vw / 830) !important; 
         }
       }
     `;
@@ -193,7 +196,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
             {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

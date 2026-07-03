@@ -14,6 +14,7 @@ import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
+import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
 
 type SaleItem = { productId: number; productName: string; rollId?: number; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
 
@@ -169,6 +170,10 @@ export default function Penjualan() {
   const [paymentType, setPaymentType] = useState<string>("tunai");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<InvoicePreviewData | null>(null);
+  const [previewSaleId, setPreviewSaleId] = useState<number | undefined>();
 
   const { data: sales, isLoading } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const { data: customers } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
@@ -185,7 +190,6 @@ export default function Penjualan() {
         setIsOpen(false);
         resetForm();
         toast({ title: "Penjualan berhasil dicatat" });
-        window.open(`/penjualan/print/${data.id}`, "_blank");
       }
     }
   });
@@ -231,6 +235,38 @@ export default function Penjualan() {
   };
 
   const totalAmount = items.reduce((sum, i) => sum + i.subtotal, 0);
+
+  const handlePreview = () => {
+    let customerName = "Umum";
+    if (customerId) {
+      const cust = customers?.find(c => c.id.toString() === customerId);
+      if (cust) customerName = cust.name;
+    }
+    const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+    
+    setPreviewSaleId(undefined);
+    setPreviewData({
+      invoiceNumber,
+      customerName,
+      createdAt: new Date().toISOString(),
+      totalAmount,
+      paidAmount,
+      remainingAmount: totalAmount - paidAmount,
+      items: items.map(i => {
+        const prod = products?.find(p => p.id === i.productId);
+        const cat = categories?.find(c => c.id === prod?.categoryId);
+        return {
+          categoryName: cat?.name,
+          productName: i.productName,
+          meters: typeof i.meters === "number" ? i.meters : 0,
+          rolls: typeof i.rolls === "number" ? i.rolls : 0,
+          pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0,
+          subtotal: i.subtotal
+        };
+      })
+    });
+    setPreviewOpen(true);
+  };
 
   const handleSubmit = () => {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
@@ -324,7 +360,7 @@ export default function Penjualan() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => window.open(`/penjualan/print/${s.id}`, "_blank")} title="Cetak Nota">
+                      <Button variant="ghost" size="icon" onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }} title="Cetak Nota">
                         <Printer className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -413,12 +449,17 @@ export default function Penjualan() {
               </div>
             )}
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 flex flex-wrap gap-2 justify-between items-center sm:justify-end">
+            <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto sm:mr-4">
+              <Printer className="h-4 w-4" />
+            </Button>
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
             <Button onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <InvoicePreviewModal open={previewOpen} onOpenChange={setPreviewOpen} data={previewData} saleId={previewSaleId} />
     </div>
   );
 }

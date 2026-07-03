@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { salesTable, saleItemsTable, customersTable, productsTable, receivablesTable, stockMutationsTable, productRollsTable } from "@workspace/db";
+import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, stockMutationsTable, productRollsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { CreateSaleBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
@@ -261,6 +261,7 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     .select({
       productId: saleItemsTable.productId,
       productName: productsTable.name,
+      categoryName: categoriesTable.name,
       rollId: saleItemsTable.rollId,
       rolls: saleItemsTable.rolls,
       meters: saleItemsTable.meters,
@@ -269,6 +270,7 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     })
     .from(saleItemsTable)
     .leftJoin(productsTable, eq(saleItemsTable.productId, productsTable.id))
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(saleItemsTable.saleId, id));
 
   res.json({

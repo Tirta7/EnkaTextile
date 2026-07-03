@@ -278,7 +278,7 @@ export default function Karyawan() {
                   </FormItem>
                 )}
               />
-              <DrawerFooter className="px-0 pt-4">
+              <DrawerFooter className="px-0 pt-4 flex-row gap-2">
                 <Button type="button" variant="outline" className="w-full" onClick={() => { setIsCreateOpen(false); setEditingUser(null); }}>
                   Batal
                 </Button>

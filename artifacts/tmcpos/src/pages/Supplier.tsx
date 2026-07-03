@@ -132,9 +132,9 @@ export default function Supplier() {
               <FormField control={form.control} name="address" render={({ field }) => (
                 <FormItem><FormLabel>Alamat</FormLabel><FormControl><Input placeholder="Alamat lengkap" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              <DrawerFooter className="px-0 pt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
-                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
+              <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+                <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
+                <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
               </DrawerFooter>
             </form>
           </Form>

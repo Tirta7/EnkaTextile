@@ -422,8 +422,8 @@ export default function Barang() {
                 </div>
               </div>
 
-                <DrawerFooter className="px-0 pt-4">
-                  <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
+                <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
                   <Button type="submit" className="tour-submit w-full" disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>Simpan</Button>
                 </DrawerFooter>
             </form>

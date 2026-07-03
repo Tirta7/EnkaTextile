@@ -451,12 +451,12 @@ export default function Penjualan() {
             )}
           </div>
           </div>
-          <DrawerFooter className="mt-4 px-0 flex flex-wrap gap-2 justify-between items-center sm:justify-end">
-            <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto sm:mr-4">
+          <DrawerFooter className="mt-4 px-0 flex flex-row gap-2">
+            <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto">
               <Printer className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-            <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+            <Button className="flex-1" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

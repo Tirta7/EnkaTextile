@@ -205,9 +205,9 @@ export default function Hutang() {
             </div>
           )}
           </div>
-          <DrawerFooter className="px-0 pt-4">
-            <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
-            <Button className="w-full" onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
+            <Button className="flex-1" onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

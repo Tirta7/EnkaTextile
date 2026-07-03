@@ -142,9 +142,9 @@ export default function Pelanggan() {
               <FormField control={form.control} name="creditLimit" render={({ field }) => (
                 <FormItem><FormLabel>Limit Kredit (Rp)</FormLabel><FormControl><Input type="number" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
               )} />
-              <DrawerFooter className="px-0 pt-4">
-                <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
-                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
+              <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+                <Button type="button" variant="ghost" className="flex-1" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
+                <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
               </DrawerFooter>
             </form>
           </Form>

@@ -658,8 +658,8 @@ export default function Pengaturan() {
               />
             </div>
           </div>
-          <DrawerFooter className="px-0 pt-4">
-            <Button variant="outline" className="w-full" onClick={() => setIsAddOpen(false)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setIsAddOpen(false)}>Batal</Button>
             <Button
               className="w-full"
               onClick={handleAdd}
@@ -703,8 +703,8 @@ export default function Pengaturan() {
               </div>
             </div>
           )}
-          <DrawerFooter className="px-0 pt-4">
-            <Button variant="outline" className="w-full" onClick={() => setEditItem(null)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setEditItem(null)}>Batal</Button>
             <Button className="w-full" onClick={handleEditSave} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
@@ -736,8 +736,8 @@ export default function Pengaturan() {
               />
             </div>
           </div>
-          <DrawerFooter className="px-0 pt-4">
-            <Button variant="outline" className="w-full" onClick={() => setIsAddUnitOpen(false)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setIsAddUnitOpen(false)}>Batal</Button>
             <Button
               className="w-full"
               onClick={handleAddUnit}
@@ -773,8 +773,8 @@ export default function Pengaturan() {
               </div>
             </div>
           )}
-          <DrawerFooter className="px-0 pt-4">
-            <Button variant="outline" className="w-full" onClick={() => setEditUnitItem(null)}>Batal</Button>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button variant="ghost" className="flex-1" onClick={() => setEditUnitItem(null)}>Batal</Button>
             <Button className="w-full" onClick={handleEditUnitSave} disabled={updateUnitMutation.isPending}>
               {updateUnitMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>

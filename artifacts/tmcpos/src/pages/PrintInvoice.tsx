@@ -93,10 +93,10 @@ export default function PrintInvoice() {
                   {parseFloat(item.meters).toFixed(2)} M / {item.rolls} ROLL
                 </td>
                 <td className="py-1 text-right">
-                  {new Intl.NumberFormat('id-ID').format(item.pricePerMeter)}
+                  {new Intl.NumberFormat('id-ID').format(item.pricePerMeter ?? 0)}
                 </td>
                 <td className="py-1 text-right">
-                  {new Intl.NumberFormat('id-ID').format(item.subtotal)}
+                  {new Intl.NumberFormat('id-ID').format(item.subtotal ?? 0)}
                 </td>
               </tr>
             ))}
@@ -108,17 +108,17 @@ export default function PrintInvoice() {
                 {totalYds.toFixed(2)} M / {totalRolls} ROLL
               </td>
               <td className="py-2 text-right">Grand Total</td>
-              <td className="py-2 text-right font-semibold">{new Intl.NumberFormat('id-ID').format(sale.totalAmount)}</td>
+              <td className="py-2 text-right font-semibold">{new Intl.NumberFormat('id-ID').format(sale.totalAmount ?? 0)}</td>
             </tr>
             <tr>
               <td colSpan={3} className="py-1"></td>
               <td className="py-1 text-right">Di Bayar</td>
-              <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(sale.paidAmount)}</td>
+              <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(sale.paidAmount ?? 0)}</td>
             </tr>
             <tr>
               <td colSpan={3} className="py-1"></td>
               <td className="py-1 text-right">Sisa Bayar</td>
-              <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(sale.remainingAmount)}</td>
+              <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(sale.remainingAmount ?? 0)}</td>
             </tr>
           </tfoot>
         </table>

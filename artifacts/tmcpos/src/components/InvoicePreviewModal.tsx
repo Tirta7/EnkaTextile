@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatRupiah, formatDate } from "@/lib/utils";
+import { formatRupiah, formatDate, formatDateTime } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
 import { useState } from "react";
 import * as htmlToImage from "html-to-image";
@@ -165,7 +165,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </div>
                 
                 <div className="w-[35%] text-right text-xs">
-                  <p className="text-slate-500 mb-3 text-[11px]">Tanggal: <span className="text-slate-900 font-semibold">{formatDate(displayData.createdAt || new Date().toISOString())}</span></p>
+                  <p className="text-slate-500 mb-3 text-[11px]">Tanggal: <span className="text-slate-900 font-semibold">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
                   <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-1">Kepada Yth.</p>
                   <p className="font-extrabold text-slate-900 text-[15px]">{displayData.customerName || "UMUM"}</p>
                 </div>

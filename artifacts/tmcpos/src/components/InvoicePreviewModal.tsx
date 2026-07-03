@@ -114,6 +114,13 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           margin: 1cm 0.5cm; /* Adjust for continuous form tractor feed */
         }
       }
+      
+      /* Mobile Zoom for exact PC layout preview */
+      @media screen and (max-width: 640px) {
+        #printable-invoice {
+          zoom: 0.45; /* Scales the entire layout down to fit mobile screens perfectly */
+        }
+      }
     `;
     document.head.appendChild(style);
     
@@ -134,6 +141,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     
     setIsDownloading(true);
     try {
+      // Temporarily remove zoom for high-res download
+      element.style.setProperty('zoom', '1', 'important');
+      
       // Small delay to ensure all fonts/styles are loaded before rendering
       await new Promise((resolve) => setTimeout(resolve, 100));
       
@@ -154,6 +164,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     } catch (error) {
       console.error("Failed to generate image", error);
     } finally {
+      element.style.removeProperty('zoom');
       setIsDownloading(false);
     }
   };
@@ -201,13 +212,13 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               )}
 
               {/* Header */}
-              <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 pb-8 border-b-2 border-indigo-100 relative z-10 gap-6 md:gap-0">
-                <div className="w-full md:w-[35%] text-center md:text-left">
+              <div className="flex justify-between items-start mb-8 pb-8 border-b-2 border-indigo-100 relative z-10">
+                <div className="w-[35%]">
                   <h1 className="font-black text-2xl tracking-tighter text-indigo-900 mb-2 uppercase">{appName}</h1>
                   <p className="text-slate-500 whitespace-pre-line text-xs leading-relaxed">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
-                <div className="w-full md:w-[30%] text-center flex flex-col items-center">
+                <div className="w-[30%] text-center flex flex-col items-center">
                   <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100 shadow-sm">
                     Nota Penjualan
                   </div>
@@ -224,7 +235,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   </div>
                 </div>
                 
-                <div className="w-full md:w-[35%] text-center md:text-right text-xs">
+                <div className="w-[35%] text-right text-xs">
                   <p className="text-slate-500 mb-3 text-[11px]">Tanggal: <span className="text-slate-900 font-semibold">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
                   <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-1">Kepada Yth.</p>
                   <p className="font-extrabold text-slate-900 text-[15px]">{displayData.customerName || "UMUM"}</p>
@@ -232,8 +243,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </div>
               
               {/* Table */}
-              <div className="rounded-xl border border-indigo-100 shadow-sm overflow-x-auto w-full mb-8 relative z-10">
-                <table className="w-full min-w-[600px] text-left border-collapse">
+              <div className="rounded-xl border border-indigo-100 shadow-sm overflow-hidden mb-8 relative z-10 w-full min-w-[700px]">
+                <table className="w-full text-left border-collapse">
                   <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
                       <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-10 text-center">No</th>
@@ -276,9 +287,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </table>
               </div>
               {/* Totals Section */}
-              <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-6 md:gap-0">
+              <div className="flex justify-between items-start relative z-10 min-w-[700px]">
                 {/* Left side info (Payment / Transfer) */}
-                <div className="w-full md:w-[45%]">
+                <div className="w-[45%]">
                   <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
@@ -297,7 +308,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </div>
 
                 {/* Right side totals */}
-                <div className="w-full md:w-[45%] bg-white rounded-xl border border-slate-200 p-0 shadow-sm overflow-hidden">
+                <div className="w-[45%] bg-white rounded-xl border border-slate-200 p-0 shadow-sm overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-200">
                     <div className="flex justify-between items-center text-slate-600">
                       <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas</span>
@@ -322,7 +333,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </div>
               
               {/* Footer Signatures */}
-              <div className="flex justify-end gap-8 sm:gap-16 mt-12 pr-0 sm:pr-4">
+              <div className="flex justify-end gap-16 mt-12 pr-4 min-w-[700px]">
                 <div className="text-center w-32 flex flex-col items-center">
                   <p className="text-slate-500 text-xs mb-16">Tanda Terima</p>
                   <div className="border-b border-slate-300 w-full"></div>

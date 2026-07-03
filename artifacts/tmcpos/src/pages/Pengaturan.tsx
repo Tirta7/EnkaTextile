@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { registerAndSubscribePush } from "../lib/pushNotification";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
@@ -53,6 +53,10 @@ export default function Pengaturan() {
   const [appAddressInput, setAppAddressInput] = useState("");
   const [appLogoInput, setAppLogoInput] = useState("");
   
+  const [invoiceBankNameInput, setInvoiceBankNameInput] = useState("");
+  const [invoiceBankAccountInput, setInvoiceBankAccountInput] = useState("");
+  const [invoiceNotesInput, setInvoiceNotesInput] = useState("");
+  
   const { data: settings, isLoading: isLoadingSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
 
@@ -68,6 +72,15 @@ export default function Pengaturan() {
       }
       if (settings["app_logo"]) {
         setAppLogoInput(settings["app_logo"]);
+      }
+      if (settings["invoice_bank_name"]) {
+        setInvoiceBankNameInput(settings["invoice_bank_name"]);
+      }
+      if (settings["invoice_bank_account"]) {
+        setInvoiceBankAccountInput(settings["invoice_bank_account"]);
+      }
+      if (settings["invoice_notes"]) {
+        setInvoiceNotesInput(settings["invoice_notes"]);
       }
       setIsInitialized(true);
     }
@@ -94,6 +107,20 @@ export default function Pengaturan() {
       { app_name: appNameInput.trim(), app_address: appAddressInput.trim(), app_logo: appLogoInput },
       {
         onSuccess: () => toast({ title: "Pengaturan Utama disimpan!" }),
+        onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleSaveInvoiceSettings = () => {
+    updateSettingsMutation.mutate(
+      { 
+        invoice_bank_name: invoiceBankNameInput.trim(), 
+        invoice_bank_account: invoiceBankAccountInput.trim(), 
+        invoice_notes: invoiceNotesInput.trim() 
+      },
+      {
+        onSuccess: () => toast({ title: "Pengaturan Nota disimpan!" }),
         onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
       }
     );
@@ -333,6 +360,62 @@ export default function Pengaturan() {
               disabled={isLoadingSettings || updateSettingsMutation.isPending || !appNameInput.trim()}
               style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
               className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <Save size={16} />
+              {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Invoice Settings Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Receipt size={16} className="text-violet-500" />
+            Pengaturan Nota / Invoice
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Ubah detail informasi bank dan keterangan tambahan yang dicetak pada nota.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+            <div className="space-y-1.5 w-full sm:max-w-[200px]">
+              <Label>Nama Rekening</Label>
+              <Input 
+                value={invoiceBankNameInput} 
+                onChange={(e) => setInvoiceBankNameInput(e.target.value)} 
+                placeholder="mis: A.n PT XYZ" 
+                disabled={isLoadingSettings}
+              />
+            </div>
+            
+            <div className="space-y-1.5 w-full sm:max-w-[200px]">
+              <Label>Nomor Rekening</Label>
+              <Input 
+                value={invoiceBankAccountInput} 
+                onChange={(e) => setInvoiceBankAccountInput(e.target.value)} 
+                placeholder="mis: BCA - 12345" 
+                disabled={isLoadingSettings}
+              />
+            </div>
+            
+            <div className="space-y-1.5 w-full">
+              <Label>Keterangan / Pesan Tambahan</Label>
+              <Input 
+                value={invoiceNotesInput} 
+                onChange={(e) => setInvoiceNotesInput(e.target.value)} 
+                placeholder="mis: Barang yang dibeli tidak dapat ditukar" 
+                disabled={isLoadingSettings}
+              />
+            </div>
+
+            <Button 
+              onClick={handleSaveInvoiceSettings}
+              disabled={isLoadingSettings || updateSettingsMutation.isPending}
+              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
+              className="w-full sm:w-auto flex items-center gap-2 shrink-0"
             >
               <Save size={16} />
               {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}

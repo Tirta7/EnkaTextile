@@ -37,6 +37,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
   const appName = settings?.["app_name"] || "ENKA TEXTILE";
   const appAddress = settings?.["app_address"] || "Jl. Raya Jrebengkembang, Kedolon Gang Griya Azzahra, Karangdadap Kab. Pekalongan";
+  
+  const invoiceBankName = settings?.["invoice_bank_name"] || "A.n Spectra Jaya Fashion PT";
+  const invoiceBankAccount = settings?.["invoice_bank_account"] || "BCA - 2384564444";
+  const invoiceNotes = settings?.["invoice_notes"] || "";
 
   const displayData = data || fetchedSale;
 
@@ -180,9 +184,16 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
                       <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>
                     </div>
-                    <p className="text-indigo-800 text-[14px] font-bold font-mono tracking-wider mt-2">BCA - 2384564444</p>
-                    <p className="text-indigo-600 text-xs mt-1 font-medium">A.n Spectra Jaya Fashion PT</p>
+                    <p className="text-indigo-800 text-[14px] font-bold font-mono tracking-wider mt-2">{invoiceBankAccount}</p>
+                    <p className="text-indigo-600 text-xs mt-1 font-medium">{invoiceBankName}</p>
                   </div>
+                  
+                  {invoiceNotes && (
+                    <div className="mt-4 p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+                      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Catatan</p>
+                      <p className="text-slate-700 text-xs italic">{invoiceNotes}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right side totals */}

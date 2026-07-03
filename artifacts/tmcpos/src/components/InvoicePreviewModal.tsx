@@ -230,14 +230,14 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           </div>
           
           <div 
-            className="w-full flex justify-center overflow-hidden pb-6"
+            className="w-full overflow-hidden pb-6"
             ref={containerRef}
             style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}
           >
             <div 
               id="printable-invoice" 
               ref={invoiceRef}
-              className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] origin-top-left sm:origin-top" 
+              className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] origin-top-left" 
               style={{ 
                 fontFamily: "'Inter', sans-serif",
                 width: '800px',

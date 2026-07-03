@@ -96,11 +96,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           border-color: #000 !important;
         }
 
-        /* Adjust watermark for dot matrix so it doesn't obstruct text */
+        /* Hide giant watermark for dot matrix so it doesn't obstruct text */
         #print-container-temp .lunas-watermark {
-          opacity: 0.2 !important;
-          color: #000 !important;
-          border-color: #000 !important;
+          display: none !important;
         }
         
         @page { 
@@ -204,9 +202,16 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100 shadow-sm">
                     Nota Penjualan
                   </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <QrCode className="w-5 h-5 text-indigo-400" />
-                    <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <QrCode className="w-5 h-5 text-indigo-400" />
+                      <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
+                    </div>
+                    {isPaid && (
+                      <div className="mt-2 inline-block border-[1.5px] border-green-600 text-green-600 px-3 py-1 font-black text-[10px] tracking-widest uppercase rounded">
+                        LUNAS
+                      </div>
+                    )}
                   </div>
                 </div>
                 

@@ -78,7 +78,34 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        @page { margin: 0.5cm; }
+        
+        /* Dot Matrix / 3-Ply Optimizations */
+        #print-container-temp * {
+          color: #000 !important;
+          background: transparent !important;
+          border-color: #000 !important;
+          box-shadow: none !important;
+        }
+        
+        /* Ensure table lines are crisp */
+        #print-container-temp table, 
+        #print-container-temp th, 
+        #print-container-temp td,
+        #print-container-temp .border-b,
+        #print-container-temp .border {
+          border-color: #000 !important;
+        }
+
+        /* Adjust watermark for dot matrix so it doesn't obstruct text */
+        #print-container-temp .lunas-watermark {
+          opacity: 0.2 !important;
+          color: #000 !important;
+          border-color: #000 !important;
+        }
+        
+        @page { 
+          margin: 1cm 0.5cm; /* Adjust for continuous form tractor feed */
+        }
       }
     `;
     document.head.appendChild(style);
@@ -159,9 +186,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             <div className="max-w-4xl mx-auto text-[13px] leading-relaxed relative">
               {/* Watermark for Paid */}
               {isPaid && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] z-0">
-                  <div className="transform -rotate-45 text-9xl font-black text-green-600 border-8 border-green-600 rounded-2xl p-8 uppercase tracking-widest">
-                    Lunas
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+                  <div className="lunas-watermark text-[150px] font-black text-green-500/10 rotate-[-30deg] select-none border-8 border-green-500/10 p-8 rounded-3xl tracking-widest uppercase">
+                    LUNAS
                   </div>
                 </div>
               )}

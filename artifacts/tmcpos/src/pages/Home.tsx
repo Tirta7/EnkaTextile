@@ -47,7 +47,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-white/5 backdrop-blur-[2px]" />
         
         <div className="relative z-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-[0.05em] drop-shadow-lg">{appName}</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-wider drop-shadow-lg">{appName}</h1>
           <p className="text-white/90 text-xs sm:text-sm tracking-wide font-medium drop-shadow-md">{appAddress}</p>
         </div>
       </div>

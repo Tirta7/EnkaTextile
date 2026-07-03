@@ -22,48 +22,49 @@ export default function Home() {
   const { data: chartData, isLoading: loadingChart } = useGetDashboardSalesChart({}, { query: { queryKey: getGetDashboardSalesChartQueryKey({}) } });
 
   const menuItems = [
-    { name: "Kategori", href: "/kategori", icon: Tags, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { name: "Barang", href: "/barang", icon: Package2, color: "text-amber-500", bg: "bg-amber-500/10" },
-    { name: "Pelanggan", href: "/pelanggan", icon: UserCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { name: "Supplier", href: "/supplier", icon: Building2, color: "text-orange-500", bg: "bg-orange-500/10" },
-    { name: "Penjualan", href: "/penjualan", icon: Receipt, color: "text-violet-500", bg: "bg-violet-500/10" },
-    { name: "Pembelian", href: "/pembelian", icon: ShoppingBasket, color: "text-pink-500", bg: "bg-pink-500/10" },
-    { name: "Mutasi", href: "/mutasi", icon: ArrowLeftRight, color: "text-cyan-500", bg: "bg-cyan-500/10" },
-    { name: "Piutang", href: "/piutang", icon: Landmark, color: "text-red-500", bg: "bg-red-500/10" },
-    { name: "Hutang", href: "/hutang", icon: CreditCard, color: "text-rose-500", bg: "bg-rose-500/10" },
-    { name: "Buku Kas", href: "/buku-kas", icon: BookMarked, color: "text-amber-600", bg: "bg-amber-600/10" },
-    { name: "Laporan", href: "/laporan", icon: BarChart3, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+    { name: "Kategori", href: "/kategori", icon: Tags, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    { name: "Barang", href: "/barang", icon: Package2, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+    { name: "Pelanggan", href: "/pelanggan", icon: UserCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+    { name: "Supplier", href: "/supplier", icon: Building2, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+    { name: "Penjualan", href: "/penjualan", icon: Receipt, color: "text-violet-500", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+    { name: "Pembelian", href: "/pembelian", icon: ShoppingBasket, color: "text-pink-500", bg: "bg-pink-500/10", border: "border-pink-500/20" },
+    { name: "Mutasi", href: "/mutasi", icon: ArrowLeftRight, color: "text-cyan-500", bg: "bg-cyan-500/10", border: "border-cyan-500/20" },
+    { name: "Piutang", href: "/piutang", icon: Landmark, color: "text-red-500", bg: "bg-red-500/10", border: "border-red-500/20" },
+    { name: "Hutang", href: "/hutang", icon: CreditCard, color: "text-rose-500", bg: "bg-rose-500/10", border: "border-rose-500/20" },
+    { name: "Buku Kas", href: "/buku-kas", icon: BookMarked, color: "text-amber-600", bg: "bg-amber-600/10", border: "border-amber-600/20" },
+    { name: "Laporan", href: "/laporan", icon: BarChart3, color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
   ];
 
   return (
-    <div className="max-w-[1200px] mx-auto w-full space-y-12 pb-10">
+    <div className="max-w-[1200px] mx-auto w-full space-y-12 pb-14 px-2">
       
       {/* Banner */}
       <div 
-        className="w-full rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-lg"
-        style={{ background: "linear-gradient(135deg, #0000FF 0%, #3b82f6 100%)" }}
+        className="w-full rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(59,130,246,0.3)] border border-blue-500/20"
+        style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)" }}
       >
-        <h1 className="text-3xl font-bold text-white mb-2 uppercase tracking-wide">{appName}</h1>
-        <p className="text-white/90 text-sm">{appAddress}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-[0.05em] drop-shadow-md">{appName}</h1>
+        <p className="text-white/80 text-xs sm:text-sm tracking-wide font-medium">{appAddress}</p>
       </div>
 
       {/* Menu Grid */}
-      <div className="flex flex-wrap justify-center gap-x-8 gap-y-10 max-w-4xl mx-auto">
+      <div className="flex flex-wrap justify-center gap-x-10 gap-y-10 max-w-[900px] mx-auto mt-8">
         {menuItems.map((item) => (
           <Link key={item.name} href={item.href}>
-            <div className="flex flex-col items-center gap-3 cursor-pointer group hover:scale-105 transition-transform duration-200">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${item.bg} shadow-sm group-hover:shadow-md transition-shadow`}>
-                <item.icon className={`w-8 h-8 ${item.color}`} />
+            <div className="flex flex-col items-center gap-3.5 cursor-pointer group transition-all duration-300">
+              <div className={`w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-[1.25rem] flex items-center justify-center ${item.bg} border ${item.border} shadow-lg backdrop-blur-md group-hover:-translate-y-1.5 transition-transform duration-300 relative overflow-hidden`}>
+                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${item.bg}`} />
+                <item.icon className={`w-7 h-7 sm:w-8 sm:h-8 ${item.color} relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]`} />
               </div>
-              <span className="text-sm font-semibold tracking-wide text-foreground uppercase">{item.name}</span>
+              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-foreground/80 group-hover:text-foreground transition-colors uppercase">{item.name}</span>
             </div>
           </Link>
         ))}
       </div>
 
       {/* Chart */}
-      <div className="pt-6">
-        <h2 className="text-center text-lg font-medium mb-6">
+      <div className="pt-8 max-w-4xl mx-auto">
+        <h2 className="text-center text-sm font-semibold tracking-wide text-foreground/90 mb-8">
           Grafik Penjualan {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
         </h2>
         

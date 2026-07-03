@@ -176,11 +176,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
-                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-12 text-center">No</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest">Nama Barang</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Kuantitas</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Harga</th>
-                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Total</th>
+                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-10 text-center">No</th>
+                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest">Nama Barang</th>
+                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Kuantitas</th>
+                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Harga</th>
+                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Total</th>
                     </tr>
                   </thead>
                 <tbody>
@@ -192,21 +192,21 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     
                     return (
                       <tr key={index} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3.5 px-4 text-center text-slate-400 font-medium">{index + 1}</td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-1.5 px-3 text-center text-slate-500 text-xs font-medium">{index + 1}</td>
+                        <td className="py-1.5 px-3">
                           <div className="flex flex-col">
-                            {item.categoryName && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">{item.categoryName}</span>}
-                            <span className="font-bold text-slate-800">{productName}</span>
+                            {item.categoryName && <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest leading-none">{item.categoryName}</span>}
+                            <span className="font-bold text-slate-800 text-xs">{productName}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <span className="font-semibold text-slate-800">{meters.toFixed(2)} M</span>
-                          <span className="text-slate-400 ml-1 text-xs">/ {rolls} Roll</span>
+                        <td className="py-1.5 px-3 text-right whitespace-nowrap">
+                          <span className="font-semibold text-slate-800 text-xs">{meters.toFixed(2)} M</span>
+                          <span className="text-slate-400 ml-1 text-[10px]">/ {rolls} Roll</span>
                         </td>
-                        <td className="py-3.5 px-4 text-right font-semibold text-slate-600">
+                        <td className="py-1.5 px-3 text-right font-semibold text-slate-600 text-xs">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-black text-slate-900">
+                        <td className="py-1.5 px-3 text-right font-black text-slate-900 text-xs">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.subtotal as string || "0"))}
                         </td>
                       </tr>

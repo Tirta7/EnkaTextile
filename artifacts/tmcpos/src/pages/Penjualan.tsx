@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -180,11 +180,12 @@ export default function Penjualan() {
 
   const createMutation = useCreateSale({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
         setIsOpen(false);
         resetForm();
         toast({ title: "Penjualan berhasil dicatat" });
+        window.open(`/penjualan/print/${data.id}`, "_blank");
       }
     }
   });
@@ -295,14 +296,15 @@ export default function Penjualan() {
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right hidden md:table-cell">Terbayar</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(7).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
+                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
               ) : filtered?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     <ShoppingCart className="mx-auto mb-2 h-8 w-8 opacity-30" />
                     Belum ada penjualan
                   </TableCell>
@@ -320,6 +322,11 @@ export default function Penjualan() {
                       <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[s.status ?? "kredit"] || "bg-gray-100 text-gray-700"}`}>
                         {s.status}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => window.open(`/penjualan/print/${s.id}`, "_blank")} title="Cetak Nota">
+                        <Printer className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

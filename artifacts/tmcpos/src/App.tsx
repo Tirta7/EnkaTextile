@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
+import PrintInvoice from "@/pages/PrintInvoice";
 import Kategori from "@/pages/Kategori";
 import Barang from "@/pages/Barang";
 import Pelanggan from "@/pages/Pelanggan";
@@ -69,6 +70,7 @@ function Router() {
         <Route path="/pelanggan" component={Pelanggan} />
         <Route path="/supplier" component={Supplier} />
         <Route path="/penjualan" component={Penjualan} />
+        <Route path="/penjualan/print/:id" component={PrintInvoice} />
         <Route path="/pembelian" component={Pembelian} />
         <Route path="/mutasi" component={Mutasi} />
         <Route path="/piutang" component={Piutang} />

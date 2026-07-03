@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,13 +111,11 @@ export default function Pembelian() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Pembelian</h1>
-          <p className="text-muted-foreground mt-1">Catat dan kelola pembelian dari supplier.</p>
-        </div>
-        <Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Buat Pembelian</Button>
-      </div>
+      <PageHeader
+        title="Pembelian"
+        description="Catat dan kelola pembelian dari supplier."
+        actions={<Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Buat Pembelian</Button>}
+      />
 
       <Card>
         <CardHeader className="py-4 flex flex-col gap-3">

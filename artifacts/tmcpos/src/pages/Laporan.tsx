@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useGetSalesSummaryReport, useGetStockSummaryReport, getGetSalesSummaryReportQueryKey, getGetStockSummaryReportQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,10 +40,7 @@ export default function Laporan() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Laporan</h1>
-        <p className="text-muted-foreground mt-1">Analisa performa penjualan dan inventori.</p>
-      </div>
+      <PageHeader title="Laporan" description="Analisa performa penjualan dan inventori." />
 
       <Tabs defaultValue="penjualan">
         <TabsList className="grid w-full grid-cols-2 max-w-sm">

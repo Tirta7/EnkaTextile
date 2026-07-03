@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -302,13 +303,11 @@ export default function Penjualan() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Penjualan</h1>
-          <p className="text-muted-foreground mt-1">Catat dan kelola transaksi penjualan.</p>
-        </div>
-        <Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Buat Penjualan</Button>
-      </div>
+      <PageHeader
+        title="Penjualan"
+        description="Catat dan kelola transaksi penjualan."
+        actions={<Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Buat Penjualan</Button>}
+      />
 
       <Card>
         <CardHeader className="py-4 flex flex-col gap-3">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, getListSuppliersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,13 +55,11 @@ export default function Supplier() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Supplier</h1>
-          <p className="text-muted-foreground mt-1">Kelola data supplier dan hutang.</p>
-        </div>
-        <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Tambah Supplier</Button>
-      </div>
+      <PageHeader
+        title="Supplier"
+        description="Kelola data supplier dan hutang."
+        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Tambah Supplier</Button>}
+      />
 
       <Card>
         <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListCashEntries, useGetCashBalance, useCreateCashEntry, getListCashEntriesQueryKey, getGetCashBalanceQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,13 +70,11 @@ export default function BukuKas() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Buku Kas</h1>
-          <p className="text-muted-foreground mt-1">Catat pemasukan dan pengeluaran kas.</p>
-        </div>
-        <Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Catat Transaksi</Button>
-      </div>
+      <PageHeader
+        title="Buku Kas"
+        description="Catat pemasukan dan pengeluaran kas."
+        actions={<Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Catat Transaksi</Button>}
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="bg-primary/5 border-primary/20">

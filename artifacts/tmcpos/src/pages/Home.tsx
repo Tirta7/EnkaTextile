@@ -1,4 +1,5 @@
 import { useSettings } from "@/hooks/useSettings";
+import { PageHeader } from "../components/PageHeader";
 import { useLocation, Link } from "wouter";
 import { 
   Tags, Package2, UserCircle2, Building2, Receipt, ShoppingBasket, 

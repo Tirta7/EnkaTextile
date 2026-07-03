@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,15 +95,13 @@ export default function Kategori() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Kategori</h1>
-          <p className="text-muted-foreground mt-1">Kelola kategori barang.</p>
-        </div>
-        <Button onClick={openCreate}>
+      <PageHeader
+        title="Kategori"
+        description="Kelola kategori barang."
+        actions={<Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> Tambah Kategori
-        </Button>
-      </div>
+        </Button>}
+      />
 
       <Card>
         <CardHeader className="py-4 flex flex-row items-center justify-between">

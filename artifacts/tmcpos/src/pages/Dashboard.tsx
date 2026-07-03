@@ -1,4 +1,5 @@
 import { useGetDashboardSummary, useGetDashboardSalesChart, useGetDashboardRecentTransactions, useGetDashboardTopProducts, useGetDashboardReceivablesSummary, getGetDashboardSummaryQueryKey, getGetDashboardSalesChartQueryKey, getGetDashboardRecentTransactionsQueryKey, getGetDashboardTopProductsQueryKey, getGetDashboardReceivablesSummaryQueryKey } from "@workspace/api-client-react";
+import { PageHeader } from "../components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { cn, formatRupiah } from "@/lib/utils";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Clock, CreditCard, DollarSign, Package2, Receipt, ShoppingCart, TrendingDown, TrendingUp, Wallet } from "lucide-react";

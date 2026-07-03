@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListUsers, useCreateUser, useUpdateUser, useDeleteUser, getListUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,15 +117,13 @@ export default function Karyawan() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Karyawan</h1>
-          <p className="text-muted-foreground mt-1">Kelola akses akun dan role karyawan.</p>
-        </div>
-        <Button onClick={openCreate}>
+      <PageHeader
+        title="Karyawan"
+        description="Kelola akses akun dan role karyawan."
+        actions={<Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" /> Tambah Karyawan
-        </Button>
-      </div>
+        </Button>}
+      />
 
       <Card>
         <CardHeader className="py-4 flex flex-row items-center justify-between">

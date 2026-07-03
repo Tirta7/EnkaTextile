@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "../components/PageHeader";
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {

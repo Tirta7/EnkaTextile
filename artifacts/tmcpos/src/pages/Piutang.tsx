@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../components/PageHeader";
 import { useListReceivables, useAddReceivablePayment, getListReceivablesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,10 +72,7 @@ export default function Piutang() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Piutang</h1>
-        <p className="text-muted-foreground mt-1">Kelola tagihan dan pembayaran piutang pelanggan.</p>
-      </div>
+      <PageHeader title="Piutang" description="Kelola tagihan dan pembayaran piutang pelanggan." />
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>

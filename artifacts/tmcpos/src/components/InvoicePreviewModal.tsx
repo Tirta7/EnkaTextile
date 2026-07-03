@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { formatRupiah, formatDate, formatDateTime } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
@@ -176,11 +176,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* Note: sr-only DialogTitle added to resolve accessibility warnings */}
-        <DialogTitle className="sr-only">Preview Invoice</DialogTitle>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-white">
-          <div className="sticky top-0 bg-white/90 backdrop-blur-sm p-4 pt-12 sm:pt-4 border-b flex flex-col sm:flex-row gap-4 sm:gap-2 justify-between items-center z-50">
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {/* Note: sr-only DrawerTitle added to resolve accessibility warnings */}
+        <DrawerTitle className="sr-only">Preview Invoice</DrawerTitle>
+        <DrawerContent className="max-w-4xl mx-auto w-full max-h-[90vh] overflow-y-auto p-0 bg-white">
+          <div className="sticky top-0 bg-white/90 backdrop-blur-sm p-4 pt-6 sm:pt-4 border-b flex flex-col sm:flex-row gap-4 sm:gap-2 justify-between items-center z-50">
             <h2 className="text-lg font-semibold text-black">Preview Invoice</h2>
             <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
               <Button onClick={handleDownloadJPG} variant="outline" disabled={isDownloading} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
@@ -348,8 +348,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

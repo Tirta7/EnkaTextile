@@ -270,7 +270,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </div>
                 
                 <div className="w-[30%] text-center flex flex-col items-center">
-                  <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100 shadow-sm">
+                  <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100">
                     Nota Penjualan
                   </div>
                   <div className="flex flex-col items-center justify-center">
@@ -294,7 +294,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </div>
               
               {/* Table */}
-              <div className="rounded-xl border border-indigo-100 shadow-sm overflow-hidden mb-8 relative z-10 w-full min-w-[700px]">
+              <div className="rounded-xl border border-indigo-100 overflow-hidden mb-8 relative z-10 w-full min-w-[700px]">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
@@ -341,7 +341,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               <div className="flex justify-between items-start relative z-10 min-w-[700px]">
                 {/* Left side info (Payment / Transfer) */}
                 <div className="w-[45%]">
-                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
                       <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>
@@ -359,14 +359,14 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </div>
 
                 {/* Right side totals */}
-                <div className="w-[45%] bg-white rounded-xl border border-slate-200 p-0 shadow-sm overflow-hidden">
+                <div className="w-[45%] bg-white rounded-xl border border-slate-200 p-0 overflow-hidden">
                   <div className="p-4 bg-slate-50 border-b border-slate-200">
                     <div className="flex justify-between items-center text-slate-600">
                       <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas</span>
                       <span className="font-bold text-slate-800">{totalYds.toFixed(2)} M / {totalRolls} Roll</span>
                     </div>
                   </div>
-                  <div className="p-4 bg-indigo-600 text-white flex justify-between items-center shadow-inner">
+                  <div className="p-4 bg-indigo-600 text-white flex justify-between items-center">
                     <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">Grand Total</span>
                     <span className="font-black text-xl tracking-tight">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
                   </div>

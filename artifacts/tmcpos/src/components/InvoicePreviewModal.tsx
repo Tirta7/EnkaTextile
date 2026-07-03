@@ -2,7 +2,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { formatRupiah, formatDate, formatDateTime } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import * as htmlToImage from "html-to-image";
 import { Printer, Loader2, QrCode, Download } from "lucide-react";
 import { useGetSale, getGetSaleQueryKey } from "@workspace/api-client-react";
@@ -36,6 +36,54 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const { data: fetchedSale, isLoading } = useGetSale(saleId || 0, {
     query: { queryKey: getGetSaleQueryKey(saleId || 0), enabled: !!saleId && open }
   });
+
+  const displayData = data || fetchedSale;
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [scaledHeight, setScaledHeight] = useState<number | 'auto'>('auto');
+
+  useEffect(() => {
+    if (!open) return;
+    
+    const updateDimensions = () => {
+      if (containerRef.current && invoiceRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const invoiceWidth = 800; // The fixed width for the invoice
+        if (containerWidth > 0 && containerWidth < invoiceWidth) {
+          const newScale = containerWidth / invoiceWidth;
+          setScale(newScale);
+          setScaledHeight(invoiceRef.current.offsetHeight * newScale);
+        } else {
+          setScale(1);
+          setScaledHeight('auto');
+        }
+      }
+    };
+
+    // Delay slightly to ensure DOM is fully rendered before measuring
+    const timeoutId = setTimeout(updateDimensions, 50);
+    
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+    
+    if (invoiceRef.current) {
+      resizeObserver.observe(invoiceRef.current);
+    }
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    window.addEventListener('resize', updateDimensions);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateDimensions);
+      resizeObserver.disconnect();
+    };
+  }, [open, displayData]);
 
   const appName = settings?.["app_name"] || "ENKA TEXTILE";
   const appAddress = settings?.["app_address"] || "Jl. Raya Jrebengkembang, Kedolon Gang Griya Azzahra, Karangdadap Kab. Pekalongan";
@@ -182,8 +230,22 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div className="w-full overflow-x-auto pb-6">
-            <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-w-[800px] w-max mx-auto min-h-[400px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <div 
+            className="w-full flex justify-center overflow-hidden pb-6"
+            ref={containerRef}
+            style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}
+          >
+            <div 
+              id="printable-invoice" 
+              ref={invoiceRef}
+              className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] origin-top-left sm:origin-top" 
+              style={{ 
+                fontFamily: "'Inter', sans-serif",
+                width: '800px',
+                minWidth: '800px',
+                transform: `scale(${scale})`
+              }}
+            >
               {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />

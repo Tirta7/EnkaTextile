@@ -65,6 +65,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             margin: 0;
             padding: 0;
             background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           @page { margin: 0.5cm; }
         }
@@ -81,7 +83,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </Button>
           </div>
           
-          <div id="printable-invoice" className="p-8 text-black bg-white min-h-[400px]" style={{ fontFamily: "Arial, sans-serif" }}>
+          <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px]" style={{ fontFamily: "'Inter', sans-serif" }}>
             {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -89,37 +91,40 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             ) : !displayData ? (
               <div className="text-center pt-12 text-muted-foreground">Data tidak tersedia</div>
             ) : (
-            <div className="max-w-4xl mx-auto text-[13px] leading-tight">
+            <div className="max-w-4xl mx-auto text-[13px] leading-relaxed">
               {/* Header */}
-              <div className="flex justify-between items-start mb-4">
-                <div className="w-[30%] text-center">
-                  <h1 className="font-bold text-[15px]">{appName}</h1>
-                  <p className="whitespace-pre-line">{appAddress.replace(/, /g, ",\n")}</p>
+              <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-200">
+                <div className="w-[35%]">
+                  <h1 className="font-extrabold text-xl tracking-tight text-slate-900 mb-1">{appName}</h1>
+                  <p className="text-slate-500 whitespace-pre-line text-xs">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
-                <div className="w-[30%] text-center">
-                  <h2 className="font-bold text-[15px] underline underline-offset-2">NOTA PENJUALAN</h2>
-                  <p className="mt-1">No. {displayData.invoiceNumber || "DRAFT"}</p>
+                <div className="w-[30%] text-center flex flex-col items-center">
+                  <div className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full font-bold text-xs tracking-widest mb-2 uppercase">
+                    Nota Penjualan
+                  </div>
+                  <p className="text-slate-900 font-semibold text-[15px]">No. {displayData.invoiceNumber || "DRAFT"}</p>
                 </div>
                 
-                <div className="w-[30%] text-center">
-                  <p>Pekalongan, {formatDate(displayData.createdAt || new Date().toISOString())}</p>
-                  <p className="mt-1">KEPADA YTH</p>
-                  <p className="font-bold">{displayData.customerName || "UMUM"}</p>
+                <div className="w-[35%] text-right text-xs">
+                  <p className="text-slate-500 mb-2">Pekalongan, <span className="text-slate-900 font-medium">{formatDate(displayData.createdAt || new Date().toISOString())}</span></p>
+                  <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider mb-0.5">Kepada Yth</p>
+                  <p className="font-bold text-slate-900 text-sm">{displayData.customerName || "UMUM"}</p>
                 </div>
               </div>
               
               {/* Table */}
-              <table className="w-full mb-2 border-y-2 border-black border-collapse">
-                <thead>
-                  <tr className="border-b border-black">
-                    <th className="py-2 text-left font-normal w-12">NO</th>
-                    <th className="py-2 text-left font-normal">NAMA BARANG</th>
-                    <th className="py-2 text-right font-normal">JUMLAH</th>
-                    <th className="py-2 text-right font-normal">HARGA</th>
-                    <th className="py-2 text-right font-normal">JUMLAH</th>
-                  </tr>
-                </thead>
+              <div className="rounded-lg border border-slate-200 overflow-hidden mb-6">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider w-12 text-center">No</th>
+                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider">Nama Barang</th>
+                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Kuantitas</th>
+                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Harga</th>
+                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Total</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {displayData.items.map((item: any, index: number) => {
                     const meters = parseFloat(item.meters as string || "0");
@@ -128,63 +133,73 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     const productName = item.productName?.toUpperCase() || "";
                     
                     return (
-                      <tr key={index} className="align-top border-b border-gray-100 last:border-0">
-                        <td className="py-2 text-left">{index + 1}</td>
-                        <td className="py-2 text-left font-medium">
-                          {categoryPrefix}{productName}
+                      <tr key={index} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3 px-4 text-center text-slate-500">{index + 1}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col">
+                            {item.categoryName && <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">{item.categoryName}</span>}
+                            <span className="font-semibold text-slate-800">{productName}</span>
+                          </div>
                         </td>
-                        <td className="py-2 text-right whitespace-nowrap">
-                          {meters.toFixed(2)} M / {rolls} ROLL
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <span className="font-medium text-slate-700">{meters.toFixed(2)} M</span>
+                          <span className="text-slate-400 ml-1 text-xs">/ {rolls} Roll</span>
                         </td>
-                        <td className="py-2 text-right">
+                        <td className="py-3 px-4 text-right font-medium text-slate-700">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
                         </td>
-                        <td className="py-2 text-right">
+                        <td className="py-3 px-4 text-right font-bold text-slate-900">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.subtotal as string || "0"))}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-                <tfoot>
-                  <tr className="border-t border-black">
-                    <td colSpan={2} className="py-2"></td>
-                    <td className="py-2 text-right font-semibold">
-                      {totalYds.toFixed(2)} M / {totalRolls} ROLL
-                    </td>
-                    <td className="py-2 text-right">Grand Total</td>
-                    <td className="py-2 text-right font-semibold">{new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3} className="py-1"></td>
-                    <td className="py-1 text-right">Di Bayar</td>
-                    <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={3} className="py-1"></td>
-                    <td className="py-1 text-right">Sisa Bayar</td>
-                    <td className="py-1 text-right">{new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</td>
-                  </tr>
-                </tfoot>
-              </table>
-              
-              {/* Footer Signatures & Info */}
-              <div className="flex justify-between items-start mt-8">
-                <div className="flex gap-24">
-                  <div className="text-center w-32">
-                    <p className="mb-16">Tanda Terima</p>
-                    <p className="border-b border-black border-dotted">&nbsp;</p>
+                </table>
+              </div>
+              {/* Totals Section */}
+              <div className="flex justify-between items-start">
+                {/* Left side info (Payment / Transfer) */}
+                <div className="w-[45%]">
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+                    <p className="text-blue-900 font-semibold mb-1 text-xs">Informasi Pembayaran (Transfer)</p>
+                    <p className="text-blue-800 text-[13px] font-medium font-mono">BCA - 2384564444</p>
+                    <p className="text-blue-700 text-xs mt-0.5">A.n Spectra Jaya Fashion PT</p>
                   </div>
-                  <div className="text-center w-32">
-                    <p className="mb-16">Hormat Kami</p>
-                    <p className="border-b border-black border-dotted">&nbsp;</p>
+                </div>
+
+                {/* Right side totals */}
+                <div className="w-[45%] bg-slate-50 rounded-lg border border-slate-200 p-4">
+                  <div className="flex justify-between items-center mb-2 text-slate-600">
+                    <span>Total Kuantitas</span>
+                    <span className="font-semibold text-slate-800">{totalYds.toFixed(2)} M / {totalRolls} Roll</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-4 text-slate-600 pb-4 border-b border-slate-200">
+                    <span>Grand Total</span>
+                    <span className="font-bold text-slate-900 text-base">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2 text-slate-600">
+                    <span>Di Bayar</span>
+                    <span className="font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-600">
+                    <span>Sisa Bayar</span>
+                    <span className="font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</span>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-8 text-[12px]">
-                <p>Transfer :</p>
-                <p>BCA-2384564444 An. Spectra Jaya Fashion PT</p>
+              {/* Footer Signatures */}
+              <div className="flex justify-end gap-16 mt-12 pr-4">
+                <div className="text-center w-32 flex flex-col items-center">
+                  <p className="text-slate-500 text-xs mb-16">Tanda Terima</p>
+                  <div className="border-b border-slate-300 w-full"></div>
+                </div>
+                <div className="text-center w-32 flex flex-col items-center">
+                  <p className="text-slate-500 text-xs mb-16">Hormat Kami</p>
+                  <div className="border-b border-slate-300 w-full"></div>
+                  <p className="text-slate-400 text-[10px] mt-1">{appName}</p>
+                </div>
               </div>
               
             </div>

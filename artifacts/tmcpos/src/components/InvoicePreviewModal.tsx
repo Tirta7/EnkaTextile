@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
-import { Printer, Loader2 } from "lucide-react";
+import { Printer, Loader2, QrCode } from "lucide-react";
 import { useGetSale, getGetSaleQueryKey } from "@workspace/api-client-react";
 
 export type InvoicePreviewData = {
@@ -46,6 +46,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
   const totalYds = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
   const totalRolls = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
+  
+  const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0;
 
   return (
     <>
@@ -91,38 +93,50 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             ) : !displayData ? (
               <div className="text-center pt-12 text-muted-foreground">Data tidak tersedia</div>
             ) : (
-            <div className="max-w-4xl mx-auto text-[13px] leading-relaxed">
+            <div className="max-w-4xl mx-auto text-[13px] leading-relaxed relative">
+              {/* Watermark for Paid */}
+              {isPaid && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] z-0">
+                  <div className="transform -rotate-45 text-9xl font-black text-green-600 border-8 border-green-600 rounded-2xl p-8 uppercase tracking-widest">
+                    Lunas
+                  </div>
+                </div>
+              )}
+
               {/* Header */}
-              <div className="flex justify-between items-start mb-8 pb-6 border-b border-slate-200">
+              <div className="flex justify-between items-start mb-8 pb-8 border-b-2 border-indigo-100 relative z-10">
                 <div className="w-[35%]">
-                  <h1 className="font-extrabold text-xl tracking-tight text-slate-900 mb-1">{appName}</h1>
-                  <p className="text-slate-500 whitespace-pre-line text-xs">{appAddress.replace(/, /g, ",\n")}</p>
+                  <h1 className="font-black text-2xl tracking-tighter text-indigo-900 mb-2 uppercase">{appName}</h1>
+                  <p className="text-slate-500 whitespace-pre-line text-xs leading-relaxed">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
                 <div className="w-[30%] text-center flex flex-col items-center">
-                  <div className="bg-slate-100 text-slate-700 px-4 py-1.5 rounded-full font-bold text-xs tracking-widest mb-2 uppercase">
+                  <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100 shadow-sm">
                     Nota Penjualan
                   </div>
-                  <p className="text-slate-900 font-semibold text-[15px]">No. {displayData.invoiceNumber || "DRAFT"}</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <QrCode className="w-5 h-5 text-indigo-400" />
+                    <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
+                  </div>
                 </div>
                 
                 <div className="w-[35%] text-right text-xs">
-                  <p className="text-slate-500 mb-2">Pekalongan, <span className="text-slate-900 font-medium">{formatDate(displayData.createdAt || new Date().toISOString())}</span></p>
-                  <p className="text-slate-400 font-medium text-[10px] uppercase tracking-wider mb-0.5">Kepada Yth</p>
-                  <p className="font-bold text-slate-900 text-sm">{displayData.customerName || "UMUM"}</p>
+                  <p className="text-slate-500 mb-3 text-[11px]">Tanggal: <span className="text-slate-900 font-semibold">{formatDate(displayData.createdAt || new Date().toISOString())}</span></p>
+                  <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-1">Kepada Yth.</p>
+                  <p className="font-extrabold text-slate-900 text-[15px]">{displayData.customerName || "UMUM"}</p>
                 </div>
               </div>
               
               {/* Table */}
-              <div className="rounded-lg border border-slate-200 overflow-hidden mb-6">
+              <div className="rounded-xl border border-indigo-100 shadow-sm overflow-hidden mb-8 relative z-10">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-gradient-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
-                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider w-12 text-center">No</th>
-                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider">Nama Barang</th>
-                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Kuantitas</th>
-                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Harga</th>
-                      <th className="py-3 px-4 font-semibold text-slate-600 text-[11px] uppercase tracking-wider text-right">Total</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-12 text-center">No</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest">Nama Barang</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Kuantitas</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Harga</th>
+                      <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Total</th>
                     </tr>
                   </thead>
                 <tbody>
@@ -134,21 +148,21 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     
                     return (
                       <tr key={index} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-3 px-4 text-center text-slate-500">{index + 1}</td>
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4 text-center text-slate-400 font-medium">{index + 1}</td>
+                        <td className="py-3.5 px-4">
                           <div className="flex flex-col">
-                            {item.categoryName && <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">{item.categoryName}</span>}
-                            <span className="font-semibold text-slate-800">{productName}</span>
+                            {item.categoryName && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-0.5">{item.categoryName}</span>}
+                            <span className="font-bold text-slate-800">{productName}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          <span className="font-medium text-slate-700">{meters.toFixed(2)} M</span>
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <span className="font-semibold text-slate-800">{meters.toFixed(2)} M</span>
                           <span className="text-slate-400 ml-1 text-xs">/ {rolls} Roll</span>
                         </td>
-                        <td className="py-3 px-4 text-right font-medium text-slate-700">
+                        <td className="py-3.5 px-4 text-right font-semibold text-slate-600">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-900">
+                        <td className="py-3.5 px-4 text-right font-black text-slate-900">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.subtotal as string || "0"))}
                         </td>
                       </tr>
@@ -158,33 +172,40 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </table>
               </div>
               {/* Totals Section */}
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start relative z-10">
                 {/* Left side info (Payment / Transfer) */}
                 <div className="w-[45%]">
-                  <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
-                    <p className="text-blue-900 font-semibold mb-1 text-xs">Informasi Pembayaran (Transfer)</p>
-                    <p className="text-blue-800 text-[13px] font-medium font-mono">BCA - 2384564444</p>
-                    <p className="text-blue-700 text-xs mt-0.5">A.n Spectra Jaya Fashion PT</p>
+                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
+                      <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>
+                    </div>
+                    <p className="text-indigo-800 text-[14px] font-bold font-mono tracking-wider mt-2">BCA - 2384564444</p>
+                    <p className="text-indigo-600 text-xs mt-1 font-medium">A.n Spectra Jaya Fashion PT</p>
                   </div>
                 </div>
 
                 {/* Right side totals */}
-                <div className="w-[45%] bg-slate-50 rounded-lg border border-slate-200 p-4">
-                  <div className="flex justify-between items-center mb-2 text-slate-600">
-                    <span>Total Kuantitas</span>
-                    <span className="font-semibold text-slate-800">{totalYds.toFixed(2)} M / {totalRolls} Roll</span>
+                <div className="w-[45%] bg-white rounded-xl border border-slate-200 p-0 shadow-sm overflow-hidden">
+                  <div className="p-4 bg-slate-50 border-b border-slate-200">
+                    <div className="flex justify-between items-center text-slate-600">
+                      <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas</span>
+                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} M / {totalRolls} Roll</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center mb-4 text-slate-600 pb-4 border-b border-slate-200">
-                    <span>Grand Total</span>
-                    <span className="font-bold text-slate-900 text-base">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
+                  <div className="p-4 bg-indigo-600 text-white flex justify-between items-center shadow-inner">
+                    <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">Grand Total</span>
+                    <span className="font-black text-xl tracking-tight">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
                   </div>
-                  <div className="flex justify-between items-center mb-2 text-slate-600">
-                    <span>Di Bayar</span>
-                    <span className="font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-slate-600">
-                    <span>Sisa Bayar</span>
-                    <span className="font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</span>
+                  <div className="p-4 bg-white">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-slate-500 font-medium text-xs">Di Bayar</span>
+                      <span className="font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-medium text-xs">Sisa Bayar</span>
+                      <span className="font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</span>
+                    </div>
                   </div>
                 </div>
               </div>

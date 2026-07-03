@@ -47,7 +47,49 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const displayData = data || fetchedSale;
 
   const handlePrint = () => {
-    window.print();
+    const printContent = document.getElementById("printable-invoice");
+    if (!printContent) return;
+    
+    // Create a temporary div for printing
+    const printContainer = document.createElement("div");
+    printContainer.id = "print-container-temp";
+    printContainer.appendChild(printContent.cloneNode(true));
+    document.body.appendChild(printContainer);
+    
+    // Add a style to hide everything else
+    const style = document.createElement("style");
+    style.id = "print-style-temp";
+    style.innerHTML = `
+      @media print {
+        body > *:not(#print-container-temp) {
+          display: none !important;
+        }
+        body {
+          background: white;
+        }
+        #print-container-temp {
+          display: block !important;
+          width: 100%;
+          position: absolute;
+          left: 0;
+          top: 0;
+          margin: 0;
+          padding: 0;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        @page { margin: 0.5cm; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Small delay to ensure styles are applied
+    setTimeout(() => {
+      window.print();
+      // Cleanup
+      document.body.removeChild(printContainer);
+      document.head.removeChild(style);
+    }, 100);
   };
 
   const [isDownloading, setIsDownloading] = useState(false);
@@ -89,29 +131,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
   return (
     <>
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-invoice, #printable-invoice * {
-            visibility: visible;
-          }
-          #printable-invoice {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          @page { margin: 0.5cm; }
-        }
-      `}</style>
-      
       <Dialog open={open} onOpenChange={onOpenChange}>
         {/* Note: sr-only DialogTitle added to resolve accessibility warnings */}
         <DialogTitle className="sr-only">Preview Invoice</DialogTitle>

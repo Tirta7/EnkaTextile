@@ -92,7 +92,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const invoiceBankAccount = settings?.["invoice_bank_account"] || "BCA - 2384564444";
   const invoiceNotes = settings?.["invoice_notes"] || "";
 
-  const displayData = data || fetchedSale;
 
   const handlePrint = () => {
     const printContent = document.getElementById("printable-invoice");

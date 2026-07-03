@@ -114,16 +114,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           margin: 1cm 0.5cm; /* Adjust for continuous form tractor feed */
         }
       }
-      
-      /* Mobile Zoom for exact PC layout preview */
-      @media screen and (max-width: 800px) {
-        #printable-invoice {
-          width: 800px !important;
-          max-width: 800px !important;
-          /* Automatically calculate scale based on screen width (with some padding) */
-          zoom: calc(100vw / 830) !important; 
-        }
-      }
     `;
     document.head.appendChild(style);
     
@@ -144,9 +134,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     
     setIsDownloading(true);
     try {
-      // Temporarily remove zoom for high-res download
-      element.style.setProperty('zoom', '1', 'important');
-      
       // Small delay to ensure all fonts/styles are loaded before rendering
       await new Promise((resolve) => setTimeout(resolve, 100));
       
@@ -167,7 +154,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     } catch (error) {
       console.error("Failed to generate image", error);
     } finally {
-      element.style.removeProperty('zoom');
       setIsDownloading(false);
     }
   };
@@ -196,8 +182,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] mx-auto" style={{ fontFamily: "'Inter', sans-serif" }}>
-            {isLoading && !data ? (
+          <div className="w-full overflow-x-auto pb-6">
+            <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-w-[800px] w-max mx-auto min-h-[400px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>

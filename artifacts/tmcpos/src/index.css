@@ -165,6 +165,70 @@
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
 
+/* Responsive Mobile Tables (Card Layout) */
+@media (max-width: 767px) {
+  .responsive-table {
+    display: block;
+    width: 100%;
+  }
+  .responsive-table thead {
+    display: none;
+  }
+  .responsive-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+  .responsive-table tr {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    background: hsl(var(--card));
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  .responsive-table tr:hover {
+    background: hsl(var(--card));
+  }
+  .responsive-table td {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    text-align: right;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1px dashed hsl(var(--border));
+    width: 100%;
+    gap: 1rem;
+  }
+  .responsive-table td:last-child {
+    border-bottom: none;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 0.85em;
+    color: hsl(var(--muted-foreground));
+    text-align: left;
+    flex-shrink: 0;
+    max-width: 45%;
+  }
+  /* Handle single actions (buttons) or cells without labels */
+  .responsive-table td:has(> button.w-full),
+  .responsive-table td[data-label=""] {
+    justify-content: center;
+    background: hsl(var(--muted) / 0.3);
+  }
+  .responsive-table td[data-label=""]::before {
+    display: none;
+  }
+  .responsive-table td > * {
+    max-width: 100%;
+  }
+}
+
 /* Premium Banner Animation */
 @keyframes gradient-move {
   0% { background-position: 0% 50%; }

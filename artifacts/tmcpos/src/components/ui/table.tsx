@@ -5,15 +5,62 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
->(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
-      {...props}
-    />
-  </div>
-))
+>(({ className, ...props }, ref) => {
+  const innerRef = React.useRef<HTMLTableElement>(null);
+  
+  // Set up both refs
+  const setRef = React.useCallback(
+    (node: HTMLTableElement | null) => {
+      innerRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    },
+    [ref]
+  );
+
+  React.useEffect(() => {
+    if (!innerRef.current) return;
+    const table = innerRef.current;
+    
+    // Auto-inject data-label for mobile card layouts
+    const updateLabels = () => {
+      const headers = Array.from(table.querySelectorAll("thead th")).map(
+        (th) => th.textContent || ""
+      );
+      const rows = Array.from(table.querySelectorAll("tbody tr"));
+      
+      rows.forEach((row) => {
+        const cells = Array.from(row.querySelectorAll("td"));
+        cells.forEach((cell, index) => {
+          if (headers[index] !== undefined && !cell.hasAttribute("data-label")) {
+            cell.setAttribute("data-label", headers[index]);
+          }
+        });
+      });
+    };
+
+    updateLabels();
+
+    // Observe changes to the table (e.g., new rows loaded asynchronously)
+    const observer = new MutationObserver(updateLabels);
+    observer.observe(table, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="relative w-full overflow-hidden md:overflow-auto rounded-lg">
+      <table
+        ref={setRef}
+        className={cn("w-full caption-bottom text-sm responsive-table", className)}
+        {...props}
+      />
+    </div>
+  );
+})
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef<

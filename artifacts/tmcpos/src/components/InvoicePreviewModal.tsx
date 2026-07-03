@@ -2,7 +2,9 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
-import { Printer, Loader2, QrCode } from "lucide-react";
+import { useState } from "react";
+import html2canvas from "html2canvas";
+import { Printer, Loader2, QrCode, Download } from "lucide-react";
 import { useGetSale, getGetSaleQueryKey } from "@workspace/api-client-react";
 
 export type InvoicePreviewData = {
@@ -48,6 +50,32 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     window.print();
   };
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadJPG = async () => {
+    const element = document.getElementById("printable-invoice");
+    if (!element) return;
+    
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2, // High resolution for better text clarity
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+      
+      const image = canvas.toDataURL("image/jpeg", 0.9);
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = `Invoice-${displayData?.invoiceNumber || "Draft"}.jpg`;
+      link.click();
+    } catch (error) {
+      console.error("Failed to generate image", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const totalYds = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
   const totalRolls = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
   
@@ -84,9 +112,15 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto p-0 bg-white">
           <div className="sticky top-0 bg-white/90 backdrop-blur-sm p-4 border-b flex justify-between items-center z-10">
             <h2 className="text-lg font-semibold text-black">Preview Invoice</h2>
-            <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Printer className="w-4 h-4 mr-2" /> Cetak Sekarang
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleDownloadJPG} variant="outline" disabled={isDownloading} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
+                {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Download JPG
+              </Button>
+              <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Printer className="w-4 h-4 mr-2" /> Cetak Sekarang
+              </Button>
+            </div>
           </div>
           
           <div id="printable-invoice" className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px]" style={{ fontFamily: "'Inter', sans-serif" }}>

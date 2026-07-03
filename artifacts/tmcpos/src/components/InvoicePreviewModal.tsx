@@ -338,6 +338,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
             )}
           </div>
+          </div>
         </DrawerContent>
       </Drawer>
     </>

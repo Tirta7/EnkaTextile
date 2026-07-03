@@ -40,11 +40,16 @@ export default function Home() {
       
       {/* Banner */}
       <div 
-        className="w-full rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(59,130,246,0.3)] border border-blue-500/20"
-        style={{ background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)" }}
+        className="w-full rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-[0_8px_30px_rgb(139,92,246,0.25)] border border-white/10 animate-gradient relative overflow-hidden"
+        style={{ background: "linear-gradient(45deg, #1d4ed8, #8b5cf6, #1e40af, #6d28d9)" }}
       >
-        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-[0.05em] drop-shadow-md">{appName}</h1>
-        <p className="text-white/80 text-xs sm:text-sm tracking-wide font-medium">{appAddress}</p>
+        {/* Subtle glass overlay inside banner */}
+        <div className="absolute inset-0 bg-white/5 backdrop-blur-[2px]" />
+        
+        <div className="relative z-10">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-[0.05em] drop-shadow-lg">{appName}</h1>
+          <p className="text-white/90 text-xs sm:text-sm tracking-wide font-medium drop-shadow-md">{appAddress}</p>
+        </div>
       </div>
 
       {/* Menu Grid */}

@@ -83,18 +83,26 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         #print-container-temp * {
           color: #000 !important;
           background: transparent !important;
-          border-color: #000 !important;
           box-shadow: none !important;
           border-radius: 0 !important;
         }
         
-        /* Ensure table lines are crisp */
-        #print-container-temp table, 
-        #print-container-temp th, 
-        #print-container-temp td,
+        /* Remove unnecessary box borders */
+        #print-container-temp .border,
+        #print-container-temp .border-[1.5px] {
+          border: none !important;
+        }
+        
+        /* Keep and crisp horizontal separators and table rows */
         #print-container-temp .border-b,
-        #print-container-temp .border {
+        #print-container-temp .border-b-2,
+        #print-container-temp .border-t {
           border-color: #000 !important;
+        }
+        
+        /* Specific borders to keep */
+        #print-container-temp .lunas-stamp {
+          border: 2px solid #000 !important;
         }
 
         /* Hide giant watermark for dot matrix so it doesn't obstruct text */
@@ -209,7 +217,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
                     </div>
                     {isPaid && (
-                      <div className="mt-2 inline-block border-[1.5px] border-green-600 text-green-600 px-3 py-1 font-black text-[10px] tracking-widest uppercase rounded">
+                      <div className="lunas-stamp mt-2 inline-block border-[1.5px] border-green-600 text-green-600 px-3 py-1 font-black text-[10px] tracking-widest uppercase rounded">
                         LUNAS
                       </div>
                     )}

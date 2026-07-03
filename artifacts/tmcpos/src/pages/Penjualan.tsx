@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer } from "lucide-react";
@@ -372,9 +372,10 @@ export default function Penjualan() {
         </CardContent>
       </Card>
 
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DialogContent className="max-w-6xl w-[95vw] md:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader><DialogTitle>Buat Penjualan Baru</DialogTitle></DialogHeader>
+      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader><DrawerTitle>Buat Penjualan Baru</DrawerTitle></DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">
               <span className="text-sm font-medium text-muted-foreground">No. Invoice:</span>
@@ -449,15 +450,16 @@ export default function Penjualan() {
               </div>
             )}
           </div>
-          <DialogFooter className="mt-4 flex flex-wrap gap-2 justify-between items-center sm:justify-end">
+          </div>
+          <DrawerFooter className="mt-4 px-0 flex flex-wrap gap-2 justify-between items-center sm:justify-end">
             <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto sm:mr-4">
               <Printer className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+            <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
       
       <InvoicePreviewModal open={previewOpen} onOpenChange={setPreviewOpen} data={previewData} saleId={previewSaleId} />
     </div>

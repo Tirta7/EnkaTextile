@@ -28,10 +28,10 @@ import { useSettings } from "@/hooks/useSettings";
 const navigation = [
   {
     title: "Overview",
-    requiredRoles: ["admin"],
+    requiredRoles: ["admin", "kasir"],
     items: [
-      { name: "Menu Utama", href: "/", icon: Home },
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Menu Utama", href: "/", icon: Home, requiredRoles: ["admin", "kasir"] },
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, requiredRoles: ["admin"] },
     ]
   },
   {
@@ -156,7 +156,9 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
                   {group.title}
                 </h4>
                 <div className="space-y-0.5">
-                  {group.items.map((item) => {
+                  {group.items
+                    .filter(item => !item.requiredRoles || item.requiredRoles.includes(user?.role as string || 'admin'))
+                    .map((item) => {
                     const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
                     return (
                       <Link key={item.name} href={item.href} onClick={() => setOpen(false)}>

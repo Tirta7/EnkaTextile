@@ -61,9 +61,8 @@ function Router() {
   return (
     <AppLayout>
       <Switch>
-        {isAdmin && <Route path="/" component={Home} />}
+        <Route path="/" component={Home} />
         {isAdmin && <Route path="/dashboard" component={Dashboard} />}
-        {!isAdmin && <Route path="/" component={() => <Redirect to="/penjualan" />} />}
         
         <Route path="/kategori" component={Kategori} />
         <Route path="/barang" component={Barang} />

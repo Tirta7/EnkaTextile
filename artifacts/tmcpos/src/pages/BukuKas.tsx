@@ -203,7 +203,7 @@ export default function BukuKas() {
                 </FormItem>
               )} />
               <DrawerFooter className="px-0 pt-4 flex-row gap-2">
-                <Button type="button" variant="ghost" className="text-muted-foreground flex-1" onClick={() => setIsOpen(false)}>Batal</Button>
+                <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => setIsOpen(false)}>Batal</Button>
                 <Button type="submit" className="flex-1" disabled={createMutation.isPending}>Simpan</Button>
               </DrawerFooter>
             </form>

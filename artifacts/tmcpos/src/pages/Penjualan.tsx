@@ -455,7 +455,7 @@ export default function Penjualan() {
             <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto">
               <Printer className="h-4 w-4" />
             </Button>
-            <Button type="button" variant="ghost" className="text-muted-foreground flex-1" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+            <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
             <Button className="flex-1" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
           </DrawerFooter>
         </DrawerContent>

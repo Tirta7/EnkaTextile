@@ -159,12 +159,6 @@
   }
 }
 
-/* Fix for Radix UI Select preventing scroll inside Vaul Drawer on touch devices */
-body[data-scroll-locked] {
-  overflow: visible !important;
-  pointer-events: auto !important;
-}
-
 /* Premium scrollbar */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

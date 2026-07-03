@@ -50,6 +50,7 @@ export default function Pengaturan() {
 
   const [isEnablingPush, setIsEnablingPush] = useState(false);
   const [appNameInput, setAppNameInput] = useState("");
+  const [appAddressInput, setAppAddressInput] = useState("");
   const [appLogoInput, setAppLogoInput] = useState("");
   
   const { data: settings, isLoading: isLoadingSettings } = useSettings();
@@ -61,6 +62,9 @@ export default function Pengaturan() {
     if (settings && !isInitialized) {
       if (settings["app_name"]) {
         setAppNameInput(settings["app_name"]);
+      }
+      if (settings["app_address"]) {
+        setAppAddressInput(settings["app_address"]);
       }
       if (settings["app_logo"]) {
         setAppLogoInput(settings["app_logo"]);
@@ -87,7 +91,7 @@ export default function Pengaturan() {
   const handleSaveSettings = () => {
     if (!appNameInput.trim()) return;
     updateSettingsMutation.mutate(
-      { app_name: appNameInput.trim(), app_logo: appLogoInput },
+      { app_name: appNameInput.trim(), app_address: appAddressInput.trim(), app_logo: appLogoInput },
       {
         onSuccess: () => toast({ title: "Pengaturan Utama disimpan!" }),
         onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
@@ -284,6 +288,16 @@ export default function Pengaturan() {
                 value={appNameInput} 
                 onChange={(e) => setAppNameInput(e.target.value)} 
                 placeholder="mis: Enka Textile POS" 
+                disabled={isLoadingSettings}
+              />
+            </div>
+            
+            <div className="space-y-1.5 w-full sm:max-w-sm">
+              <Label>Alamat Toko</Label>
+              <Input 
+                value={appAddressInput} 
+                onChange={(e) => setAppAddressInput(e.target.value)} 
+                placeholder="mis: Jl. Jend. Sudirman No. 1" 
                 disabled={isLoadingSettings}
               />
             </div>

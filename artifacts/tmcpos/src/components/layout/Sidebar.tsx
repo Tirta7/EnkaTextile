@@ -17,6 +17,7 @@ import {
   X,
   Settings,
   LogOut,
+  Home,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,7 +30,8 @@ const navigation = [
     title: "Overview",
     requiredRoles: ["admin"],
     items: [
-      { name: "Dashboard", href: "/", icon: LayoutDashboard },
+      { name: "Menu Utama", href: "/", icon: Home },
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     ]
   },
   {

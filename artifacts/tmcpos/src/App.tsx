@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
+import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Kategori from "@/pages/Kategori";
 import Barang from "@/pages/Barang";
@@ -60,7 +61,8 @@ function Router() {
   return (
     <AppLayout>
       <Switch>
-        {isAdmin && <Route path="/" component={Dashboard} />}
+        {isAdmin && <Route path="/" component={Home} />}
+        {isAdmin && <Route path="/dashboard" component={Dashboard} />}
         {!isAdmin && <Route path="/" component={() => <Redirect to="/penjualan" />} />}
         
         <Route path="/kategori" component={Kategori} />

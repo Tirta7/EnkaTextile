@@ -85,6 +85,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
           background: transparent !important;
           border-color: #000 !important;
           box-shadow: none !important;
+          border-radius: 0 !important;
         }
         
         /* Ensure table lines are crisp */

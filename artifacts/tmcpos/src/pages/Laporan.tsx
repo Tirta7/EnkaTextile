@@ -114,7 +114,7 @@ export default function Laporan() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Produk</TableHead>
-                            <TableHead className="text-right">Qty (m)</TableHead>
+                            <TableHead className="text-right">Qty (Utama)</TableHead>
                             <TableHead className="text-right">Revenue</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -198,8 +198,8 @@ export default function Laporan() {
                       <TableRow>
                         <TableHead>Nama Barang</TableHead>
                         <TableHead>Kategori</TableHead>
-                        <TableHead className="text-right">Stok Roll</TableHead>
-                        <TableHead className="text-right">Stok Meter</TableHead>
+                        <TableHead className="text-right">Stok Tambahan</TableHead>
+                        <TableHead className="text-right">Stok Utama</TableHead>
                         <TableHead className="text-right">Min. Stok</TableHead>
                         <TableHead className="text-right">Nilai</TableHead>
                         <TableHead>Status</TableHead>
@@ -210,8 +210,8 @@ export default function Laporan() {
                         <TableRow key={p.id} className={p.isLowStock ? "bg-amber-50/50 dark:bg-amber-900/10" : ""}>
                           <TableCell className="font-medium">{p.name}</TableCell>
                           <TableCell className="text-muted-foreground">{p.categoryName || "-"}</TableCell>
-                          <TableCell className="text-right">{formatNumber(p.rollStock)}</TableCell>
-                          <TableCell className="text-right">{formatNumber(p.meterStock)}</TableCell>
+                          <TableCell className="text-right">{formatNumber(p.rollStock)} {p.secondaryUnit?.toLowerCase() || ""}</TableCell>
+                          <TableCell className="text-right">{formatNumber(p.meterStock)} {p.primaryUnit?.toLowerCase() || ""}</TableCell>
                           <TableCell className="text-right text-muted-foreground">{formatNumber(p.minStock)}</TableCell>
                           <TableCell className="text-right font-medium">{formatRupiah(p.stockValue)}</TableCell>
                           <TableCell>

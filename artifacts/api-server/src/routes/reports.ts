@@ -25,20 +25,61 @@ router.get("/reports/sales-summary", async (req, res) => {
 
   const [itemsSummary] = await db
     .select({
-      totalRolls: sql<string>`coalesce(sum(si.rolls), 0)`,
-      totalMeters: sql<string>`coalesce(sum(si.meters), 0)`,
+      totalRolls: sql<string>`coalesce(sum(${saleItemsTable.rolls}), 0)`,
+      totalMeters: sql<string>`coalesce(sum(${saleItemsTable.meters}), 0)`,
     })
     .from(saleItemsTable)
     .leftJoin(salesTable, eq(saleItemsTable.saleId, salesTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
+  const byProduct = await db
+    .select({
+      productId: saleItemsTable.productId,
+      productName: productsTable.name,
+      totalMeters: sql<string>`coalesce(sum(${saleItemsTable.meters}), 0)`,
+      totalRevenue: sql<string>`coalesce(sum(${saleItemsTable.subtotal}), 0)`,
+    })
+    .from(saleItemsTable)
+    .leftJoin(salesTable, eq(saleItemsTable.saleId, salesTable.id))
+    .leftJoin(productsTable, eq(saleItemsTable.productId, productsTable.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .groupBy(saleItemsTable.productId, productsTable.name)
+    .orderBy(sql`sum(${saleItemsTable.subtotal}) DESC`);
+
+  const byCategory = await db
+    .select({
+      categoryName: categoriesTable.name,
+      totalRevenue: sql<string>`coalesce(sum(${saleItemsTable.subtotal}), 0)`,
+    })
+    .from(saleItemsTable)
+    .leftJoin(salesTable, eq(saleItemsTable.saleId, salesTable.id))
+    .leftJoin(productsTable, eq(saleItemsTable.productId, productsTable.id))
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .groupBy(categoriesTable.name)
+    .orderBy(sql`sum(${saleItemsTable.subtotal}) DESC`);
+
+  const totalRev = numStr(summary?.totalRevenue);
+  const totalTx = Number(summary?.totalTransactions ?? 0);
+
   res.json({
-    totalRevenue: numStr(summary?.totalRevenue),
-    totalTransactions: Number(summary?.totalTransactions ?? 0),
+    totalRevenue: totalRev,
+    totalTransactions: totalTx,
+    averageTransaction: totalTx > 0 ? totalRev / totalTx : 0,
     totalRolls: numStr(itemsSummary?.totalRolls),
     totalMeters: numStr(itemsSummary?.totalMeters),
     cashRevenue: numStr(summary?.cashRevenue),
     tempoRevenue: numStr(summary?.tempoRevenue),
+    byProduct: byProduct.map(p => ({
+      productId: p.productId,
+      productName: p.productName ?? "Unknown",
+      totalMeters: numStr(p.totalMeters),
+      totalRevenue: numStr(p.totalRevenue)
+    })),
+    byCategory: byCategory.map(c => ({
+      categoryName: c.categoryName ?? "Tanpa Kategori",
+      totalRevenue: numStr(c.totalRevenue)
+    }))
   });
 });
 
@@ -58,16 +99,28 @@ router.get("/reports/stock-summary", async (req, res) => {
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .orderBy(productsTable.name);
 
-  res.json(products.map(p => ({
-    productId: p.productId,
-    productName: p.productName,
+  const formattedProducts = products.map(p => ({
+    id: p.productId,
+    name: p.productName,
     categoryName: p.categoryName ?? null,
     rackLocation: p.rackLocation,
     rollStock: numStr(p.rollStock),
     meterStock: numStr(p.meterStock),
-    value: numStr(p.meterStock) * numStr(p.pricePerMeter),
+    minStock: numStr(p.minStock),
+    stockValue: numStr(p.meterStock) * numStr(p.pricePerMeter),
     isLowStock: numStr(p.meterStock) <= numStr(p.minStock),
-  })));
+  }));
+
+  const totalProducts = formattedProducts.length;
+  const totalValue = formattedProducts.reduce((acc, p) => acc + p.stockValue, 0);
+  const lowStockCount = formattedProducts.filter(p => p.isLowStock).length;
+
+  res.json({
+    totalProducts,
+    totalValue,
+    lowStockCount,
+    products: formattedProducts
+  });
 });
 
 export default router;

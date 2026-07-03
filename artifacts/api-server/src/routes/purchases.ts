@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, stockMutationsTable } from "@workspace/db";
+import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, stockMutationsTable, productRollsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { CreatePurchaseBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
@@ -51,7 +51,7 @@ router.post("/purchases", async (req, res): Promise<void> => {
 
   const { supplierId, paymentType, dueDate, notes, items } = parsed.data;
   const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
-  const paidAmount = paymentType === "tunai" || paymentType === "transfer" || paymentType === "cashless" ? totalAmount : 0;
+  const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
   const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
 
   const invoiceNumber = `PO-${Date.now()}`;
@@ -68,9 +68,23 @@ router.post("/purchases", async (req, res): Promise<void> => {
   }).returning();
 
   for (const item of items) {
+    // Create product roll if barcode is provided
+    let insertedRollId: number | null = null;
+    if (item.barcode) {
+      const [roll] = await db.insert(productRollsTable).values({
+        productId: item.productId,
+        barcode: item.barcode,
+        originalLength: item.meters.toString(),
+        currentLength: item.meters.toString(),
+        status: "available",
+      }).returning();
+      insertedRollId = roll.id;
+    }
+
     await db.insert(purchaseItemsTable).values({
       purchaseId: purchase.id,
       productId: item.productId,
+      rollId: insertedRollId,
       rolls: item.rolls.toString(),
       meters: item.meters.toString(),
       pricePerMeter: item.pricePerMeter.toString(),
@@ -140,6 +154,7 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
     .select({
       productId: purchaseItemsTable.productId,
       productName: productsTable.name,
+      rollId: purchaseItemsTable.rollId,
       rolls: purchaseItemsTable.rolls,
       meters: purchaseItemsTable.meters,
       pricePerMeter: purchaseItemsTable.pricePerMeter,
@@ -158,6 +173,7 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
     createdAt: purchase.createdAt.toISOString(),
     items: items.map(i => ({
       ...i,
+      rollId: i.rollId,
       rolls: numStr(i.rolls),
       meters: numStr(i.meters),
       pricePerMeter: numStr(i.pricePerMeter),

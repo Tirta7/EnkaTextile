@@ -22,16 +22,19 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/hooks/useSettings";
 
 const navigation = [
   {
     title: "Overview",
+    requiredRoles: ["admin"],
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
     ]
   },
   {
     title: "Master Data",
+    requiredRoles: ["admin", "kasir"],
     items: [
       { name: "Kategori", href: "/kategori", icon: Tags },
       { name: "Barang", href: "/barang", icon: Package2 },
@@ -41,6 +44,7 @@ const navigation = [
   },
   {
     title: "Transaksi",
+    requiredRoles: ["admin", "kasir"],
     items: [
       { name: "Penjualan", href: "/penjualan", icon: Receipt },
       { name: "Pembelian", href: "/pembelian", icon: ShoppingBasket },
@@ -49,6 +53,7 @@ const navigation = [
   },
   {
     title: "Keuangan",
+    requiredRoles: ["admin", "kasir"],
     items: [
       { name: "Piutang", href: "/piutang", icon: Landmark },
       { name: "Hutang", href: "/hutang", icon: CreditCard },
@@ -57,9 +62,11 @@ const navigation = [
   },
   {
     title: "Laporan & Pengaturan",
+    requiredRoles: ["admin"],
     items: [
       { name: "Laporan", href: "/laporan", icon: BarChart3 },
       { name: "Pengaturan", href: "/pengaturan", icon: Settings },
+      { name: "Karyawan", href: "/karyawan", icon: UserCircle2 },
     ]
   }
 ];
@@ -68,10 +75,13 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { toast } = useToast();
+  const { data: settings } = useSettings();
+  const appName = settings?.["app_name"] || "VOCpos";
+  const appLogo = settings?.["app_logo"];
 
   const handleLogout = async () => {
     await logout();
-    toast({ title: "Berhasil keluar" });
+    window.location.href = "/";
   };
 
   const initials = user?.fullName
@@ -93,30 +103,34 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 flex flex-col border-r border-white/5",
+          "fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-300 lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen lg:w-64 flex flex-col border-r border-white/10",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{
-          background: "linear-gradient(180deg, #0d0a1f 0%, #0a0d1e 60%, #07090f 100%)",
+          background: "linear-gradient(180deg, #1a1832 0%, #131226 60%, #0c0b1a 100%)",
         }}
       >
         {/* Brand */}
         <div
-          className="h-[64px] flex items-center px-5 border-b border-white/5 shrink-0"
+          className="h-[calc(64px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] flex items-center px-5 pl-[max(1.25rem,env(safe-area-inset-left))] border-b border-white/5 shrink-0"
           style={{
             background: "linear-gradient(135deg, rgba(139,92,246,0.12) 0%, transparent 70%)",
           }}
         >
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-lg overflow-hidden"
               style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
             >
-              <Zap size={17} className="text-white" />
+              {appLogo ? (
+                <img src={appLogo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Zap size={17} className="text-white" />
+              )}
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-white text-[17px] tracking-tight leading-none">VOCpos</div>
-              <div className="text-[9px] text-white/25 tracking-[0.15em] uppercase mt-0.5">Virtual Operational Control</div>
+              <div className="font-bold text-white text-[17px] tracking-tight leading-none">{appName}</div>
+              <div className="text-[9px] text-white/25 tracking-[0.15em] uppercase mt-0.5 truncate max-w-[150px]">Virtual Operational Control</div>
             </div>
           </div>
           <Button
@@ -132,7 +146,9 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
         {/* Nav */}
         <ScrollArea className="flex-1 py-5">
           <nav className="px-3 space-y-6">
-            {navigation.map((group) => (
+            {navigation
+              .filter(group => !group.requiredRoles || group.requiredRoles.includes(user?.role as string || 'admin'))
+              .map((group) => (
               <div key={group.title}>
                 <h4 className="px-3 text-[10px] font-semibold text-white/25 uppercase tracking-[0.18em] mb-2">
                   {group.title}
@@ -147,7 +163,7 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
                             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer group",
                             isActive
                               ? "text-white"
-                              : "text-white/45 hover:text-white/80 hover:bg-white/5"
+                              : "text-white/60 hover:text-white/90 hover:bg-white/10"
                           )}
                           style={isActive ? {
                             background: "linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(99,102,241,0.15) 100%)",
@@ -188,7 +204,7 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
         </ScrollArea>
 
         {/* Footer — user info + logout */}
-        <div className="px-4 py-4 border-t border-white/5 shrink-0">
+        <div className="px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/5 shrink-0">
           <div className="flex items-center gap-3 px-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"

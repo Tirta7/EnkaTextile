@@ -1,23 +1,45 @@
-const CACHE_NAME = 'tmcpos-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/favicon.svg'
-];
+self.addEventListener('push', function (event) {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      const options = {
+        body: data.notification.body,
+        icon: data.notification.icon || '/icon-192.png',
+        badge: data.notification.badge || '/icon-192.png',
+        vibrate: data.notification.vibrate || [200, 100, 200],
+        data: {
+          url: data.notification.data.url || '/'
+        },
+      };
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-  );
+      event.waitUntil(
+        self.registration.showNotification(data.notification.title, options)
+      );
+    } catch (e) {
+      console.error('Failed to parse push notification JSON:', e);
+    }
+  }
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) return response;
-        return fetch(event.request);
-      })
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  
+  const targetUrl = event.notification.data.url;
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        if ('focus' in client) {
+          client.focus();
+        }
+        if ('navigate' in client) {
+          return client.navigate(targetUrl);
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
   );
 });

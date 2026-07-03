@@ -13,7 +13,10 @@ import payablesRouter from "./payables";
 import cashbookRouter from "./cashbook";
 import reportsRouter from "./reports";
 import paymentMethodsRouter from "./payment-methods";
-
+import unitsRouter from "./units";
+import usersRouter from "./users";
+import notificationsRouter from "./notifications";
+import { settingsRouter } from "./settings";
 const router: IRouter = Router();
 
 router.use(healthRouter);
@@ -30,5 +33,8 @@ router.use(payablesRouter);
 router.use(cashbookRouter);
 router.use(reportsRouter);
 router.use(paymentMethodsRouter);
-
+router.use(unitsRouter);
+router.use("/users", usersRouter);
+router.use("/notifications", notificationsRouter);
+router.use("/settings", settingsRouter);
 export default router;

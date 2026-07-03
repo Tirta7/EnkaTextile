@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
+  const [appName, setAppName] = useState("VOCpos");
+  const [appLogo, setAppLogo] = useState("");
+
+  useEffect(() => {
+    fetch("/api/settings/manifest.json")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.name) {
+          setAppName(data.name);
+          document.title = data.name;
+        }
+        if (data.app_logo && data.app_logo !== "/favicon.svg") {
+          setAppLogo(data.app_logo);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +39,7 @@ export default function Login() {
     const result = await login(username, password);
     setLoading(false);
     if (result.ok) {
-      navigate("/");
+      window.location.href = "/";
     } else {
       setError(result.error ?? "Login gagal");
     }
@@ -54,12 +71,16 @@ export default function Login() {
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-xl"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden"
             style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
           >
-            <Zap size={26} className="text-white" />
+            {appLogo ? (
+              <img src={appLogo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Zap size={26} className="text-white" />
+            )}
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">VOCpos</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">{appName}</h1>
           <p className="text-white/35 text-xs tracking-[0.18em] uppercase mt-1">Virtual Operational Control</p>
         </div>
 
@@ -151,7 +172,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-white/15 text-xs mt-6">
-          &copy; {new Date().getFullYear()} Enka Textile · VOCpos
+          &copy; {new Date().getFullYear()} Enka Textile · {appName}
         </p>
       </div>
     </div>

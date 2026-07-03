@@ -53,9 +53,13 @@ router.patch("/suppliers/:id", async (req, res): Promise<void> => {
 });
 
 router.delete("/suppliers/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  await db.delete(suppliersTable).where(eq(suppliersTable.id, id));
-  res.status(204).send();
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(suppliersTable).where(eq(suppliersTable.id, id));
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: "Gagal menghapus supplier. Pastikan supplier tidak memiliki transaksi terkait." });
+  }
 });
 
 export default router;

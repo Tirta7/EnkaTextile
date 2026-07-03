@@ -1,6 +1,7 @@
 import { Menu, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { useSettings } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -11,10 +12,12 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
   const { isConnected } = useWebSocket();
+  const { data: settings } = useSettings();
+  const appName = settings?.["app_name"] || "VOCpos";
 
   return (
     <header
-      className="h-[64px] border-b flex items-center justify-between sticky top-0 z-30 px-5"
+      className="h-[calc(64px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b flex items-center justify-between sticky top-0 z-30 px-5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
       style={{
         borderColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "hsl(var(--border))",
         background: theme === "dark"
@@ -34,9 +37,9 @@ export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
           <Menu size={18} />
         </Button>
 
-        <div className="flex items-center gap-2.5 hidden sm:flex">
+        <div className="hidden sm:flex items-center gap-2.5">
           <div className="font-semibold text-sm text-foreground/70 tracking-wide">
-            Enka Textile
+            {appName}
           </div>
           <div className="w-1 h-1 rounded-full bg-foreground/20" />
           <div className="text-xs text-muted-foreground font-medium">
@@ -77,7 +80,7 @@ export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
 
         {/* Avatar */}
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer shadow-sm"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer shadow-sm shrink-0"
           style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
         >
           A

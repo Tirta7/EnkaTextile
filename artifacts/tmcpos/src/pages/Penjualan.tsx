@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
+import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
-type SaleItem = { productId: number; productName: string; unit: "meter" | "roll"; rolls: number; meters: number; pricePerUnit: number; subtotal: number; };
+type SaleItem = { productId: number; productName: string; rollId?: number; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -23,11 +23,147 @@ const STATUS_COLORS: Record<string, string> = {
   kredit: "bg-blue-100 text-blue-700 border-blue-200",
 };
 
+function SaleItemRow({ item, index, products, categories, updateItem, removeItem }: any) {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const { data: rolls } = useGetProductRolls(item.productId, {
+    query: { queryKey: getGetProductRollsQueryKey(item.productId), enabled: !!item.productId }
+  });
+
+  const availableRolls = rolls?.filter(r => r.status === 'available') || [];
+  const lengthGroups: Record<string, number> = {};
+  availableRolls.forEach(r => {
+    const len = r.currentLength.toString();
+    lengthGroups[len] = (lengthGroups[len] || 0) + 1;
+  });
+
+  const maxRolls = item.unit === "roll" && item.targetLength ? lengthGroups[item.targetLength.toString()] : undefined;
+
+  const filteredProducts = selectedCategoryId === "all" ? products : products?.filter((p: any) => p.categoryId.toString() === selectedCategoryId);
+
+  return (
+    <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
+      <div className="md:col-span-2">
+        <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
+        <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+          <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Kategori</SelectItem>
+            {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="md:col-span-2">
+        <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
+        <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => { updateItem(index, "productId", parseInt(v)); }}>
+          <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
+          <SelectContent>
+            {filteredProducts?.map((p: any) => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="md:col-span-2">
+        <label className="text-xs text-muted-foreground mb-1 block">Roll (Stiker)</label>
+        <Select 
+          value={item.rollId ? `r_${item.rollId}` : (item.targetLength ? `len_${item.targetLength}` : "none")} 
+          onValueChange={v => { 
+            if (v === "none") { 
+              updateItem(index, "rollId", undefined);
+              updateItem(index, "targetLength", undefined);
+              return;
+            }
+            if (v.startsWith("len_")) {
+              const targetLen = parseFloat(v.replace("len_", ""));
+              updateItem(index, "rollId", undefined);
+              updateItem(index, "targetLength", targetLen);
+              updateItem(index, "unit", "roll");
+              updateItem(index, "rolls", 1);
+              updateItem(index, "meters", targetLen);
+              return;
+            }
+            if (v.startsWith("r_")) {
+              const rollId = parseInt(v.replace("r_", ""));
+              updateItem(index, "rollId", rollId);
+              updateItem(index, "targetLength", undefined);
+              const roll = availableRolls.find(r => r.id === rollId);
+              if (roll) {
+                updateItem(index, "unit", "roll");
+                updateItem(index, "rolls", 1);
+                updateItem(index, "meters", roll.currentLength);
+              }
+            }
+          }}
+          disabled={!item.productId || !rolls || rolls.length === 0}
+        >
+          <SelectTrigger className="h-8"><SelectValue placeholder="Pilih roll (opsional)" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Potong Bebas (Meteran)</SelectItem>
+            {Object.keys(lengthGroups).length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Pilih Otomatis (Per Ukuran)</SelectLabel>
+                {Object.entries(lengthGroups).map(([len, count]) => (
+                  <SelectItem key={`len_${len}`} value={`len_${len}`}>
+                    Ukuran {len}m (Tersedia: {count} roll)
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+            {availableRolls.length > 0 && (
+              <SelectGroup>
+                <SelectLabel>Pilih Spesifik Barcode</SelectLabel>
+                {availableRolls.map(r => (
+                  <SelectItem key={`r_${r.id}`} value={`r_${r.id}`}>
+                    {r.barcode} ({r.currentLength}m)
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="md:col-span-1">
+        <label className="text-xs text-muted-foreground mb-1 block">Satuan</label>
+        <Select value={item.unit} onValueChange={v => updateItem(index, "unit", v)} disabled={!!item.rollId}>
+          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="meter">{item.primaryUnit || "Meter"}</SelectItem>
+            <SelectItem value="roll">{item.secondaryUnit || "Roll"}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="md:col-span-1">
+        <label className="text-xs text-muted-foreground mb-1 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "m"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "roll"})`}</label>
+        <Input className="h-8" type="number" step="any" min={0} max={maxRolls} value={item.unit === "meter" ? item.meters : item.rolls}
+          onChange={e => {
+            let val: number | "" = e.target.value === "" ? "" : parseFloat(e.target.value);
+            if (item.unit === "roll" && maxRolls !== undefined && typeof val === "number" && val > maxRolls) {
+              val = maxRolls;
+            }
+            updateItem(index, item.unit === "meter" ? "meters" : "rolls", val);
+          }} 
+          disabled={(item.unit === "meter" && !!item.rollId) || (item.unit === "roll" && !!item.rollId)} 
+        />
+      </div>
+      <div className="md:col-span-2">
+        <label className="text-xs text-muted-foreground mb-1 block">Harga/satuan</label>
+        <Input className="h-8" type="number" step="any" min={0} value={item.pricePerUnit} onChange={e => updateItem(index, "pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+      </div>
+      <div className="md:col-span-1">
+        <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
+        <div className="h-8 flex items-center text-sm font-medium">{formatRupiah(item.subtotal)}</div>
+      </div>
+      <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Penjualan() {
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [paymentType, setPaymentType] = useState<string>("tunai");
@@ -36,8 +172,9 @@ export default function Penjualan() {
 
   const { data: sales, isLoading } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const { data: customers } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
-  const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
-  const { data: paymentMethods = [] } = useListPaymentMethods({}, { query: { queryKey: getListPaymentMethodsQueryKey({}) } });
+  const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
+  const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey() } });
+  const { data: paymentMethods = [] } = useListPaymentMethods({ query: { queryKey: getListPaymentMethodsQueryKey() } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -53,6 +190,7 @@ export default function Penjualan() {
   });
 
   const resetForm = () => {
+    setInvoiceNumber("");
     setItems([]);
     setCustomerId("");
     setPaymentType("tunai");
@@ -61,7 +199,7 @@ export default function Penjualan() {
   };
 
   const addItem = () => {
-    setItems(prev => [...prev, { productId: 0, productName: "", unit: "meter", rolls: 0, meters: 0, pricePerUnit: 0, subtotal: 0 }]);
+    setItems(prev => [...prev, { productId: 0, productName: "", unit: "meter", rolls: "", meters: "", pricePerUnit: "", subtotal: 0 }]);
   };
 
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
@@ -70,19 +208,23 @@ export default function Penjualan() {
     setItems(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
+      const item = updated[index];
       if (field === "productId") {
         const prod = products?.find(p => p.id === parseInt(value));
         if (prod) {
-          updated[index].productName = prod.name;
-          updated[index].pricePerUnit = prod.pricePerMeter;
+          item.productName = prod.name;
+          item.pricePerUnit = parseFloat(String(prod.pricePerMeter));
+          item.primaryUnit = prod.primaryUnit || undefined;
+          item.secondaryUnit = prod.secondaryUnit || undefined;
         }
       }
-      const item = updated[index];
-      if (item.unit === "meter") {
-        updated[index].subtotal = item.meters * item.pricePerUnit;
-      } else {
-        updated[index].subtotal = item.rolls * item.pricePerUnit;
+      
+      // Auto update meters when rolls change and targetLength is known
+      if (field === "rolls" && item.unit === "roll" && item.targetLength && !item.rollId) {
+        item.meters = (typeof item.rolls === "number" ? item.rolls : 0) * item.targetLength;
       }
+
+      item.subtotal = (typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerUnit === "number" ? item.pricePerUnit : 0);
       return updated;
     });
   };
@@ -91,21 +233,22 @@ export default function Penjualan() {
 
   const handleSubmit = () => {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
-    if (items.some(i => !i.productId)) { toast({ title: "Pilih produk untuk semua item", variant: "destructive" }); return; }
+    if (items.some(i => !i.productId || (typeof i.meters === "number" ? i.meters : 0) <= 0)) { toast({ title: "Mohon lengkapi data barang", variant: "destructive" }); return; }
+    
     createMutation.mutate({
       data: {
-        invoiceNumber: generateInvoiceNumber("INV"),
+        invoiceNumber,
         customerId: customerId ? parseInt(customerId) : undefined,
         paymentType: paymentType as any,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
-        items: items.map(i => ({
-          productId: i.productId,
-          unit: i.unit,
-          rolls: i.rolls,
-          meters: i.meters,
-          pricePerUnit: i.pricePerUnit,
-          subtotal: i.subtotal,
+        items: items.map(i => ({ 
+          productId: i.productId, 
+          rollId: i.rollId || undefined, 
+          rolls: typeof i.rolls === "number" ? i.rolls : 0, 
+          meters: typeof i.meters === "number" ? i.meters : 0, 
+          pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0, 
+          subtotal: i.subtotal 
         }))
       }
     });
@@ -122,12 +265,12 @@ export default function Penjualan() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Penjualan</h1>
           <p className="text-muted-foreground mt-1">Catat dan kelola transaksi penjualan.</p>
         </div>
-        <Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Buat Penjualan</Button>
+        <Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Buat Penjualan</Button>
       </div>
 
       <Card>
@@ -147,10 +290,10 @@ export default function Penjualan() {
               <TableRow>
                 <TableHead>No. Invoice</TableHead>
                 <TableHead>Pelanggan</TableHead>
-                <TableHead>Tgl. Transaksi</TableHead>
-                <TableHead>Pembayaran</TableHead>
+                <TableHead className="hidden md:table-cell">Tgl. Transaksi</TableHead>
+                <TableHead className="hidden md:table-cell">Pembayaran</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Terbayar</TableHead>
+                <TableHead className="text-right hidden md:table-cell">Terbayar</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -169,10 +312,10 @@ export default function Penjualan() {
                   <TableRow key={s.id}>
                     <TableCell className="font-mono font-medium">{s.invoiceNumber}</TableCell>
                     <TableCell>{(s as any).customerName || <span className="text-muted-foreground">Umum</span>}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(s.createdAt)}</TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{s.paymentType}</Badge></TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">{formatDate(s.createdAt)}</TableCell>
+                    <TableCell className="hidden md:table-cell"><Badge variant="outline" className="capitalize">{s.paymentType}</Badge></TableCell>
                     <TableCell className="text-right font-medium">{formatRupiah(s.totalAmount)}</TableCell>
-                    <TableCell className="text-right">{formatRupiah(s.paidAmount ?? 0)}</TableCell>
+                    <TableCell className="text-right hidden md:table-cell">{formatRupiah(s.paidAmount ?? 0)}</TableCell>
                     <TableCell>
                       <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[s.status ?? "kredit"] || "bg-gray-100 text-gray-700"}`}>
                         {s.status}
@@ -187,11 +330,15 @@ export default function Penjualan() {
       </Card>
 
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl w-[95vw] md:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader><DialogTitle>Buat Penjualan Baru</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">
+              <span className="text-sm font-medium text-muted-foreground">No. Invoice:</span>
+              <span className="text-base font-mono font-bold break-all">{invoiceNumber}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">Pelanggan</label>
                 <Select value={customerId} onValueChange={setCustomerId}>
                   <SelectTrigger><SelectValue placeholder="Pilih pelanggan (opsional)" /></SelectTrigger>
@@ -227,7 +374,7 @@ export default function Penjualan() {
                   <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                 </div>
               )}
-              <div className={paymentType === "kredit" ? "" : "col-span-2"}>
+              <div className={paymentType === "kredit" ? "" : "md:col-span-2"}>
                 <label className="text-sm font-medium mb-1 block">Catatan</label>
                 <Input placeholder="Catatan opsional" value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
@@ -245,45 +392,9 @@ export default function Penjualan() {
                   Belum ada item. Klik "Tambah Item" untuk memulai.
                 </div>
               )}
-              {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-muted/30 rounded-lg">
-                  <div className="col-span-4">
-                    <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
-                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => { updateItem(index, "productId", parseInt(v)); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
-                      <SelectContent>
-                        {products?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Satuan</label>
-                    <Select value={item.unit} onValueChange={v => updateItem(index, "unit", v)}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="meter">Meter</SelectItem>
-                        <SelectItem value="roll">Roll</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">{item.unit === "meter" ? "Jumlah (m)" : "Jumlah (roll)"}</label>
-                    <Input className="h-8" type="number" min={0} value={item.unit === "meter" ? item.meters : item.rolls}
-                      onChange={e => updateItem(index, item.unit === "meter" ? "meters" : "rolls", parseFloat(e.target.value) || 0)} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Harga/satuan</label>
-                    <Input className="h-8" type="number" min={0} value={item.pricePerUnit} onChange={e => updateItem(index, "pricePerUnit", parseFloat(e.target.value) || 0)} />
-                  </div>
-                  <div className="col-span-1">
-                    <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
-                    <div className="h-8 flex items-center text-sm font-medium">{formatRupiah(item.subtotal)}</div>
-                  </div>
-                  <div className="col-span-1 flex justify-end">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
-                </div>
-              ))}
+                {items.map((item, index) => (
+                  <SaleItemRow key={index} item={item} index={index} products={products} categories={categories} updateItem={updateItem} removeItem={removeItem} />
+                ))}
             </div>
 
             {items.length > 0 && (

@@ -14,7 +14,7 @@ async function getCustomerDebt(customerId: number): Promise<number> {
   return parseFloat(result?.total ?? "0");
 }
 
-router.get("/customers", async (req, res) => {
+router.get("/customers", async (req, res): Promise<void> => {
   const { search, overLimit } = req.query;
   const customers = await db
     .select()
@@ -33,41 +33,52 @@ router.get("/customers", async (req, res) => {
     };
   }));
 
-  if (overLimit === "true") return res.json(result.filter(c => c.isOverLimit));
+  if (overLimit === "true") { res.json(result.filter(c => c.isOverLimit)); return; }
   res.json(result);
 });
 
-router.post("/customers", async (req, res) => {
+router.post("/customers", async (req, res): Promise<void> => {
   const parsed = CreateCustomerBody.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
-  const [cust] = await db.insert(customersTable).values(parsed.data).returning();
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const d = parsed.data;
+  const [cust] = await db.insert(customersTable).values({
+    ...d,
+    creditLimit: d.creditLimit != null ? String(d.creditLimit) : undefined
+  }).returning();
   res.status(201).json({ ...cust, creditLimit: parseFloat(cust.creditLimit ?? "0"), currentDebt: 0, isOverLimit: false });
 });
 
-router.get("/customers/:id", async (req, res) => {
+router.get("/customers/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const [cust] = await db.select().from(customersTable).where(eq(customersTable.id, id));
-  if (!cust) return res.status(404).json({ error: "Not found" });
+  if (!cust) { res.status(404).json({ error: "Not found" }); return; }
   const currentDebt = await getCustomerDebt(id);
   const creditLimit = parseFloat(cust.creditLimit ?? "0");
   res.json({ ...cust, creditLimit, currentDebt, isOverLimit: currentDebt > creditLimit });
 });
 
-router.patch("/customers/:id", async (req, res) => {
+router.patch("/customers/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const parsed = UpdateCustomerBody.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
-  const [cust] = await db.update(customersTable).set({ ...parsed.data, updatedAt: new Date() }).where(eq(customersTable.id, id)).returning();
-  if (!cust) return res.status(404).json({ error: "Not found" });
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  const d = parsed.data;
+  const updateData: any = { ...d, updatedAt: new Date() };
+  if (d.creditLimit != null) updateData.creditLimit = String(d.creditLimit);
+  const [cust] = await db.update(customersTable).set(updateData).where(eq(customersTable.id, id)).returning();
+  if (!cust) { res.status(404).json({ error: "Not found" }); return; }
   const currentDebt = await getCustomerDebt(id);
   const creditLimit = parseFloat(cust.creditLimit ?? "0");
   res.json({ ...cust, creditLimit, currentDebt, isOverLimit: currentDebt > creditLimit });
 });
 
-router.delete("/customers/:id", async (req, res) => {
-  const id = parseInt(req.params.id);
-  await db.delete(customersTable).where(eq(customersTable.id, id));
-  res.status(204).send();
+router.delete("/customers/:id", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(customersTable).where(eq(customersTable.id, id));
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: "Gagal menghapus pelanggan. Pastikan pelanggan tidak memiliki transaksi terkait." });
+  }
 });
 
 router.get("/customers/:id/credit-status", async (req, res): Promise<void> => {

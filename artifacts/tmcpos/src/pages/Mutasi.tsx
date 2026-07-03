@@ -51,6 +51,11 @@ export default function Mutasi() {
     defaultValues: { type: "in", rolls: 0, meters: 0, description: "", reference: "" },
   });
 
+  const selectedProductId = form.watch("productId");
+  const selectedProduct = products?.find(p => p.id === selectedProductId);
+  const primaryUnit = selectedProduct?.primaryUnit || "Meter";
+  const secondaryUnit = selectedProduct?.secondaryUnit || "Roll";
+
   const createMutation = useCreateMutation({
     mutation: {
       onSuccess: () => {
@@ -63,7 +68,7 @@ export default function Mutasi() {
     }
   });
 
-  const onSubmit = (data: FormData) => createMutation.mutate({ data });
+  const onSubmit = (data: FormData) => createMutation.mutate({ data: { ...data, description: data.description || "", reference: data.reference || "" } });
 
   const filtered = filterByDateRange(
     mutations?.filter(m => {
@@ -102,8 +107,8 @@ export default function Mutasi() {
                 <TableHead>Tanggal</TableHead>
                 <TableHead>Barang</TableHead>
                 <TableHead>Tipe</TableHead>
-                <TableHead className="text-right">Roll</TableHead>
-                <TableHead className="text-right">Meter</TableHead>
+                <TableHead className="text-right">Stok Tambahan</TableHead>
+                <TableHead className="text-right">Stok Utama</TableHead>
                 <TableHead>Keterangan</TableHead>
                 <TableHead>Referensi</TableHead>
               </TableRow>
@@ -145,7 +150,7 @@ export default function Mutasi() {
       </Card>
 
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) setIsOpen(false); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[95vw] md:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader><DialogTitle>Catat Mutasi Stok</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -173,12 +178,12 @@ export default function Mutasi() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField control={form.control} name="rolls" render={({ field }) => (
-                  <FormItem><FormLabel>Roll</FormLabel><FormControl><Input type="number" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Qty ({secondaryUnit.toLowerCase()})</FormLabel><FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="meters" render={({ field }) => (
-                  <FormItem><FormLabel>Meter</FormLabel><FormControl><Input type="number" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Qty ({primaryUnit.toLowerCase()})</FormLabel><FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
               <FormField control={form.control} name="description" render={({ field }) => (

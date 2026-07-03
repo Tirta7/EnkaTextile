@@ -23,7 +23,7 @@ app.use(
 );
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -40,7 +40,7 @@ app.use("/api", authRouter);
 
 // Auth guard — protect all other /api routes
 app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
-  const publicPaths = ["/healthz"];
+  const publicPaths = ["/healthz", "/settings/manifest.json"];
   if (publicPaths.some((p) => req.path === p || req.path.startsWith(p))) {
     next(); return;
   }
@@ -51,5 +51,22 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 });
 
 app.use("/api", router);
+
+// Serve static frontend files in production
+import path from "path";
+if (process.env.NODE_ENV === "production") {
+  const publicPath = path.resolve(process.cwd(), "../tmcpos/dist/public");
+  app.use(express.static(publicPath));
+  
+  // SPA fallback
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const isFileRequest = req.path.match(/\.[a-zA-Z0-9]+$/);
+    if (req.method === "GET" && !req.path.startsWith("/api") && req.accepts('html') && !isFileRequest) {
+      res.sendFile(path.resolve(publicPath, "index.html"));
+    } else {
+      next();
+    }
+  });
+}
 
 export default app;

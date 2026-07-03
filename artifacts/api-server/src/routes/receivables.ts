@@ -129,6 +129,23 @@ router.post("/receivables/:id/payments", async (req, res): Promise<void> => {
   `);
 
   broadcastRefresh();
+
+  // Trigger push notification for payment
+  try {
+    const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, rec.customerId));
+    const customerName = customer?.name ?? "Umum";
+    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(parsed.data.amount);
+    
+    // Import pushService at the top is needed! Wait, let's just require it if we didn't import it, but I'll import it at the top later.
+    const { pushService } = require("../lib/push");
+    await pushService.sendNotificationToAdmins(
+      "💰 Pembayaran Piutang",
+      `Pelanggan: ${customerName}\nJumlah Bayar: ${formattedAmount}\nMetode: ${parsed.data.paymentMethod.toUpperCase()}`,
+      `/piutang`
+    );
+  } catch (e) {
+    console.error("Gagal kirim notif pembayaran piutang", e);
+  }
   res.status(201).json({
     ...payment,
     amount: numStr(payment.amount),

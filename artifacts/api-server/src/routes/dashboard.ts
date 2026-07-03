@@ -46,8 +46,8 @@ router.get("/dashboard/summary", async (req, res) => {
 
   const [cash] = await db
     .select({
-      totalIn: sql<string>`coalesce(sum(case when type = 'income' then amount else 0 end), 0)`,
-      totalOut: sql<string>`coalesce(sum(case when type = 'expense' then amount else 0 end), 0)`,
+      totalIn: sql<string>`coalesce(sum(case when type = 'masuk' then amount else 0 end), 0)`,
+      totalOut: sql<string>`coalesce(sum(case when type = 'keluar' then amount else 0 end), 0)`,
     })
     .from(cashEntriesTable);
 

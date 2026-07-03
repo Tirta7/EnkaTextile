@@ -264,6 +264,98 @@ paths:
               schema:
                 $ref: "#/components/schemas/Product"
 
+  /products/{id}/rolls:
+    get:
+      operationId: getProductRolls
+      tags: [products]
+      summary: Get rolls for a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of rolls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductRoll"
+    post:
+      operationId: createProductRoll
+      tags: [products]
+      summary: Manually create a roll for a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductRollInput"
+      responses:
+        "201":
+          description: Created roll
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductRoll"
+
+  /products/{id}/rolls/{rollId}:
+    patch:
+      operationId: updateProductRoll
+      tags: [products]
+      summary: Update a product roll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: rollId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductRollUpdateInput"
+      responses:
+        "200":
+          description: Updated roll
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductRoll"
+    delete:
+      operationId: deleteProductRoll
+      tags: [products]
+      summary: Delete a product roll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: rollId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /products/{id}:
     get:
       operationId: getProduct
@@ -1008,6 +1100,153 @@ paths:
         "200":
           description: Deleted
 
+  # Units (Satuan)
+  /units:
+    get:
+      operationId: listUnits
+      tags: [units]
+      summary: List all units
+      responses:
+        "200":
+          description: List of units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Unit"
+    post:
+      operationId: createUnit
+      tags: [units]
+      summary: Create a unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitInput"
+      responses:
+        "201":
+          description: Created unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+
+  /units/{id}:
+    put:
+      operationId: updateUnit
+      tags: [units]
+      summary: Update a unit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnitUpdate"
+      responses:
+        "200":
+          description: Updated unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Unit"
+    delete:
+      operationId: deleteUnit
+      tags: [units]
+      summary: Delete a unit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  # Users
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
 components:
   schemas:
     HealthStatus:
@@ -1017,6 +1256,36 @@ components:
           type: string
       required:
         - status
+
+    Unit:
+      type: object
+      required: [id, name, symbol, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        symbol:
+          type: string
+        createdAt:
+          type: string
+
+    UnitInput:
+      type: object
+      required: [name, symbol]
+      properties:
+        name:
+          type: string
+        symbol:
+          type: string
+
+    UnitUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        symbol:
+          type: string
 
     DashboardSummary:
       type: object
@@ -1127,7 +1396,7 @@ components:
 
     Product:
       type: object
-      required: [id, name, categoryId, lotNumber, rackLocation, pricePerMeter, rollStock, meterStock, minStock, createdAt]
+      required: [id, name, categoryId, barcode, primaryUnit, secondaryUnit, lotNumber, rackLocation, costPricePerMeter, costPricePerRoll, pricePerMeter, pricePerRoll, rollStock, meterStock, minStock, createdAt]
       properties:
         id:
           type: integer
@@ -1137,6 +1406,12 @@ components:
           type: integer
         categoryName:
           type: ["string", "null"]
+        barcode:
+          type: string
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
         lotNumber:
           type: string
         rackLocation:
@@ -1158,16 +1433,26 @@ components:
 
     ProductInput:
       type: object
-      required: [name, categoryId, lotNumber, rackLocation, pricePerMeter, rollStock, meterStock]
+      required: [name, categoryId]
       properties:
         name:
           type: string
         categoryId:
           type: integer
+        barcode:
+          type: string
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
         lotNumber:
           type: string
         rackLocation:
           type: string
+        costPricePerMeter:
+          type: number
+        costPricePerRoll:
+          type: number
         pricePerMeter:
           type: number
         pricePerRoll:
@@ -1179,6 +1464,47 @@ components:
         minStock:
           type: number
 
+    ProductRollInput:
+      type: object
+      required: [originalLength, currentLength]
+      properties:
+        barcode:
+          type: string
+        originalLength:
+          type: number
+        currentLength:
+          type: number
+
+    ProductRollUpdateInput:
+      type: object
+      properties:
+        barcode:
+          type: string
+        originalLength:
+          type: number
+        currentLength:
+          type: number
+
+    ProductRoll:
+      type: object
+      required: [id, productId, barcode, originalLength, currentLength, status, createdAt]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        barcode:
+          type: string
+        originalLength:
+          type: number
+        currentLength:
+          type: number
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
     ProductUpdate:
       type: object
       properties:
@@ -1186,15 +1512,29 @@ components:
           type: string
         categoryId:
           type: integer
+        barcode:
+          type: string
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
         lotNumber:
           type: string
         rackLocation:
           type: string
+        costPricePerMeter:
+          type: number
+        costPricePerRoll:
+          type: number
         pricePerMeter:
           type: number
         pricePerRoll:
           type: number
         minStock:
+          type: number
+        rollStock:
+          type: number
+        meterStock:
           type: number
 
     Customer:
@@ -1302,14 +1642,37 @@ components:
         contactPerson:
           type: string
 
-    SaleLineItem:
+    SaleItem:
+      type: object
+      required: [id, saleId, productId, rolls, meters, pricePerMeter, subtotal]
+      properties:
+        id:
+          type: integer
+        saleId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: ["string", "null"]
+        rollId:
+          type: ["integer", "null"]
+        rolls:
+          type: number
+        meters:
+          type: number
+        pricePerMeter:
+          type: number
+        subtotal:
+          type: number
+
+    SaleItemInput:
       type: object
       required: [productId, rolls, meters, pricePerMeter, subtotal]
       properties:
         productId:
           type: integer
-        productName:
-          type: ["string", "null"]
+        rollId:
+          type: integer
         rolls:
           type: number
         meters:
@@ -1379,12 +1742,14 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/SaleLineItem"
+            $ref: "#/components/schemas/SaleItem"
 
     SaleInput:
       type: object
       required: [paymentType, items]
       properties:
+        invoiceNumber:
+          type: string
         customerId:
           type: integer
         paymentType:
@@ -1396,7 +1761,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/SaleLineItem"
+            $ref: "#/components/schemas/SaleItemInput"
 
     Purchase:
       type: object
@@ -1427,14 +1792,20 @@ components:
         createdAt:
           type: string
 
-    PurchaseLineItem:
+    PurchaseItem:
       type: object
-      required: [productId, rolls, meters, pricePerMeter, subtotal]
+      required: [id, purchaseId, productId, rolls, meters, pricePerMeter, subtotal]
       properties:
+        id:
+          type: integer
+        purchaseId:
+          type: integer
         productId:
           type: integer
         productName:
           type: ["string", "null"]
+        rollId:
+          type: ["integer", "null"]
         rolls:
           type: number
         meters:
@@ -1443,6 +1814,25 @@ components:
           type: number
         subtotal:
           type: number
+
+    PurchaseItemInput:
+      type: object
+      required: [productId, rolls, meters, pricePerMeter, subtotal]
+      properties:
+        productId:
+          type: integer
+        rollId:
+          type: integer
+        rolls:
+          type: number
+        meters:
+          type: number
+        pricePerMeter:
+          type: number
+        subtotal:
+          type: number
+        barcode:
+          type: string
 
     PurchaseDetail:
       type: object
@@ -1475,7 +1865,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/PurchaseLineItem"
+            $ref: "#/components/schemas/PurchaseItem"
 
     PurchaseInput:
       type: object
@@ -1492,7 +1882,7 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/PurchaseLineItem"
+            $ref: "#/components/schemas/PurchaseItemInput"
 
     StockMutation:
       type: object
@@ -1769,3 +2159,43 @@ components:
           type: boolean
         sortOrder:
           type: integer
+
+    User:
+      type: object
+      required: [id, username, fullName, role, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+        createdAt:
+          type: string
+
+    UserInput:
+      type: object
+      required: [username, password, fullName, role]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string

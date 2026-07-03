@@ -17,7 +17,7 @@ export default function Dashboard() {
   const { data: receivables, isLoading: loadingReceivables } = useGetDashboardReceivablesSummary({ query: { queryKey: getGetDashboardReceivablesSummaryQueryKey() } });
 
   return (
-    <div className="space-y-7 max-w-[1400px]">
+    <div className="space-y-7 max-w-[2400px] mx-auto w-full">
 
       {/* Page header */}
       <div className="flex items-end justify-between">
@@ -281,7 +281,7 @@ function KpiCard({
 }) {
   return (
     <Card className="relative overflow-hidden border-border/70 hover:border-border transition-colors hover:shadow-md">
-      <div className={cn("absolute inset-0 bg-gradient-to-br", gradient)} />
+      <div className={cn("absolute inset-0 bg-linear-to-br", gradient)} />
       <CardHeader className="relative flex flex-row items-start justify-between space-y-0 pb-2 pt-5 px-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
         <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shrink-0", iconBg)}>

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
-type PurchaseItem = { productId: number; productName: string; rolls: number; meters: number; pricePerMeter: number; subtotal: number; };
+type PurchaseItem = { productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -36,8 +36,8 @@ export default function Pembelian() {
 
   const { data: purchases, isLoading } = useListPurchases({}, { query: { queryKey: getListPurchasesQueryKey({}) } });
   const { data: suppliers } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
-  const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
-  const { data: paymentMethods = [] } = useListPaymentMethods({}, { query: { queryKey: getListPaymentMethodsQueryKey({}) } });
+  const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey() } });
+  const { data: paymentMethods = [] } = useListPaymentMethods({ query: { queryKey: getListPaymentMethodsQueryKey() } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -53,7 +53,7 @@ export default function Pembelian() {
 
   const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); };
 
-  const addItem = () => setItems(prev => [...prev, { productId: 0, productName: "", rolls: 0, meters: 0, pricePerMeter: 0, subtotal: 0 }]);
+  const addItem = () => setItems(prev => [...prev, { productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "" }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
   const updateItem = (index: number, field: keyof PurchaseItem, value: any) => {
@@ -62,10 +62,15 @@ export default function Pembelian() {
       updated[index] = { ...updated[index], [field]: value };
       if (field === "productId") {
         const prod = products?.find(p => p.id === parseInt(value));
-        if (prod) { updated[index].productName = prod.name; updated[index].pricePerMeter = prod.pricePerMeter; }
+        if (prod) { 
+          updated[index].productName = prod.name; 
+          updated[index].pricePerMeter = prod.pricePerMeter;
+          updated[index].primaryUnit = prod.primaryUnit;
+          updated[index].secondaryUnit = prod.secondaryUnit;
+        }
       }
       const item = updated[index];
-      updated[index].subtotal = item.meters * item.pricePerMeter;
+      updated[index].subtotal = (typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerMeter === "number" ? item.pricePerMeter : 0);
       return updated;
     });
   };
@@ -74,15 +79,22 @@ export default function Pembelian() {
 
   const handleSubmit = () => {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
+    if (items.some(i => !i.productId || (typeof i.meters === "number" ? i.meters : 0) <= 0)) { toast({ title: "Mohon lengkapi data barang", variant: "destructive" }); return; }
     if (!supplierId) { toast({ title: "Pilih supplier", variant: "destructive" }); return; }
     createMutation.mutate({
       data: {
-        invoiceNumber: generateInvoiceNumber("PO"),
         supplierId: parseInt(supplierId),
         paymentType: paymentType as any,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
-        items: items.map(i => ({ productId: i.productId, rolls: i.rolls, meters: i.meters, pricePerMeter: i.pricePerMeter, subtotal: i.subtotal }))
+        items: items.map(i => ({ 
+          productId: i.productId, 
+          rolls: typeof i.rolls === "number" ? i.rolls : 0, 
+          meters: typeof i.meters === "number" ? i.meters : 0, 
+          pricePerMeter: typeof i.pricePerMeter === "number" ? i.pricePerMeter : 0, 
+          subtotal: i.subtotal, 
+          barcode: i.barcode || undefined 
+        }))
       }
     });
   };
@@ -161,10 +173,10 @@ export default function Pembelian() {
       </Card>
 
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl w-[95vw] md:w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader><DialogTitle>Buat Pembelian Baru</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Supplier</label>
                 <Select value={supplierId} onValueChange={setSupplierId}>
@@ -200,7 +212,7 @@ export default function Pembelian() {
                   <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                 </div>
               )}
-              <div className={paymentType === "kredit" ? "" : "col-span-2"}>
+              <div className={paymentType === "kredit" ? "" : "md:col-span-2"}>
                 <label className="text-sm font-medium mb-1 block">Catatan</label>
                 <Input placeholder="Catatan opsional" value={notes} onChange={e => setNotes(e.target.value)} />
               </div>
@@ -215,31 +227,35 @@ export default function Pembelian() {
                 <div className="text-center py-6 border-2 border-dashed rounded-lg text-muted-foreground text-sm">Belum ada item. Klik "Tambah Item" untuk memulai.</div>
               )}
               {items.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 bg-muted/30 rounded-lg">
-                  <div className="col-span-4">
+                <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
+                  <div className="md:col-span-3">
                     <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
                     <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => updateItem(index, "productId", parseInt(v))}>
                       <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
                       <SelectContent>{products?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Roll</label>
-                    <Input className="h-8" type="number" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", parseFloat(e.target.value) || 0)} />
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>
+                    <Input className="h-8" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
                   </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Meter</label>
-                    <Input className="h-8" type="number" min={0} value={item.meters} onChange={e => updateItem(index, "meters", parseFloat(e.target.value) || 0)} />
+                  <div className="md:col-span-1">
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Roll</label>
+                    <Input className="h-8" type="number" step="any" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                   </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Harga/Meter</label>
-                    <Input className="h-8" type="number" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", parseFloat(e.target.value) || 0)} />
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Meter"})</label>
+                    <Input className="h-8" type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                   </div>
-                  <div className="col-span-1">
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Mtr"}</label>
+                    <Input className="h-8" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                  </div>
+                  <div className="md:col-span-1">
                     <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
                     <div className="h-8 flex items-center text-sm font-medium">{formatRupiah(item.subtotal)}</div>
                   </div>
-                  <div className="col-span-1 flex justify-end">
+                  <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </div>

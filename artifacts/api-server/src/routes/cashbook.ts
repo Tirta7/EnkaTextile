@@ -29,9 +29,9 @@ router.get("/cashbook", async (req, res) => {
   })));
 });
 
-router.post("/cashbook", async (req, res) => {
+router.post("/cashbook", async (req, res): Promise<void> => {
   const parsed = CreateCashEntryBody.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const [entry] = await db.insert(cashEntriesTable).values({
     ...parsed.data,

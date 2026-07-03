@@ -13,7 +13,7 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Category } from "@workspace/api-client-react/src/generated/api.schemas";
+import { Category } from "@workspace/api-client-react";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -57,6 +57,9 @@ export default function Kategori() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
         toast({ title: "Kategori berhasil dihapus" });
+      },
+      onError: (error: any) => {
+        toast({ title: "Gagal menghapus", description: error.data?.error || "Terjadi kesalahan", variant: "destructive" });
       }
     }
   });
@@ -172,7 +175,7 @@ export default function Kategori() {
           setEditingCategory(null);
         }
       }}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[90vh] overflow-y-auto max-w-lg">
           <DialogHeader>
             <DialogTitle>{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</DialogTitle>
           </DialogHeader>

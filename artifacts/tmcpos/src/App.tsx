@@ -19,6 +19,7 @@ import Hutang from "@/pages/Hutang";
 import BukuKas from "@/pages/BukuKas";
 import Laporan from "@/pages/Laporan";
 import Pengaturan from "@/pages/Pengaturan";
+import Karyawan from "@/pages/Karyawan";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -53,10 +54,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   return (
     <AppLayout>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        {isAdmin && <Route path="/" component={Dashboard} />}
+        {!isAdmin && <Route path="/" component={() => <Redirect to="/penjualan" />} />}
+        
         <Route path="/kategori" component={Kategori} />
         <Route path="/barang" component={Barang} />
         <Route path="/pelanggan" component={Pelanggan} />
@@ -67,8 +73,16 @@ function Router() {
         <Route path="/piutang" component={Piutang} />
         <Route path="/hutang" component={Hutang} />
         <Route path="/buku-kas" component={BukuKas} />
-        <Route path="/laporan" component={Laporan} />
-        <Route path="/pengaturan" component={Pengaturan} />
+        
+        {isAdmin && <Route path="/laporan" component={Laporan} />}
+        {isAdmin && <Route path="/pengaturan" component={Pengaturan} />}
+        {isAdmin && <Route path="/karyawan" component={Karyawan} />}
+        
+        {/* Redirect non-admins trying to access restricted routes */}
+        {!isAdmin && <Route path="/laporan"><Redirect to="/penjualan" /></Route>}
+        {!isAdmin && <Route path="/pengaturan"><Redirect to="/penjualan" /></Route>}
+        {!isAdmin && <Route path="/karyawan"><Redirect to="/penjualan" /></Route>}
+        
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

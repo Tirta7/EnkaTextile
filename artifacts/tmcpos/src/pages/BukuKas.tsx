@@ -163,7 +163,7 @@ export default function BukuKas() {
       </Card>
 
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) setIsOpen(false); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader><DialogTitle>Catat Transaksi Kas</DialogTitle></DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

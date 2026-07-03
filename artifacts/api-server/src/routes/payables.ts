@@ -72,6 +72,22 @@ router.post("/payables/:id/payments", async (req, res): Promise<void> => {
   }).where(eq(payablesTable.id, id));
 
   broadcastRefresh();
+
+  // Trigger push notification for payment
+  try {
+    const [supplier] = await db.select().from(suppliersTable).where(eq(suppliersTable.id, pay.supplierId));
+    const supplierName = supplier?.name ?? "Umum";
+    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(parsed.data.amount);
+    
+    const { pushService } = require("../lib/push");
+    await pushService.sendNotificationToAdmins(
+      "💸 Pembayaran Hutang",
+      `Supplier: ${supplierName}\nJumlah Bayar: ${formattedAmount}\nMetode: ${parsed.data.paymentMethod.toUpperCase()}`,
+      `/hutang`
+    );
+  } catch (e) {
+    console.error("Gagal kirim notif pembayaran hutang", e);
+  }
   res.status(201).json({
     ...payment,
     amount: numStr(payment.amount),

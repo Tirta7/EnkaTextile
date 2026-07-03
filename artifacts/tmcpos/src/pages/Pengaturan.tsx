@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useListPaymentMethods,
   useCreatePaymentMethod,
   useUpdatePaymentMethod,
   useDeletePaymentMethod,
   getListPaymentMethodsQueryKey,
+  useListUnits,
+  useCreateUnit,
+  useUpdateUnit,
+  useDeleteUnit,
+  getListUnitsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,14 +20,19 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { registerAndSubscribePush } from "../lib/pushNotification";
+import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 
 export default function Pengaturan() {
   const { data: methods = [], isLoading } = useListPaymentMethods(
-    {},
-    { query: { queryKey: getListPaymentMethodsQueryKey({}) } }
+    { query: { queryKey: getListPaymentMethodsQueryKey() } }
   );
+  const { data: units = [], isLoading: isLoadingUnits } = useListUnits(
+    { query: { queryKey: getListUnitsQueryKey() } }
+  );
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -32,7 +42,101 @@ export default function Pengaturan() {
   const [newName, setNewName] = useState("");
   const [newSortOrder, setNewSortOrder] = useState("99");
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListPaymentMethodsQueryKey({}) });
+  // Unit State
+  const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
+  const [editUnitItem, setEditUnitItem] = useState<{ id: number; name: string; symbol: string } | null>(null);
+  const [newUnitName, setNewUnitName] = useState("");
+  const [newUnitSymbol, setNewUnitSymbol] = useState("");
+
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
+  const [appNameInput, setAppNameInput] = useState("");
+  const [appLogoInput, setAppLogoInput] = useState("");
+  
+  const { data: settings, isLoading: isLoadingSettings } = useSettings();
+  const updateSettingsMutation = useUpdateSettings();
+
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  useEffect(() => {
+    if (settings && !isInitialized) {
+      if (settings["app_name"]) {
+        setAppNameInput(settings["app_name"]);
+      }
+      if (settings["app_logo"]) {
+        setAppLogoInput(settings["app_logo"]);
+      }
+      setIsInitialized(true);
+    }
+  }, [settings, isInitialized]);
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListPaymentMethodsQueryKey() });
+  const invalidateUnits = () => queryClient.invalidateQueries({ queryKey: getListUnitsQueryKey() });
+
+  const handleEnableNotification = async () => {
+    setIsEnablingPush(true);
+    try {
+      await registerAndSubscribePush();
+      toast({ title: "Notifikasi diaktifkan!", description: "Perangkat ini akan menerima notifikasi transaksi." });
+    } catch (error: any) {
+      toast({ title: "Gagal", description: error.message, variant: "destructive" });
+    } finally {
+      setIsEnablingPush(false);
+    }
+  };
+
+  const handleSaveSettings = () => {
+    if (!appNameInput.trim()) return;
+    updateSettingsMutation.mutate(
+      { app_name: appNameInput.trim(), app_logo: appLogoInput },
+      {
+        onSuccess: () => toast({ title: "Pengaturan Utama disimpan!" }),
+        onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File terlalu besar", description: "Ukuran maksimal 2MB", variant: "destructive" });
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        
+        const MAX_SIZE = 512;
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL("image/png", 0.9);
+        setAppLogoInput(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const createMutation = useCreatePaymentMethod({
     mutation: {
@@ -91,6 +195,60 @@ export default function Pengaturan() {
     deleteMutation.mutate({ id });
   };
 
+  // Unit Mutations
+  const createUnitMutation = useCreateUnit({
+    mutation: {
+      onSuccess: () => {
+        invalidateUnits();
+        setIsAddUnitOpen(false);
+        setNewUnitName(""); setNewUnitSymbol("");
+        toast({ title: "Satuan ditambahkan" });
+      },
+      onError: (err: any) => {
+        toast({ title: "Gagal menambahkan satuan", description: err?.message, variant: "destructive" });
+      },
+    },
+  });
+
+  const updateUnitMutation = useUpdateUnit({
+    mutation: {
+      onSuccess: () => {
+        invalidateUnits();
+        setEditUnitItem(null);
+        toast({ title: "Satuan diperbarui" });
+      },
+    },
+  });
+
+  const deleteUnitMutation = useDeleteUnit({
+    mutation: {
+      onSuccess: () => {
+        invalidateUnits();
+        toast({ title: "Satuan dihapus" });
+      },
+    },
+  });
+
+  const handleAddUnit = () => {
+    if (!newUnitName.trim() || !newUnitSymbol.trim()) return;
+    createUnitMutation.mutate({
+      data: { name: newUnitName.trim(), symbol: newUnitSymbol.trim() },
+    });
+  };
+
+  const handleEditUnitSave = () => {
+    if (!editUnitItem) return;
+    updateUnitMutation.mutate({
+      id: editUnitItem.id,
+      data: { name: editUnitItem.name, symbol: editUnitItem.symbol },
+    });
+  };
+
+  const handleDeleteUnit = (id: number) => {
+    if (!confirm("Hapus satuan ini? Satuan yang sedang digunakan mungkin akan mengalami error pada tampilan.")) return;
+    deleteUnitMutation.mutate({ id });
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       {/* Header */}
@@ -106,6 +264,90 @@ export default function Pengaturan() {
           <p className="text-sm text-muted-foreground">Konfigurasi sistem VOCpos</p>
         </div>
       </div>
+
+      {/* General Settings Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MonitorSmartphone size={16} className="text-violet-500" />
+            Pengaturan Utama
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Ubah nama aplikasi yang akan ditampilkan di layar dan notifikasi.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-end gap-3">
+            <div className="space-y-1.5 w-full sm:max-w-sm">
+              <Label>Nama Aplikasi</Label>
+              <Input 
+                value={appNameInput} 
+                onChange={(e) => setAppNameInput(e.target.value)} 
+                placeholder="mis: Enka Textile POS" 
+                disabled={isLoadingSettings}
+              />
+            </div>
+            
+            <div className="space-y-1.5 w-full sm:w-auto">
+              <Label>Logo Aplikasi (Opsional)</Label>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 border rounded-lg flex items-center justify-center bg-muted/50 overflow-hidden shrink-0">
+                  {appLogoInput ? (
+                    <img src={appLogoInput} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon size={16} className="text-muted-foreground" />
+                  )}
+                </div>
+                <Label htmlFor="logo-upload" className="cursor-pointer">
+                  <div className="h-10 px-3 border rounded-md hover:bg-muted/50 transition-colors flex items-center text-sm">
+                    Pilih Gambar
+                  </div>
+                </Label>
+                <input 
+                  id="logo-upload" 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleLogoUpload}
+                  disabled={isLoadingSettings}
+                />
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleSaveSettings}
+              disabled={isLoadingSettings || updateSettingsMutation.isPending || !appNameInput.trim()}
+              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <Save size={16} />
+              {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Push Notification Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BellRing size={16} className="text-violet-500" />
+            Notifikasi Transaksi
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Aktifkan fitur ini agar perangkat Anda menerima Push Notification seketika dari sistem setiap kali ada penjualan baru.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={handleEnableNotification} 
+            disabled={isEnablingPush}
+            style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
+          >
+            {isEnablingPush ? "Memproses..." : "Aktifkan Perangkat Ini"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Payment Methods Card */}
       <Card>
@@ -202,9 +444,94 @@ export default function Pengaturan() {
         </CardContent>
       </Card>
 
+      {/* Units Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Box size={16} className="text-violet-500" />
+                Satuan Barang
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Kelola jenis satuan utama dan tambahan untuk data barang
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              className="h-9 gap-1.5"
+              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
+              onClick={() => setIsAddUnitOpen(true)}
+            >
+              <Plus size={14} />
+              Tambah
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8 pl-6"></TableHead>
+                <TableHead>Nama Satuan</TableHead>
+                <TableHead>Simbol</TableHead>
+                <TableHead className="w-28 text-right pr-6">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoadingUnits ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                    Memuat...
+                  </TableCell>
+                </TableRow>
+              ) : units.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
+                    Belum ada satuan
+                  </TableCell>
+                </TableRow>
+              ) : (
+                units.map((u) => (
+                  <TableRow key={u.id}>
+                    <TableCell className="pl-6">
+                      <GripVertical size={14} className="text-muted-foreground/40" />
+                    </TableCell>
+                    <TableCell className="font-medium">{u.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{u.symbol}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => setEditUnitItem({ id: u.id, name: u.name, symbol: u.symbol })}
+                        >
+                          <Pencil size={13} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeleteUnit(u.id)}
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader>
             <DialogTitle>Tambah Metode Pembayaran</DialogTitle>
           </DialogHeader>
@@ -248,7 +575,7 @@ export default function Pengaturan() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editItem} onOpenChange={() => setEditItem(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <DialogHeader>
             <DialogTitle>Edit Metode Pembayaran</DialogTitle>
           </DialogHeader>
@@ -282,6 +609,75 @@ export default function Pengaturan() {
             <Button variant="outline" onClick={() => setEditItem(null)}>Batal</Button>
             <Button onClick={handleEditSave} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Unit Dialog */}
+      <Dialog open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
+        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <DialogHeader>
+            <DialogTitle>Tambah Satuan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Nama Satuan</Label>
+              <Input
+                placeholder="mis: METER, YARD, KILOGRAM"
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value.toUpperCase())}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Simbol</Label>
+              <Input
+                placeholder="mis: m, yds, kg"
+                value={newUnitSymbol}
+                onChange={(e) => setNewUnitSymbol(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddUnitOpen(false)}>Batal</Button>
+            <Button
+              onClick={handleAddUnit}
+              disabled={!newUnitName.trim() || !newUnitSymbol.trim() || createUnitMutation.isPending}
+            >
+              {createUnitMutation.isPending ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Unit Dialog */}
+      <Dialog open={!!editUnitItem} onOpenChange={() => setEditUnitItem(null)}>
+        <DialogContent className="max-w-sm w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <DialogHeader>
+            <DialogTitle>Edit Satuan</DialogTitle>
+          </DialogHeader>
+          {editUnitItem && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label>Nama Satuan</Label>
+                <Input
+                  value={editUnitItem.name}
+                  onChange={(e) => setEditUnitItem({ ...editUnitItem, name: e.target.value.toUpperCase() })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Simbol</Label>
+                <Input
+                  value={editUnitItem.symbol}
+                  onChange={(e) => setEditUnitItem({ ...editUnitItem, symbol: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditUnitItem(null)}>Batal</Button>
+            <Button onClick={handleEditUnitSave} disabled={updateUnitMutation.isPending}>
+              {updateUnitMutation.isPending ? "Menyimpan..." : "Simpan"}
             </Button>
           </DialogFooter>
         </DialogContent>

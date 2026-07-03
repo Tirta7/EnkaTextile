@@ -18,19 +18,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatRupiah, formatNumber } from "@/lib/utils";
-import { ProductRollsModal } from "@/components/ProductRollsModal";
-import { Joyride, Step } from "react-joyride";
-
-const tourSteps: Step[] = [
-  { target: '.tour-name', title: 'Informasi Dasar', content: 'Masukkan nama barang. Daftarkan setiap varian warna secara terpisah.' },
-  { target: '.tour-category', title: 'Kategori Barang', content: 'Pilih kategori (Misal: Katun, Rayon).' },
-  { target: '.tour-barcode', title: 'Barcode', content: 'Scan barcode atau kosongkan agar sistem membuat otomatis.' },
-  { target: '.tour-ecer', title: 'Harga & Satuan Ecer', content: 'Bagian ini khusus untuk pengaturan harga dan satuan penjualan meteran/potongan.' },
-  { target: '.tour-grosir', title: 'Harga & Satuan Grosir', content: 'Bagian ini khusus untuk penjualan satuan fisik utuh dari pabrik (contoh: Roll).' },
-  { target: '.tour-stok', title: 'Stok Awal', content: 'Masukkan jumlah utuh dan sisa potongan yang saat ini ada di toko Anda. (Hanya saat buat baru).' },
-];
-
-const schema = z.object({
+import { ProductRollsModal } from "@/components/ProductRollsModal";const schema = z.object({
   name: z.string().min(1, "Nama wajib diisi"),
   categoryId: z.number({ required_error: "Kategori wajib dipilih" }),
   barcode: z.string().optional(),
@@ -57,7 +45,6 @@ export default function Barang() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [viewRollsId, setViewRollsId] = useState<number | null>(null);
   const [viewRollsName, setViewRollsName] = useState("");
-  const [runTour, setRunTour] = useState(false);
   const [calcPerRoll, setCalcPerRoll] = useState<number | ''>('');
 
   const { data: products, isLoading } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
@@ -106,8 +93,6 @@ export default function Barang() {
     form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0 });
     setEditingId(null);
     setIsOpen(true);
-    // Start tour slightly after dialog opens if not edited
-    setTimeout(() => setRunTour(true), 300);
   };
 
   const openEdit = (p: any) => {
@@ -238,7 +223,6 @@ export default function Barang() {
       >
         <DrawerContent 
           className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2"
-          onInteractOutside={(e) => { if (runTour) e.preventDefault(); }}
         >
           <DrawerHeader>
             <DrawerTitle>{editingId ? "Edit Barang" : "Tambah Barang"}</DrawerTitle>
@@ -433,14 +417,7 @@ export default function Barang() {
           </div>
         </DrawerContent>
       </Drawer>
-      <Joyride 
-        steps={tourSteps} 
-        run={runTour} 
-        continuous 
-        {...{ showSkipButton: true, showProgress: true } as any}
-        styles={{ options: { zIndex: 100000 } } as any}
-        onEvent={(data: any) => { if (data.status === 'finished' || data.status === 'skipped' || data.action === 'close') setRunTour(false); }} 
-      />
+
       <ProductRollsModal 
         productId={viewRollsId} 
         productName={viewRollsName} 

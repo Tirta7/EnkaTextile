@@ -13,7 +13,11 @@ import { formatRupiah, formatNumber, formatDate } from "@/lib/utils";
 
 const CHART_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
 
+import { PaginationControl } from "../components/PaginationControl";
+
 export default function Laporan() {
+  const [currentSalesPage, setCurrentSalesPage] = useState(1);
+  const [currentStockPage, setCurrentStockPage] = useState(1);
   const today = new Date();
   const [startDate, setStartDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(today.toISOString().split("T")[0]);
@@ -117,7 +121,7 @@ export default function Laporan() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {(salesReport as any).byProduct?.map((p: any) => (
+                          {(salesReport as any).byProduct?.slice((currentSalesPage - 1) * 20, currentSalesPage * 20).map((p: any) => (
                             <TableRow key={p.productId}>
                               <TableCell className="font-medium">{p.productName}</TableCell>
                               <TableCell className="text-right">{formatNumber(p.totalMeters)}</TableCell>
@@ -126,6 +130,7 @@ export default function Laporan() {
                           ))}
                         </TableBody>
                       </Table>
+                      <PaginationControl currentPage={currentSalesPage} totalPages={Math.ceil(((salesReport as any).byProduct?.length || 0) / 20)} onPageChange={setCurrentSalesPage} />
                     </div>
                   </CardContent>
                 </Card>
@@ -204,7 +209,7 @@ export default function Laporan() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(stockReport as any).products?.map((p: any) => (
+                      {(stockReport as any).products?.slice((currentStockPage - 1) * 20, currentStockPage * 20).map((p: any) => (
                         <TableRow key={p.id} className={p.isLowStock ? "bg-amber-50/50 dark:bg-amber-900/10" : ""}>
                           <TableCell className="font-medium">{p.name}</TableCell>
                           <TableCell className="text-muted-foreground">{p.categoryName || "-"}</TableCell>
@@ -223,6 +228,7 @@ export default function Laporan() {
                       ))}
                     </TableBody>
                   </Table>
+                  <PaginationControl currentPage={currentStockPage} totalPages={Math.ceil(((stockReport as any).products?.length || 0) / 20)} onPageChange={setCurrentStockPage} />
                 </CardContent>
               </Card>
             </>

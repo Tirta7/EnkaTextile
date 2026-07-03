@@ -24,7 +24,10 @@ interface ProductRollsModalProps {
   onClose: () => void;
 }
 
+import { PaginationControl } from "./PaginationControl";
+
 export function ProductRollsModal({ productId, productName, isOpen, onClose }: ProductRollsModalProps) {
+  const [currentPage, setCurrentPage] = useState(1);
   const queryClient = useQueryClient();
   const { data: rolls, isLoading } = useGetProductRolls(productId ?? 0, {
     query: {
@@ -182,7 +185,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   </TableCell>
                 </TableRow>
               ) : (
-                rolls?.map((r) => {
+                rolls?.slice((currentPage - 1) * 20, currentPage * 20).map((r: any) => {
                   const isEditing = editingRollId === r.id;
                   
                   return (
@@ -250,6 +253,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
               )}
             </TableBody>
           </Table>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((rolls?.length || 0) / 20)} onPageChange={setCurrentPage} />
         </div>
       </DrawerContent>
     </Drawer>

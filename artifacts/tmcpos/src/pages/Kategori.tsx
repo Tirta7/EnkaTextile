@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -169,18 +169,19 @@ export default function Kategori() {
         </CardContent>
       </Card>
 
-      <Dialog open={isCreateOpen || !!editingCategory} onOpenChange={(open) => {
+      <Drawer open={isCreateOpen || !!editingCategory} onOpenChange={(open) => {
         if (!open) {
           setIsCreateOpen(false);
           setEditingCategory(null);
         }
       }}>
-        <DialogContent className="w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[90vh] overflow-y-auto max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</DialogTitle>
-          </DialogHeader>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle>{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</DrawerTitle>
+          </DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -207,18 +208,19 @@ export default function Kategori() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => { setIsCreateOpen(false); setEditingCategory(null); }}>
+              <DrawerFooter className="px-0 pt-4">
+                <Button type="button" variant="outline" className="w-full" onClick={() => { setIsCreateOpen(false); setEditingCategory(null); }}>
                   Batal
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                   Simpan
                 </Button>
-              </DialogFooter>
+              </DrawerFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

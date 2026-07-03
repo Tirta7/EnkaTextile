@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -230,15 +230,20 @@ export default function Barang() {
         </CardContent>
       </Card>
 
-      <Dialog modal={false} open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
-        <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh] w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]" 
+      <Drawer 
+        open={isOpen} 
+        onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}
+      >
+        <DrawerContent 
+          className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2"
           onInteractOutside={(e) => { if (runTour) e.preventDefault(); }}
         >
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Edit Barang" : "Tambah Barang"}</DialogTitle>
-          </DialogHeader>
+          <DrawerHeader>
+            <DrawerTitle>{editingId ? "Edit Barang" : "Tambah Barang"}</DrawerTitle>
+          </DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
               
               {/* Informasi Dasar */}
               <div className="space-y-4">
@@ -417,14 +422,15 @@ export default function Barang() {
                 </div>
               </div>
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
-                  <Button type="submit" className="tour-submit" disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>Simpan</Button>
-                </DialogFooter>
+                <DrawerFooter className="px-0 pt-4">
+                  <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
+                  <Button type="submit" className="tour-submit w-full" disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>Simpan</Button>
+                </DrawerFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </DrawerContent>
+      </Drawer>
       <Joyride 
         steps={tourSteps} 
         run={runTour} 

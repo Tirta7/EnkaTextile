@@ -61,7 +61,8 @@ export default function Home() {
                 <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${item.bg}`} />
                 <item.icon className={`w-7 h-7 sm:w-8 sm:h-8 ${item.color} relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]`} />
               </div>
-              <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] text-foreground/80 group-hover:text-foreground transition-colors uppercase">{item.name}</span>
+              <span className={`text-[10px] font-bold ${item.color} uppercase tracking-wider group-hover:scale-105 transition-transform duration-300`}>
+                {item.name}</span>
             </div>
           </Link>
         ))}

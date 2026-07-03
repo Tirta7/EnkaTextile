@@ -130,7 +130,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               {/* Table */}
               <div className="rounded-xl border border-indigo-100 shadow-sm overflow-hidden mb-8 relative z-10">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-gradient-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
+                  <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
                       <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-12 text-center">No</th>
                       <th className="py-3.5 px-4 font-bold text-indigo-800 text-[10px] uppercase tracking-widest">Nama Barang</th>
@@ -175,7 +175,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               <div className="flex justify-between items-start relative z-10">
                 {/* Left side info (Payment / Transfer) */}
                 <div className="w-[45%]">
-                  <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
                       <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>

@@ -82,6 +82,9 @@ const SelectContent = React.forwardRef<
       )}
       position={position}
       data-vaul-no-drag="true"
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
       {...props}
     >
       <SelectScrollUpButton />

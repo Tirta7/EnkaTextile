@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { cashEntriesTable } from "@workspace/db";
-import { and, gte, lte, sql } from "drizzle-orm";
+import { and, gte, lte, sql, desc } from "drizzle-orm";
 import { CreateCashEntryBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 
@@ -20,7 +20,7 @@ router.get("/cashbook", async (req, res) => {
     .select()
     .from(cashEntriesTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(cashEntriesTable.createdAt);
+    .orderBy(desc(cashEntriesTable.createdAt));
 
   res.json(entries.map(e => ({
     ...e,

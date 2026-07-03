@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { stockMutationsTable, productsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { CreateMutationBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 
@@ -30,7 +30,7 @@ router.get("/mutations", async (req, res) => {
     .from(stockMutationsTable)
     .leftJoin(productsTable, eq(stockMutationsTable.productId, productsTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(stockMutationsTable.createdAt);
+    .orderBy(desc(stockMutationsTable.createdAt));
 
   res.json(mutations.map(m => ({
     ...m,

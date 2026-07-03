@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { receivablesTable, customersTable, salesTable, paymentsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { AddReceivablePaymentBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 
@@ -32,7 +32,7 @@ router.get("/receivables", async (req, res): Promise<void> => {
     .leftJoin(customersTable, eq(receivablesTable.customerId, customersTable.id))
     .leftJoin(salesTable, eq(receivablesTable.saleId, salesTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(receivablesTable.createdAt);
+    .orderBy(desc(receivablesTable.createdAt));
 
   const now = new Date();
   const result = receivables.map(r => ({
@@ -75,7 +75,7 @@ router.get("/receivables/:id", async (req, res): Promise<void> => {
     .select()
     .from(paymentsTable)
     .where(eq(paymentsTable.receivableId, id))
-    .orderBy(paymentsTable.paidAt);
+    .orderBy(desc(paymentsTable.paidAt));
 
   const now = new Date();
   res.json({

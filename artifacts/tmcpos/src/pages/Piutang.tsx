@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Wallet, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -172,9 +172,10 @@ export default function Piutang() {
         </CardContent>
       </Card>
 
-      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
-        <DialogContent className="max-w-md w-[95vw] sm:w-full p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <DialogHeader><DialogTitle>Catat Pembayaran Piutang</DialogTitle></DialogHeader>
+      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader><DrawerTitle>Catat Pembayaran Piutang</DrawerTitle></DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           {selectedRec && (
             <div className="space-y-4">
               <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
@@ -202,12 +203,13 @@ export default function Piutang() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
-            <Button onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+          <DrawerFooter className="px-0 pt-4">
+            <Button type="button" variant="outline" className="w-full" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
+            <Button className="w-full" onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }

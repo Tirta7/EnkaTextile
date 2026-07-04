@@ -149,18 +149,18 @@ export default function Barang() {
         </div>
       )}
 
-      {/* Premium Category Cloud */}
-      <div className="flex flex-wrap justify-center pb-4 pt-2 mb-4 gap-2.5 w-full">
+      {/* Premium Category Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pb-4 pt-2 mb-4 w-full">
         <button 
           onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-          className={`shrink-0 group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+          className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
             selectedCategoryId === null 
-              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105" 
+              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
               : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
           }`}
         >
-          Semua Kategori
-          <span className={`flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
+          <span className="truncate text-left">Semua Kategori</span>
+          <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
             selectedCategoryId === null ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
           }`}>
             {products?.length || 0}
@@ -173,14 +173,14 @@ export default function Barang() {
             <button 
               key={c.id}
               onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
-              className={`shrink-0 group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+              className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
                 isActive 
                   ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
                   : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
               }`}
             >
-              {c.name}
-              <span className={`flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
+              <span className="truncate text-left" title={c.name}>{c.name}</span>
+              <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
                 isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
               }`}>
                 {count}

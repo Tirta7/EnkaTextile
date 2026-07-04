@@ -149,27 +149,45 @@ export default function Barang() {
         </div>
       )}
 
-      {/* Category Cloud */}
-      <div className="flex flex-wrap justify-center gap-2 mb-6">
-        <Button 
-          variant={selectedCategoryId === null ? "default" : "ghost"}
-          className={selectedCategoryId === null ? "" : "text-muted-foreground hover:text-foreground uppercase text-xs tracking-wider font-medium"}
+      {/* Premium Category Cloud */}
+      <div className="flex flex-wrap justify-center gap-2.5 mb-8">
+        <button 
           onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-          size="sm"
+          className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+            selectedCategoryId === null 
+              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105" 
+              : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
+          }`}
         >
-          SEMUA KATEGORI
-        </Button>
-        {categories?.map(c => (
-          <Button 
-            key={c.id}
-            variant={selectedCategoryId === c.id ? "default" : "ghost"}
-            className={selectedCategoryId === c.id ? "" : "text-muted-foreground hover:text-foreground uppercase text-xs tracking-wider font-medium"}
-            onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
-            size="sm"
-          >
-            {c.name}
-          </Button>
-        ))}
+          Semua Kategori
+          <span className={`flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
+            selectedCategoryId === null ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+          }`}>
+            {products?.length || 0}
+          </span>
+        </button>
+        {categories?.map(c => {
+          const count = products?.filter(p => p.categoryId === c.id).length || 0;
+          const isActive = selectedCategoryId === c.id;
+          return (
+            <button 
+              key={c.id}
+              onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
+              className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+                isActive 
+                  ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
+                  : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
+              }`}
+            >
+              {c.name}
+              <span className={`flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
+                isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+              }`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <Card>

@@ -99,23 +99,31 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         >
           <SelectTrigger className="h-8"><SelectValue placeholder="Pilih roll (opsional)" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">Potong Bebas (Meteran)</SelectItem>
+            <SelectItem value="none" className="border shadow-sm hover:border-primary/50 mb-2 w-full text-base">
+              Potong Bebas (Meteran)
+            </SelectItem>
             {Object.keys(lengthGroups).length > 0 && (
-              <SelectGroup>
-                <SelectLabel>Pilih Otomatis (Per Ukuran)</SelectLabel>
+              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
+                <div className="col-span-full"><SelectLabel className="pb-1">Pilih Otomatis (Per Ukuran)</SelectLabel></div>
                 {Object.entries(lengthGroups).map(([len, count]) => (
-                  <SelectItem key={`len_${len}`} value={`len_${len}`}>
-                    Ukuran {len}m (Tersedia: {count} roll)
+                  <SelectItem key={`len_${len}`} value={`len_${len}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="font-semibold text-base">{len}m</span>
+                      <span className="text-xs text-muted-foreground">Tersedia: {count} roll</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectGroup>
             )}
             {availableRolls.length > 0 && (
-              <SelectGroup>
-                <SelectLabel>Pilih Spesifik Barcode</SelectLabel>
+              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="col-span-full"><SelectLabel className="pb-1">Pilih Spesifik Barcode</SelectLabel></div>
                 {availableRolls.map(r => (
-                  <SelectItem key={`r_${r.id}`} value={`r_${r.id}`}>
-                    {r.barcode} ({r.currentLength}m)
+                  <SelectItem key={`r_${r.id}`} value={`r_${r.id}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="font-semibold text-base">{r.currentLength}m</span>
+                      <span className="text-[10px] text-muted-foreground truncate w-full text-center">{r.barcode}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectGroup>

@@ -150,7 +150,7 @@ export default function Barang() {
       )}
 
       {/* Premium Category Cloud */}
-      <div className="flex flex-nowrap md:flex-wrap md:justify-center overflow-x-auto pb-4 mb-6 gap-2.5 scroll-smooth w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex flex-nowrap md:flex-wrap md:justify-center overflow-x-auto pt-2 px-4 pb-6 mb-4 gap-3 scroll-smooth w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <button 
           onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
           className={`shrink-0 group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${

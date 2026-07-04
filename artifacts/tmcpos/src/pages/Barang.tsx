@@ -122,10 +122,10 @@ export default function Barang() {
     setViewRollsName(p.name);
   };
 
-  const filtered = products?.filter(p => {
+  const filtered = selectedCategoryId === null ? [] : products?.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.lotNumber && p.lotNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesLowStock = !showLowStock || p.isLowStock;
-    const matchesCategory = selectedCategoryId === null || p.categoryId === selectedCategoryId;
+    const matchesCategory = p.categoryId === selectedCategoryId;
     return matchesSearch && matchesLowStock && matchesCategory;
   });
 
@@ -151,21 +151,6 @@ export default function Barang() {
 
       {/* Premium Category Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4 pt-2 mb-4 w-full">
-        <button 
-          onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-          className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
-            selectedCategoryId === null 
-              ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
-              : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
-          }`}
-        >
-          <span className="truncate text-left">Semua Kategori</span>
-          <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
-            selectedCategoryId === null ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-          }`}>
-            {products?.length || 0}
-          </span>
-        </button>
         {categories?.map(c => {
           const count = products?.filter(p => p.categoryId === c.id).length || 0;
           const isActive = selectedCategoryId === c.id;
@@ -214,7 +199,15 @@ export default function Barang() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {selectedCategoryId === null ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
+                    <Package className="mx-auto mb-4 h-12 w-12 opacity-20" />
+                    <p className="text-lg font-medium text-foreground mb-1">Pilih Kategori</p>
+                    <p className="text-sm">Silakan pilih kategori bahan di atas untuk menampilkan daftar barang.</p>
+                  </TableCell>
+                </TableRow>
+              ) : isLoading ? (
                 Array(5).fill(0).map((_, i) => (
                   <TableRow key={i}>
                     {Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
@@ -222,7 +215,7 @@ export default function Barang() {
                 ))
               ) : filtered?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     <Package className="mx-auto mb-2 h-8 w-8 opacity-30" />
                     Tidak ada barang ditemukan
                   </TableCell>

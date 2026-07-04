@@ -39,6 +39,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function Barang() {
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -124,7 +125,8 @@ export default function Barang() {
   const filtered = products?.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.lotNumber && p.lotNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesLowStock = !showLowStock || p.isLowStock;
-    return matchesSearch && matchesLowStock;
+    const matchesCategory = selectedCategoryId === null || p.categoryId === selectedCategoryId;
+    return matchesSearch && matchesLowStock && matchesCategory;
   });
 
   const lowStockCount = products?.filter(p => p.isLowStock).length ?? 0;
@@ -146,6 +148,29 @@ export default function Barang() {
           </Button>
         </div>
       )}
+
+      {/* Category Cloud */}
+      <div className="flex flex-wrap justify-center gap-2 mb-6">
+        <Button 
+          variant={selectedCategoryId === null ? "default" : "ghost"}
+          className={selectedCategoryId === null ? "" : "text-muted-foreground hover:text-foreground uppercase text-xs tracking-wider font-medium"}
+          onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
+          size="sm"
+        >
+          SEMUA KATEGORI
+        </Button>
+        {categories?.map(c => (
+          <Button 
+            key={c.id}
+            variant={selectedCategoryId === c.id ? "default" : "ghost"}
+            className={selectedCategoryId === c.id ? "" : "text-muted-foreground hover:text-foreground uppercase text-xs tracking-wider font-medium"}
+            onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
+            size="sm"
+          >
+            {c.name}
+          </Button>
+        ))}
+      </div>
 
       <Card>
         <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">

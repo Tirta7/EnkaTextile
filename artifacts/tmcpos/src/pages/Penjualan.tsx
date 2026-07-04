@@ -103,7 +103,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
               Potong Bebas (Meteran)
             </SelectItem>
             {Object.keys(lengthGroups).length > 0 && (
-              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-2">
+              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 mb-2">
                 <div className="col-span-full"><SelectLabel className="pb-1">Pilih Otomatis (Per Ukuran)</SelectLabel></div>
                 {Object.entries(lengthGroups).map(([len, count]) => (
                   <SelectItem key={`len_${len}`} value={`len_${len}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">
@@ -116,7 +116,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
               </SelectGroup>
             )}
             {availableRolls.length > 0 && (
-              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 <div className="col-span-full"><SelectLabel className="pb-1">Pilih Spesifik Barcode</SelectLabel></div>
                 {availableRolls.map(r => (
                   <SelectItem key={`r_${r.id}`} value={`r_${r.id}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">

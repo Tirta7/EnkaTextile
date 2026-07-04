@@ -50,8 +50,19 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
           <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Kategori</SelectItem>
-            {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}
+            <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+              <SelectItem value="all" className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center font-semibold">
+                Semua Kategori
+              </SelectItem>
+              {categories?.map((c: any) => (
+                <SelectItem key={c.id} value={c.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm" title={c.description}>
+                  <div className="flex flex-col items-center justify-center gap-0.5 w-full text-center">
+                    <span className="font-semibold truncate w-full">{c.name}</span>
+                    {c.description && <span className="text-[10px] text-muted-foreground truncate w-full">{c.description}</span>}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>
@@ -60,7 +71,13 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => { updateItem(index, "productId", parseInt(v)); }}>
           <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
           <SelectContent>
-            {filteredProducts?.map((p: any) => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}
+            <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+              {filteredProducts?.map((p: any) => (
+                <SelectItem key={p.id} value={p.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center">
+                   <span className="font-semibold truncate w-full" title={p.name}>{p.name}</span>
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
       </div>

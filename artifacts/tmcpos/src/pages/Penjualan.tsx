@@ -46,9 +46,9 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
   return (
     <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
       <div className="md:col-span-2">
-        <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kategori</label>
         <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-          <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
+          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Semua" /></SelectTrigger>
           <SelectContent>
             <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
               <SelectItem value="all" className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center font-semibold">
@@ -67,9 +67,9 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         </Select>
       </div>
       <div className="md:col-span-2">
-        <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Barang</label>
         <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => { updateItem(index, "productId", parseInt(v)); }}>
-          <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
+          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
           <SelectContent>
             <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
               {filteredProducts?.map((p: any) => (
@@ -82,7 +82,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         </Select>
       </div>
       <div className="md:col-span-2">
-        <label className="text-xs text-muted-foreground mb-1 block">Roll (Stiker)</label>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Roll (Stiker)</label>
         <Select 
           value={item.rollId ? `r_${item.rollId}` : (item.targetLength ? `len_${item.targetLength}` : "none")} 
           onValueChange={v => { 
@@ -114,7 +114,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
           }}
           disabled={!item.productId || !rolls || rolls.length === 0}
         >
-          <SelectTrigger className="h-8"><SelectValue placeholder="Pilih roll (opsional)" /></SelectTrigger>
+          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih roll" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none" className="border shadow-sm hover:border-primary/50 mb-2 w-full text-base">
               Potong Bebas (Meteran)
@@ -149,9 +149,9 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         </Select>
       </div>
       <div className="md:col-span-1">
-        <label className="text-xs text-muted-foreground mb-1 block">Satuan</label>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Satuan</label>
         <Select value={item.unit} onValueChange={v => updateItem(index, "unit", v)} disabled={!!item.rollId}>
-          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-12 font-medium"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="meter">{item.primaryUnit || "Meter"}</SelectItem>
             <SelectItem value="roll">{item.secondaryUnit || "Roll"}</SelectItem>
@@ -159,8 +159,8 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         </Select>
       </div>
       <div className="md:col-span-1">
-        <label className="text-xs text-muted-foreground mb-1 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "m"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "roll"})`}</label>
-        <Input className="h-8" type="number" step="any" min={0} max={maxRolls} value={item.unit === "meter" ? item.meters : item.rolls}
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "m"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "roll"})`}</label>
+        <Input className="h-12 text-center text-lg font-medium" type="number" step="any" min={0} max={maxRolls} value={item.unit === "meter" ? item.meters : item.rolls}
           onChange={e => {
             let val: number | "" = e.target.value === "" ? "" : parseFloat(e.target.value);
             if (item.unit === "roll" && maxRolls !== undefined && typeof val === "number" && val > maxRolls) {
@@ -172,15 +172,15 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         />
       </div>
       <div className="md:col-span-2">
-        <label className="text-xs text-muted-foreground mb-1 block">Harga/satuan</label>
-        <Input className="h-8" type="number" step="any" min={0} value={item.pricePerUnit} onChange={e => updateItem(index, "pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Harga/satuan</label>
+        <Input className="h-12 font-medium text-base" type="number" step="any" min={0} value={item.pricePerUnit} onChange={e => updateItem(index, "pricePerUnit", e.target.value === "" ? "" : parseFloat(e.target.value))} />
       </div>
       <div className="md:col-span-1">
-        <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
-        <div className="h-8 flex items-center text-sm font-medium">{formatRupiah(item.subtotal)}</div>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Subtotal</label>
+        <div className="h-12 flex items-center text-base font-bold bg-muted/50 px-3 rounded-md border border-transparent">{formatRupiah(item.subtotal)}</div>
       </div>
       <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
-        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        <Button type="button" variant="ghost" size="icon" className="h-12 w-12 hover:bg-destructive/10 hover:text-destructive transition-colors" onClick={() => removeItem(index)}><Trash2 className="h-5 w-5 text-destructive" /></Button>
       </div>
     </div>
   );

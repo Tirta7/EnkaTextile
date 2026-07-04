@@ -150,10 +150,10 @@ export default function Barang() {
       )}
 
       {/* Premium Category Cloud */}
-      <div className="flex flex-wrap justify-center gap-2.5 mb-8">
+      <div className="flex overflow-x-auto pb-6 mb-4 gap-3 snap-x -mx-4 px-4 sm:mx-0 sm:px-0 scroll-smooth">
         <button 
           onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-          className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+          className={`shrink-0 snap-start group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
             selectedCategoryId === null 
               ? "bg-primary text-primary-foreground border-primary shadow-md scale-105" 
               : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
@@ -173,7 +173,7 @@ export default function Barang() {
             <button 
               key={c.id}
               onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
-              className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
+              className={`shrink-0 snap-start group relative flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
                 isActive 
                   ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
                   : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"

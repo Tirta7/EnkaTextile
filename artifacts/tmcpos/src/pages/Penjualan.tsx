@@ -400,9 +400,9 @@ export default function Penjualan() {
       </Card>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>Buat Penjualan Baru</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader><DrawerTitle className="text-xl">Buat Penjualan Baru</DrawerTitle></DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(96vh-6rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">
               <span className="text-sm font-medium text-muted-foreground">No. Invoice:</span>

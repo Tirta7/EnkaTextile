@@ -150,12 +150,12 @@ export default function Barang() {
       )}
 
       {/* Premium Category Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 pb-4 pt-2 mb-4 w-full">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4 pt-2 mb-4 w-full">
         <button 
           onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
           className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
             selectedCategoryId === null 
-              ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
+              ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
               : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
           }`}
         >
@@ -175,7 +175,7 @@ export default function Barang() {
               onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
               className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
                 isActive 
-                  ? "bg-primary text-primary-foreground border-primary shadow-md scale-105 z-10" 
+                  ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
                   : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
               }`}
             >

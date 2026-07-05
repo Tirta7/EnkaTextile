@@ -13,6 +13,13 @@ import { formatRupiah } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 const VIOLET = "#8b5cf6";
 
@@ -28,7 +35,7 @@ export default function Home() {
   // Determine today's sales for the wallet card mock
   const todaySales = chartData && chartData.length > 0 ? chartData[chartData.length - 1].revenue : 0;
 
-  const menuItems = [
+  const allMenuItems = [
     { name: "Kategori", href: "/kategori", icon: Tags, color: "text-blue-600", bg: "bg-blue-100", badge: "" },
     { name: "Barang", href: "/barang", icon: Package2, color: "text-amber-600", bg: "bg-amber-100", badge: "UPDATE" },
     { name: "Pelanggan", href: "/pelanggan", icon: UserCircle2, color: "text-emerald-600", bg: "bg-emerald-100", badge: "" },
@@ -36,8 +43,13 @@ export default function Home() {
     { name: "Penjualan", href: "/penjualan", icon: Receipt, color: "text-violet-600", bg: "bg-violet-100", badge: "HOT" },
     { name: "Pembelian", href: "/pembelian", icon: ShoppingBasket, color: "text-pink-600", bg: "bg-pink-100", badge: "" },
     { name: "Mutasi", href: "/mutasi", icon: ArrowLeftRight, color: "text-cyan-600", bg: "bg-cyan-100", badge: "" },
-    { name: "Lainnya", href: "#", icon: MoreHorizontal, color: "text-slate-600", bg: "bg-slate-100", badge: "" },
+    { name: "Piutang", href: "/piutang", icon: Landmark, color: "text-red-600", bg: "bg-red-100", badge: "" },
+    { name: "Hutang", href: "/hutang", icon: CreditCard, color: "text-rose-600", bg: "bg-rose-100", badge: "" },
+    { name: "Buku Kas", href: "/buku-kas", icon: BookMarked, color: "text-amber-700", bg: "bg-amber-200", badge: "" },
+    { name: "Laporan", href: "/laporan", icon: BarChart3, color: "text-indigo-600", bg: "bg-indigo-100", badge: "" },
   ];
+
+  const primaryMenuItems = allMenuItems.slice(0, 7);
 
   return (
     <div className="max-w-[800px] bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:mx-auto md:shadow-xl md:border-x">
@@ -116,7 +128,7 @@ export default function Home() {
       {/* Main Grid Icons */}
       <div className="px-4 py-6 mt-2">
         <div className="grid grid-cols-4 gap-y-6 gap-x-2">
-          {menuItems.map((item) => (
+          {primaryMenuItems.map((item) => (
             <Link key={item.name} href={item.href}>
               <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
                 {item.badge && (
@@ -133,6 +145,44 @@ export default function Home() {
               </div>
             </Link>
           ))}
+          
+          {/* Lainnya Button with Drawer */}
+          <Drawer>
+            <DrawerTrigger asChild>
+              <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
+                <div className="w-[60px] h-[60px] rounded-[18px] flex items-center justify-center bg-slate-100 group-active:scale-95 transition-transform relative overflow-hidden shadow-sm">
+                  <MoreHorizontal className="w-7 h-7 text-slate-600 relative z-10" strokeWidth={2} />
+                </div>
+                <span className="text-[11px] font-medium text-slate-700 text-center tracking-tight leading-tight w-full truncate px-1">
+                  Lainnya
+                </span>
+              </div>
+            </DrawerTrigger>
+            <DrawerContent>
+              <DrawerHeader className="text-left border-b pb-4">
+                <DrawerTitle>Semua Fitur</DrawerTitle>
+              </DrawerHeader>
+              <div className="p-4 grid grid-cols-4 gap-y-6 gap-x-2">
+                {allMenuItems.map((item) => (
+                  <Link key={item.name} href={item.href}>
+                    <div className="flex flex-col items-center gap-2 cursor-pointer group relative">
+                      {item.badge && (
+                        <span className="absolute -top-2 -right-1 z-10 bg-red-500 text-white text-[8px] font-extrabold px-1.5 py-0.5 rounded-full shadow-sm border-2 border-white">
+                          {item.badge}
+                        </span>
+                      )}
+                      <div className={`w-[60px] h-[60px] rounded-[18px] flex items-center justify-center ${item.bg} group-active:scale-95 transition-transform relative overflow-hidden shadow-sm`}>
+                        <item.icon className={`w-7 h-7 ${item.color} relative z-10`} strokeWidth={2} />
+                      </div>
+                      <span className="text-[11px] font-medium text-slate-700 text-center tracking-tight leading-tight w-full truncate px-1">
+                        {item.name}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
 

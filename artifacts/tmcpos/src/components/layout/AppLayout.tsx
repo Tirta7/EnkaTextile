@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { BottomNav } from "./BottomNav";
@@ -7,6 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [location] = useLocation();
   const { theme, toggle } = useTheme();
   const { data: settings } = useSettings();
 
@@ -39,7 +41,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           theme={theme}
           onThemeToggle={toggle}
         />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-[max(5rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <main className={`flex-1 p-4 md:p-6 lg:p-8 pb-[max(5rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))] ${location === '/' ? '' : 'pt-[max(1.5rem,env(safe-area-inset-top))]'}`}>
           {children}
         </main>
       </div>

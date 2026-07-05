@@ -7,7 +7,7 @@ import {
   TrendingUp, Store
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useGetDashboardSalesChart, getGetDashboardSalesChartQueryKey } from "@workspace/api-client-react";
+import { useGetDashboardSalesChart, getGetDashboardSalesChartQueryKey, useListSales, getListSalesQueryKey } from "@workspace/api-client-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { formatRupiah } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,6 +34,10 @@ export default function Home() {
 
   // Determine today's sales for the wallet card mock
   const todaySales = chartData && chartData.length > 0 ? chartData[chartData.length - 1].revenue : 0;
+
+  // Fetch real recent sales
+  const { data: salesList } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
+  const recentSales = salesList?.slice(0, 5) || [];
 
   const allMenuItems = [
     { name: "Kategori", href: "/kategori", icon: Tags, color: "text-blue-600", bg: "bg-blue-100", badge: "" },
@@ -204,24 +208,40 @@ export default function Home() {
       <div className="pl-4 pb-8">
         <div className="flex items-center justify-between pr-4 mb-3">
           <h3 className="font-bold text-slate-800 text-sm">Akses Cepat Transaksi</h3>
-          <span className="text-xs font-semibold text-violet-600">Lihat Semua</span>
+          <Link href="/penjualan">
+            <span className="text-xs font-semibold text-violet-600 cursor-pointer">Lihat Semua</span>
+          </Link>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-4 pr-4 snap-x [&::-webkit-scrollbar]:hidden">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="min-w-[200px] w-[200px] bg-white rounded-2xl p-3 border border-slate-100 shadow-sm snap-start">
+          {recentSales.length > 0 ? recentSales.map((sale) => (
+            <div key={sale.id} className="min-w-[200px] w-[200px] bg-white rounded-2xl p-3 border border-slate-100 shadow-sm snap-start">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">A</div>
+                <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 font-bold text-xs uppercase">
+                  {(sale.customerName && sale.customerName !== "Umum") ? sale.customerName.substring(0, 1) : "U"}
+                </div>
                 <div>
-                  <p className="text-[10px] text-slate-500 font-medium">Pelanggan Umum</p>
-                  <p className="text-xs font-bold text-slate-800">Hari ini, 10:45</p>
+                  <p className="text-[10px] text-slate-500 font-medium truncate w-28">
+                    {sale.customerName || "Pelanggan Umum"}
+                  </p>
+                  <p className="text-xs font-bold text-slate-800 truncate">
+                    {new Date(sale.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-3 pt-2 border-t border-dashed border-slate-200">
-                <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Lunas</span>
-                <span className="text-xs font-bold">Rp {150000 * i}</span>
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-md ${
+                  sale.status === 'lunas' ? 'text-emerald-600 bg-emerald-50' : 
+                  sale.status === 'piutang' ? 'text-rose-600 bg-rose-50' : 
+                  'text-slate-600 bg-slate-50'
+                }`}>
+                  <span className="capitalize">{sale.status || 'lunas'}</span>
+                </span>
+                <span className="text-xs font-bold">{formatRupiah(sale.totalAmount)}</span>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="text-xs text-muted-foreground italic px-2 py-4">Belum ada transaksi...</div>
+          )}
         </div>
       </div>
       

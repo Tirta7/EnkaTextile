@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -202,6 +202,7 @@ export default function Penjualan() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<InvoicePreviewData | null>(null);
   const [previewSaleId, setPreviewSaleId] = useState<number | undefined>();
+  const [activeTab, setActiveTab] = useState<string>("Semua");
 
   const { data: sales, isLoading } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const { data: customers } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
@@ -319,7 +320,7 @@ export default function Penjualan() {
     });
   };
 
-  const filtered = filterByDateRange(
+  const baseFiltered = filterByDateRange(
     sales?.filter(s => {
       const q = search.toLowerCase();
       return s.invoiceNumber?.toLowerCase().includes(q) || (s as any).customerName?.toLowerCase().includes(q);
@@ -328,76 +329,155 @@ export default function Penjualan() {
     dateTo,
   );
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Penjualan"
-        description="Catat dan kelola transaksi penjualan."
-        actions={<Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Buat Penjualan</Button>}
-      />
+  const filtered = useMemo(() => {
+    if (activeTab === "Semua") return baseFiltered;
+    return baseFiltered.filter(s => s.status?.toLowerCase() === activeTab.toLowerCase());
+  }, [baseFiltered, activeTab]);
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <CardTitle className="text-lg font-medium flex-1">Daftar Penjualan</CardTitle>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari invoice / pelanggan..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+  return (
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-20">
+      
+      {/* Mobile-optimized Header */}
+      <div className="flex items-center justify-between pt-2 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Aktivitas</h1>
+          <p className="text-sm text-slate-500">Riwayat penjualan Anda</p>
+        </div>
+        <Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Plus className="mr-2 h-4 w-4" /> Buat Nota
+        </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-slate-200 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        {["Semua", "Lunas", "Kredit", "Partial"].map(tab => (
+          <button 
+            key={tab}
+            onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+            className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-green-600' : 'text-slate-500 hover:text-slate-800'}`}
+          >
+            {tab}
+            {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />}
+          </button>
+        ))}
+      </div>
+
+      {/* Filter Chips & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari pelanggan atau invoice..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-green-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+        <div className="flex gap-2">
+           {/* Replace standard date filter with simpler or keep as is, but styled */}
+           <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
+        </div>
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-1/3" />
+                <Skeleton className="h-3 w-full mt-4" />
+              </div>
             </div>
+          ))
+        ) : filtered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <ReceiptIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Belum ada aktivitas</h3>
+            <p className="text-sm text-slate-500 mt-1">Transaksi penjualan Anda akan muncul di sini.</p>
           </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>No. Invoice</TableHead>
-                <TableHead>Pelanggan</TableHead>
-                <TableHead className="hidden md:table-cell">Tgl. Transaksi</TableHead>
-                <TableHead className="hidden md:table-cell">Pembayaran</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right hidden md:table-cell">Terbayar</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    <ShoppingCart className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Belum ada penjualan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-mono font-medium">{s.invoiceNumber}</TableCell>
-                    <TableCell>{(s as any).customerName || <span className="text-muted-foreground">Umum</span>}</TableCell>
-                    <TableCell className="text-muted-foreground hidden md:table-cell">{formatDate(s.createdAt)}</TableCell>
-                    <TableCell className="hidden md:table-cell"><Badge variant="outline" className="capitalize">{s.paymentType}</Badge></TableCell>
-                    <TableCell className="text-right font-medium">{formatRupiah(s.totalAmount)}</TableCell>
-                    <TableCell className="text-right hidden md:table-cell">{formatRupiah(s.paidAmount ?? 0)}</TableCell>
-                    <TableCell>
-                      <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[s.status ?? "kredit"] || "bg-gray-100 text-gray-700"}`}>
-                        {s.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }} title="Cetak Nota">
-                        <Printer className="h-4 w-4" />
+        ) : (
+          <>
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => {
+              const isLunas = s.status === 'lunas';
+              const isKredit = s.status === 'kredit';
+              const customerName = (s as any).customerName || "Pelanggan Umum";
+              
+              return (
+                <div key={s.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
+                  
+                  {/* Top Row: Date & Price */}
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-slate-500">
+                      {formatDate(s.createdAt)}
+                    </span>
+                    <span className="text-sm font-bold text-slate-800">
+                      {formatRupiah(s.totalAmount)}
+                    </span>
+                  </div>
+
+                  {/* Main Content: Avatar, Title, Status */}
+                  <div className="flex gap-3">
+                    <div className="w-[60px] h-[60px] rounded-2xl flex-shrink-0 bg-violet-50 flex items-center justify-center border border-violet-100">
+                      <UserIcon className="w-8 h-8 text-violet-300" strokeWidth={1.5} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
+                        {customerName}
+                      </h3>
+                      
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        {isLunas ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
+                        ) : isKredit ? (
+                          <Clock className="w-4 h-4 text-orange-500 fill-orange-50" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-blue-500 fill-blue-50" />
+                        )}
+                        <span className="text-xs font-medium text-slate-600 capitalize">
+                          {isLunas ? "Pembayaran selesai" : isKredit ? "Menunggu pelunasan" : s.status}
+                        </span>
+                      </div>
+                      
+                      <p className="text-[11px] text-slate-400 mt-1 truncate">
+                        1 [INV] {s.invoiceNumber} • {s.paymentType}
+                      </p>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="flex items-end justify-end ml-2">
+                      <Button 
+                        size="sm" 
+                        className="rounded-full bg-green-600 hover:bg-green-700 font-bold h-8 px-4 shadow-sm"
+                        onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }}
+                      >
+                        Cetak
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+                  
+                  {/* Bottom Bar: Additional Info (Optional) */}
+                  <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
+                    <span>Kasir: Admin</span>
+                    <div className="flex gap-0.5 text-slate-200">
+                      {/* Decorative stars mimicking Gojek rating */}
+                      {[1,2,3,4,5].map(star => <svg key={star} className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {filtered && filtered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
         <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-6 pt-2">

@@ -166,7 +166,7 @@ export default function Home() {
               <DrawerHeader className="text-left border-b pb-4">
                 <DrawerTitle>Semua Fitur</DrawerTitle>
               </DrawerHeader>
-              <div className="p-4 grid grid-cols-4 gap-y-6 gap-x-2">
+              <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom))] grid grid-cols-4 gap-y-6 gap-x-2">
                 {allMenuItems.map((item) => (
                   <Link key={item.name} href={item.href}>
                     <div className="flex flex-col items-center gap-2 cursor-pointer group relative">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { BottomNav } from "./BottomNav";
 import { useTheme } from "@/hooks/useTheme";
 import { useSettings } from "@/hooks/useSettings";
 
@@ -38,10 +39,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           theme={theme}
           onThemeToggle={toggle}
         />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-[max(5rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]">
           {children}
         </main>
       </div>
+      <BottomNav />
     </div>
   );
 }

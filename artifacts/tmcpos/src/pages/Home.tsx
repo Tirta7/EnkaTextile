@@ -40,7 +40,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="max-w-[800px] mx-auto bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:-mx-6 lg:-mx-8 md:mx-auto md:shadow-xl md:border-x">
+    <div className="max-w-[800px] bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:mx-auto md:shadow-xl md:border-x">
       
       {/* Gojek-style Top Banner */}
       <div 

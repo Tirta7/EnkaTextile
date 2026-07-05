@@ -17,7 +17,7 @@ export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
 
   return (
     <header
-      className="h-[calc(64px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b flex items-center justify-between sticky top-0 z-30 px-5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
+      className="hidden md:flex h-[calc(64px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b items-center justify-between sticky top-0 z-30 px-5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
       style={{
         borderColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "hsl(var(--border))",
         background: theme === "dark"

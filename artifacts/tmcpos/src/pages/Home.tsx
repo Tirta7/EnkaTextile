@@ -40,11 +40,11 @@ export default function Home() {
   ];
 
   return (
-    <div className="w-full max-w-[800px] mx-auto bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:-mx-6 lg:-mx-8 md:mx-auto md:shadow-xl md:border-x">
+    <div className="max-w-[800px] mx-auto bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:-mx-6 lg:-mx-8 md:mx-auto md:shadow-xl md:border-x">
       
       {/* Gojek-style Top Banner */}
       <div 
-        className="w-full px-4 pt-6 pb-20 relative overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3rem] z-10"
+        className="w-full px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-20 relative overflow-hidden rounded-b-[2.5rem] md:rounded-b-[3rem] z-10"
         style={{ background: "linear-gradient(135deg, #4f46e5, #9333ea, #c026d3)" }}
       >
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>

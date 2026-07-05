@@ -159,11 +159,13 @@
   }
 }
 
-/* Premium scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+/* Hide scrollbar completely but allow scrolling */
+* {
+  scrollbar-width: none; /* Firefox */
+}
+::-webkit-scrollbar { 
+  display: none; /* Chrome, Safari, Edge */
+}
 
 /* Responsive Mobile Tables (Card Layout - Ultra Compact) */
 @media (max-width: 767px) {

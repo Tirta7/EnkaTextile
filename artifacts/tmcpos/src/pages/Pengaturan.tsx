@@ -21,12 +21,14 @@ import { Badge } from "@/components/ui/badge";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt, Moon, Sun, Palette } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { registerAndSubscribePush } from "../lib/pushNotification";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function Pengaturan() {
+  const { theme, toggle: toggleTheme } = useTheme();
   const { data: methods = [], isLoading } = useListPaymentMethods(
     { query: { queryKey: getListPaymentMethodsQueryKey() } }
   );
@@ -296,6 +298,39 @@ export default function Pengaturan() {
           <p className="text-sm text-muted-foreground">Konfigurasi sistem VOCpos</p>
         </div>
       </div>
+
+      {/* App Appearance Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Palette size={16} className="text-violet-500" />
+            Tampilan Aplikasi
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Sesuaikan mode warna aplikasi sesuai dengan kenyamanan mata Anda.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-background border shadow-sm">
+                {theme === "dark" ? (
+                  <Moon className="w-5 h-5 text-indigo-400" />
+                ) : (
+                  <Sun className="w-5 h-5 text-amber-500" />
+                )}
+              </div>
+              <div>
+                <p className="font-medium text-sm">Mode Gelap (Dark Mode)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {theme === "dark" ? "Mode gelap sedang aktif" : "Gunakan mode gelap untuk malam hari"}
+                </p>
+              </div>
+            </div>
+            <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* General Settings Card */}
       <Card>

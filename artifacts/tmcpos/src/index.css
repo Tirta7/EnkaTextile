@@ -261,3 +261,9 @@
   background-size: 200% 200%;
   animation: gradient-move 8s ease infinite;
 }
+
+/* Disable bounce/overscroll on mobile/PWA */
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}

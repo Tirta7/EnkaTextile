@@ -33,7 +33,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-dvh w-full bg-background flex overflow-hidden">
       <Sidebar isOpen={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto relative">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto overscroll-none relative">
         <Header
           onMenuClick={() => setSidebarOpen(true)}
           theme={theme}

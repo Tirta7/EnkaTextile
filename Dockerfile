@@ -23,8 +23,8 @@ RUN pnpm install
 # Copy rest of the source code
 COPY . .
 
-# Build all workspace packages
-RUN pnpm run build
+# Build all workspace packages except mockup-sandbox which is not needed for prod
+RUN pnpm -r --filter=!@workspace/mockup-sandbox run build
 
 # Expose backend port
 EXPOSE 8080

@@ -13,8 +13,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Copy package.json for all packages
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 COPY artifacts/tmcpos/package.json ./artifacts/tmcpos/
+COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
+COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/db/package.json ./lib/db/
 
 # Install dependencies
@@ -23,8 +25,8 @@ RUN pnpm install
 # Copy rest of the source code
 COPY . .
 
-# Build all workspace packages except mockup-sandbox which is not needed for prod
-RUN pnpm -r --filter=!@workspace/mockup-sandbox run build
+# Build all workspace packages
+RUN pnpm run build
 
 # Expose backend port
 EXPOSE 8080

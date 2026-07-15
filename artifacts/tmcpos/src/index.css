@@ -161,10 +161,13 @@
 
 /* Hide scrollbar completely but allow scrolling */
 * {
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
 }
-::-webkit-scrollbar { 
-  display: none; /* Chrome, Safari, Edge */
+*::-webkit-scrollbar { 
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Responsive Mobile Tables (Card Layout - Ultra Compact) */
@@ -266,6 +269,13 @@
 
 /* Disable bounce/overscroll on mobile/PWA */
 html, body {
-  overscroll-behavior: none;
+  overscroll-behavior-y: none !important;
+  overscroll-behavior-x: none !important;
   -webkit-overflow-scrolling: touch;
+  /* Prevent background from showing white when scrolling past the top */
+  background-color: hsl(var(--background));
+}
+
+#root {
+  overscroll-behavior-y: none !important;
 }

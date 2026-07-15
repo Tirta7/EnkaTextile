@@ -15,6 +15,7 @@ import Supplier from "@/pages/Supplier";
 import Penjualan from "@/pages/Penjualan";
 import Pembelian from "@/pages/Pembelian";
 import Mutasi from "@/pages/Mutasi";
+import Retur from "@/pages/Retur"; // Retur Page
 import Piutang from "@/pages/Piutang";
 import Hutang from "@/pages/Hutang";
 import BukuKas from "@/pages/BukuKas";
@@ -70,6 +71,7 @@ function Router() {
         <Route path="/supplier" component={Supplier} />
         <Route path="/penjualan" component={Penjualan} />
         <Route path="/pembelian" component={Pembelian} />
+        <Route path="/retur" component={Retur} />
         <Route path="/mutasi" component={Mutasi} />
         <Route path="/piutang" component={Piutang} />
         <Route path="/hutang" component={Hutang} />

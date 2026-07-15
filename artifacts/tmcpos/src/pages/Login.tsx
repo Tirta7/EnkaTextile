@@ -15,7 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const [, navigate] = useLocation();
-  const [appName, setAppName] = useState("VOCpos");
+  const [appName, setAppName] = useState("EnkaTextile");
   const [appLogo, setAppLogo] = useState("");
 
   useEffect(() => {

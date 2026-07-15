@@ -76,7 +76,7 @@ SelectTrigger.displayName = "SelectTrigger"
 
 export const SelectContent = React.forwardRef(({ className, children, ...props }: any, ref: any) => {
   return (
-    <DrawerContent className="max-h-[85vh] px-4 pb-8" ref={ref} {...props}>
+    <DrawerContent className={cn("max-h-[85vh] px-4 pb-8", className)} ref={ref} {...props}>
       <div className="sr-only"><DrawerTitle>Select Option</DrawerTitle></div>
       <div className="overflow-y-auto max-h-[calc(85vh-3rem)] w-full py-2 flex flex-col gap-1">
         {children}

@@ -12,7 +12,7 @@ router.get("/", async (req, res) => {
       return acc;
     }, {} as Record<string, string>);
     
-    if (!result["app_name"]) result["app_name"] = "VOCpos";
+    if (!result["app_name"]) result["app_name"] = "EnkaTextile";
     
     res.json(result);
   } catch (error) {
@@ -29,7 +29,7 @@ router.get("/manifest.json", async (req, res) => {
       return acc;
     }, {} as Record<string, string>);
     
-    const appName = result["app_name"] || "VOCpos";
+    const appName = result["app_name"] || "EnkaTextile";
     const appLogo = result["app_logo"] || "/favicon.svg";
     
     res.setHeader("Content-Type", "application/manifest+json");

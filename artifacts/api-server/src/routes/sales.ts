@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, stockMutationsTable, productRollsTable } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, stockMutationsTable, productRollsTable, returnsTable, returnReturnedItemsTable, returnExchangedItemsTable } from "@workspace/db";
+import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
 import { CreateSaleBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 import { pushService } from "../lib/push";
@@ -31,6 +31,8 @@ router.get("/sales", async (req, res) => {
       dueDate: salesTable.dueDate,
       notes: salesTable.notes,
       createdAt: salesTable.createdAt,
+      hasReturns: sql<boolean>`EXISTS(SELECT 1 FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
+      returnDifference: sql<string>`(SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
     })
     .from(salesTable)
     .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
@@ -44,6 +46,8 @@ router.get("/sales", async (req, res) => {
     remainingAmount: numStr(s.totalAmount) - numStr(s.paidAmount),
     dueDate: s.dueDate?.toISOString() ?? null,
     createdAt: s.createdAt.toISOString(),
+    hasReturns: Boolean(s.hasReturns),
+    returnDifference: numStr(s.returnDifference),
   })));
 });
 
@@ -273,6 +277,53 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(saleItemsTable.saleId, id));
 
+  const returns = await db.select().from(returnsTable).where(eq(returnsTable.saleId, id));
+  const returnIds = returns.map(r => r.id);
+  let returnedItems: any[] = [];
+  let exchangedItems: any[] = [];
+  let returnsHistory: any[] = [];
+  
+  if (returnIds.length > 0) {
+    // using sql \`in\` because drizzle-orm inArray expects a non-empty array
+    returnedItems = await db.select().from(returnReturnedItemsTable).where(sql`${returnReturnedItemsTable.returnId} IN ${returnIds}`);
+    exchangedItems = await db.select({
+      returnId: returnExchangedItemsTable.returnId,
+      productId: returnExchangedItemsTable.productId,
+      productName: productsTable.name,
+      categoryName: categoriesTable.name,
+      rollId: returnExchangedItemsTable.rollId,
+      rolls: returnExchangedItemsTable.rolls,
+      meters: returnExchangedItemsTable.meters,
+      pricePerMeter: returnExchangedItemsTable.pricePerMeter,
+      subtotal: returnExchangedItemsTable.subtotal,
+    })
+    .from(returnExchangedItemsTable)
+    .leftJoin(productsTable, eq(returnExchangedItemsTable.productId, productsTable.id))
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .where(sql`${returnExchangedItemsTable.returnId} IN ${returnIds}`);
+
+    returnsHistory = returns.map(r => {
+      const retItems = returnedItems.filter(ri => ri.returnId === r.id);
+      const excItems = exchangedItems.filter(ei => ei.returnId === r.id).map(ei => ({
+        ...ei,
+        rolls: numStr(ei.rolls as string),
+        meters: numStr(ei.meters as string),
+        pricePerMeter: numStr(ei.pricePerMeter as string),
+        subtotal: numStr(ei.subtotal as string),
+      }));
+      return {
+        ...r,
+        totalReturnedValue: numStr(r.totalReturnedValue),
+        totalExchangedValue: numStr(r.totalExchangedValue),
+        differenceAmount: numStr(r.differenceAmount),
+        cashRefunded: numStr(r.cashRefunded),
+        createdAt: r.createdAt.toISOString(),
+        returnedItems: retItems,
+        exchangedItems: excItems,
+      };
+    });
+  }
+
   res.json({
     ...sale,
     totalAmount: numStr(sale.totalAmount),
@@ -280,13 +331,47 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     remainingAmount: numStr(sale.totalAmount) - numStr(sale.paidAmount),
     dueDate: sale.dueDate?.toISOString() ?? null,
     createdAt: sale.createdAt.toISOString(),
-    items: items.map(i => ({
-      ...i,
-      rollId: i.rollId,
-      rolls: numStr(i.rolls),
-      meters: numStr(i.meters),
-      pricePerMeter: numStr(i.pricePerMeter),
-      subtotal: numStr(i.subtotal),
+    items: (() => {
+      let availableReturnedItems = [...returnedItems];
+      return items.map(i => {
+        // Find if this item was returned by matching product, roll, meters, and rolls
+        const matchIndex = availableReturnedItems.findIndex(ri => 
+          ri.productId === i.productId && 
+          (ri.rollId === i.rollId || (!ri.rollId && !i.rollId)) &&
+          parseFloat(ri.meters as string || "0") === parseFloat(i.meters as string || "0") &&
+          parseFloat(ri.rolls as string || "0") === parseFloat(i.rolls as string || "0")
+        );
+        
+        let isReturned = false;
+        let itemReturns: any[] = [];
+        
+        if (matchIndex !== -1) {
+          isReturned = true;
+          const matchedReturnId = availableReturnedItems[matchIndex].returnId;
+          itemReturns = returnsHistory.filter(rh => rh.id === matchedReturnId);
+          availableReturnedItems.splice(matchIndex, 1); // consume it
+        }
+
+        return {
+          ...i,
+          rollId: i.rollId,
+          rolls: numStr(i.rolls as string),
+          meters: numStr(i.meters as string),
+          pricePerMeter: numStr(i.pricePerMeter as string),
+          subtotal: numStr(i.subtotal as string),
+          isReturned,
+          returns: itemReturns,
+        };
+      });
+    })(),
+    exchangedItems: exchangedItems.map(i => ({
+        ...i,
+        rollId: i.rollId,
+        rolls: numStr(i.rolls),
+        meters: numStr(i.meters),
+        pricePerMeter: numStr(i.pricePerMeter),
+        subtotal: numStr(i.subtotal),
+        isExchangedItem: true
     })),
   });
 });

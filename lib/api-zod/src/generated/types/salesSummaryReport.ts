@@ -8,6 +8,10 @@
 
 export interface SalesSummaryReport {
   totalRevenue: number;
+  netRevenue: number;
+  totalReturnDeposit: number;
+  totalReturnExchanged: number;
+  netReturnImpact: number;
   totalTransactions: number;
   totalRolls: number;
   totalMeters: number;

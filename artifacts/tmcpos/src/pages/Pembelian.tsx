@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingBag, PlusCircle } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -26,6 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Pembelian() {
+  const [activeTab, setActiveTab] = useState<"semua" | "lunas" | "kredit" | "partial">("semua");
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -111,68 +112,168 @@ export default function Pembelian() {
     dateTo,
   );
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Pembelian"
-        description="Catat dan kelola pembelian dari supplier."
-        actions={<Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Buat Pembelian</Button>}
-      />
+  const tabFiltered = filtered.filter(p => {
+    if (activeTab === "semua") return true;
+    return p.status === activeTab;
+  });
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <CardTitle className="text-lg font-medium flex-1">Daftar Pembelian</CardTitle>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Cari invoice / supplier..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
-            </div>
+  return (
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex flex-col pt-2 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pembelian</h1>
+            <p className="text-sm text-slate-500">Riwayat kulakan dari supplier</p>
           </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>No. PO</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Tgl. Pembelian</TableHead>
-                <TableHead>Pembayaran</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Terbayar</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(7).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <ShoppingBag className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Belum ada pembelian
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-mono font-medium">{p.invoiceNumber}</TableCell>
-                    <TableCell>{(p as any).supplierName || "-"}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(p.createdAt)}</TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{p.paymentType}</Badge></TableCell>
-                    <TableCell className="text-right font-medium">{formatRupiah(p.totalAmount)}</TableCell>
-                    <TableCell className="text-right">{formatRupiah(p.paidAmount ?? 0)}</TableCell>
-                    <TableCell>
-                      <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[p.status ?? "kredit"] || "bg-gray-100 text-gray-700"}`}>{p.status}</span>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+          <Button onClick={() => setIsOpen(true)} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+            <Plus className="mr-2 h-4 w-4" /> Baru
+          </Button>
+        </div>
+
+        {/* Scrollable Tabs */}
+        <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+          {(['semua', 'lunas', 'kredit', 'partial'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                activeTab === tab
+                  ? "bg-violet-900 text-white shadow-md shadow-violet-200"
+                  : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari no invoice atau supplier..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="w-12 h-12 rounded-2xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : tabFiltered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <ShoppingBag className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Belum ada aktivitas</h3>
+            <p className="text-sm text-slate-500 mt-1">Tidak ada transaksi yang sesuai kriteria.</p>
+          </div>
+        ) : (
+          <>
+            {tabFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => {
+              // Menentukan Icon & Warna Status
+              let StatusIcon = CheckCircle2;
+              let iconColor = "text-green-500";
+              let bgIconColor = "bg-green-100 border-green-200";
+              let badgeBg = "bg-green-100 text-green-700";
+              
+              if (p.status === 'kredit') {
+                StatusIcon = Clock;
+                iconColor = "text-amber-500";
+                bgIconColor = "bg-amber-100 border-amber-200";
+                badgeBg = "bg-amber-100 text-amber-700";
+              } else if (p.status === 'partial') {
+                StatusIcon = AlertCircle;
+                iconColor = "text-blue-500";
+                bgIconColor = "bg-blue-100 border-blue-200";
+                badgeBg = "bg-blue-100 text-blue-700";
+              }
+
+              return (
+                <div key={p.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md">
+                  
+                  {/* Decorative side accent */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${badgeBg.split(' ')[0]}`} />
+
+                  {/* Header: Waktu & Harga */}
+                  <div className="flex justify-between items-start pl-2">
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                        {formatDate(p.createdAt)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">{p.invoiceNumber}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-slate-900 block">
+                        {formatRupiah(p.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body: Info Supplier */}
+                  <div className="flex gap-3 items-center pl-2">
+                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${bgIconColor}`}>
+                      <StatusIcon className={`w-6 h-6 ${iconColor}`} strokeWidth={2} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
+                        {(p as any).supplierName || "Supplier Umum"}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeBg}`}>
+                          {p.status}
+                        </span>
+                        <span className="text-xs font-medium text-slate-400 capitalize">
+                          Via {p.paymentType}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <Button variant="ghost" size="sm" className="h-8 rounded-full text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-semibold text-xs px-3">
+                      Detail <ArrowRightCircle className="ml-1 h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  {/* Footer: Sisa Tagihan (Khusus Kredit/Partial) */}
+                  {(p.status === 'kredit' || p.status === 'partial') && (
+                    <div className="mt-2 pl-2 border-t border-slate-100 pt-3">
+                      <div className="flex items-center justify-between bg-amber-50/50 p-2 rounded-xl">
+                        <span className="text-xs font-medium text-amber-800">Kekurangan:</span>
+                        <span className="text-xs font-bold text-amber-600">{formatRupiah(p.totalAmount - (p.paidAmount || 0))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+        {tabFiltered && tabFiltered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(tabFiltered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2">
@@ -233,7 +334,7 @@ export default function Pembelian() {
                 <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
                   <div className="md:col-span-3">
                     <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
-                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => updateItem(index, "productId", parseInt(v))}>
+                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
                       <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
                       <SelectContent>{products?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>

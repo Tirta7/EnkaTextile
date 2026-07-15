@@ -1247,6 +1247,69 @@ paths:
                 properties:
                   ok:
                     type: boolean
+
+  /returns:
+    get:
+      operationId: listReturns
+      tags: [returns]
+      summary: List all returns
+      responses:
+        "200":
+          description: List of returns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Return"
+    post:
+      operationId: createReturn
+      tags: [returns]
+      summary: Create a return with optional exchange items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReturnInput"
+      responses:
+        "201":
+          description: Created return
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Return"
+
+  /returns/{id}:
+    get:
+      operationId: getReturn
+      tags: [returns]
+      summary: Get a specific return by ID with its items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Return document
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Return"
+                  - type: object
+                    properties:
+                      returnedItems:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ReturnReturnedItem"
+                      exchangedItems:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ReturnExchangedItem"
+
 components:
   schemas:
     HealthStatus:
@@ -2084,9 +2147,17 @@ components:
 
     SalesSummaryReport:
       type: object
-      required: [totalRevenue, totalTransactions, totalRolls, totalMeters, cashRevenue, tempoRevenue]
+      required: [totalRevenue, netRevenue, totalReturnDeposit, totalReturnExchanged, netReturnImpact, totalTransactions, totalRolls, totalMeters, cashRevenue, tempoRevenue]
       properties:
         totalRevenue:
+          type: number
+        netRevenue:
+          type: number
+        totalReturnDeposit:
+          type: number
+        totalReturnExchanged:
+          type: number
+        netReturnImpact:
           type: number
         totalTransactions:
           type: integer
@@ -2199,3 +2270,156 @@ components:
           type: string
         role:
           type: string
+
+    Return:
+      type: object
+      required: [id, returnNumber, type, totalReturnedValue, totalExchangedValue, differenceAmount, paymentStatus, cashRefunded, status, createdAt]
+      properties:
+        id:
+          type: integer
+        returnNumber:
+          type: string
+        type:
+          type: string
+        saleId:
+          type: integer
+          nullable: true
+        purchaseId:
+          type: integer
+          nullable: true
+        customerId:
+          type: integer
+          nullable: true
+        customerName:
+          type: string
+          nullable: true
+        supplierId:
+          type: integer
+          nullable: true
+        supplierName:
+          type: string
+          nullable: true
+        totalReturnedValue:
+          type: string
+        totalExchangedValue:
+          type: string
+        differenceAmount:
+          type: string
+        paymentStatus:
+          type: string
+        cashRefunded:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        returnedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnReturnedItem"
+        exchangedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReturnExchangedItem"
+
+    ReturnReturnedItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        returnId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        rollId:
+          type: integer
+          nullable: true
+        rolls:
+          type: string
+        meters:
+          type: string
+        pricePerMeter:
+          type: string
+        subtotal:
+          type: string
+
+    ReturnExchangedItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        returnId:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        rollId:
+          type: integer
+          nullable: true
+        rolls:
+          type: string
+        meters:
+          type: string
+        pricePerMeter:
+          type: string
+        subtotal:
+          type: string
+
+    CreateReturnInput:
+      type: object
+      required: [type, paymentStatus]
+      properties:
+        type:
+          type: string
+          enum: [penjualan, pembelian]
+        saleId:
+          type: integer
+          nullable: true
+        purchaseId:
+          type: integer
+          nullable: true
+        customerId:
+          type: integer
+          nullable: true
+        supplierId:
+          type: integer
+          nullable: true
+        paymentStatus:
+          type: string
+          enum: [lunas, tempo]
+        notes:
+          type: string
+          nullable: true
+        returnedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateReturnItemInput"
+        exchangedItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateReturnItemInput"
+
+    CreateReturnItemInput:
+      type: object
+      required: [productId, rolls, meters, pricePerMeter, subtotal]
+      properties:
+        productId:
+          type: integer
+        rollId:
+          type: integer
+          nullable: true
+        rolls:
+          type: number
+        meters:
+          type: number
+        pricePerMeter:
+          type: number
+        subtotal:
+          type: number

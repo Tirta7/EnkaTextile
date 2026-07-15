@@ -17,6 +17,8 @@ import unitsRouter from "./units";
 import usersRouter from "./users";
 import notificationsRouter from "./notifications";
 import { settingsRouter } from "./settings";
+import returnsRouter from "./returns";
+
 const router: IRouter = Router();
 
 router.use(healthRouter);
@@ -34,6 +36,8 @@ router.use(cashbookRouter);
 router.use(reportsRouter);
 router.use(paymentMethodsRouter);
 router.use(unitsRouter);
+router.use(returnsRouter);
+
 router.use("/users", usersRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/settings", settingsRouter);

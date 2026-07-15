@@ -295,3 +295,59 @@ export const insertSettingSchema = createInsertSchema(settingsTable);
 export type InsertSetting = z.infer<typeof insertSettingSchema>;
 export type Setting = typeof settingsTable.$inferSelect;
 
+// Returns (Retur & Tukar Tambah)
+export const returnsTable = pgTable("returns", {
+  id: serial("id").primaryKey(),
+  returnNumber: text("return_number").notNull(),
+  type: text("type").notNull(), // 'penjualan' or 'pembelian'
+  saleId: integer("sale_id").references(() => salesTable.id),
+  purchaseId: integer("purchase_id").references(() => purchasesTable.id),
+  customerId: integer("customer_id").references(() => customersTable.id),
+  supplierId: integer("supplier_id").references(() => suppliersTable.id),
+  totalReturnedValue: numeric("total_returned_value", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalExchangedValue: numeric("total_exchanged_value", { precision: 15, scale: 2 }).notNull().default("0"),
+  differenceAmount: numeric("difference_amount", { precision: 15, scale: 2 }).notNull().default("0"), // Exchange - Returned
+  paymentStatus: text("payment_status").notNull().default("lunas"), // lunas, tempo (if difference is unpaid)
+  cashRefunded: numeric("cash_refunded", { precision: 15, scale: 2 }).notNull().default("0"),
+  status: text("status").notNull().default("selesai"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertReturnSchema = createInsertSchema(returnsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertReturn = z.infer<typeof insertReturnSchema>;
+export type Return = typeof returnsTable.$inferSelect;
+
+// Return Returned Items (Barang yang ditarik kembali)
+export const returnReturnedItemsTable = pgTable("return_returned_items", {
+  id: serial("id").primaryKey(),
+  returnId: integer("return_id").notNull().references(() => returnsTable.id),
+  productId: integer("product_id").notNull().references(() => productsTable.id),
+  rollId: integer("roll_id").references(() => productRollsTable.id),
+  rolls: numeric("rolls", { precision: 12, scale: 4 }).notNull().default("0"),
+  meters: numeric("meters", { precision: 12, scale: 4 }).notNull().default("0"),
+  pricePerMeter: numeric("price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull().default("0"),
+});
+
+export const insertReturnReturnedItemSchema = createInsertSchema(returnReturnedItemsTable).omit({ id: true });
+export type InsertReturnReturnedItem = z.infer<typeof insertReturnReturnedItemSchema>;
+export type ReturnReturnedItem = typeof returnReturnedItemsTable.$inferSelect;
+
+// Return Exchanged Items (Barang pengganti)
+export const returnExchangedItemsTable = pgTable("return_exchanged_items", {
+  id: serial("id").primaryKey(),
+  returnId: integer("return_id").notNull().references(() => returnsTable.id),
+  productId: integer("product_id").notNull().references(() => productsTable.id),
+  rollId: integer("roll_id").references(() => productRollsTable.id),
+  rolls: numeric("rolls", { precision: 12, scale: 4 }).notNull().default("0"),
+  meters: numeric("meters", { precision: 12, scale: 4 }).notNull().default("0"),
+  pricePerMeter: numeric("price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
+  subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull().default("0"),
+});
+
+export const insertReturnExchangedItemSchema = createInsertSchema(returnExchangedItemsTable).omit({ id: true });
+export type InsertReturnExchangedItem = z.infer<typeof insertReturnExchangedItemSchema>;
+export type ReturnExchangedItem = typeof returnExchangedItemsTable.$inferSelect;
+

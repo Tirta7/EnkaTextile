@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { salesTable, receivablesTable, payablesTable, productsTable, cashEntriesTable, saleItemsTable, customersTable } from "@workspace/db";
+import { salesTable, receivablesTable, payablesTable, productsTable, cashEntriesTable, saleItemsTable, customersTable, returnsTable } from "@workspace/db";
 import { sql, gte, and, lte, eq } from "drizzle-orm";
 
 const router = Router();
@@ -98,6 +98,8 @@ router.get("/dashboard/recent-transactions", async (req, res) => {
       totalAmount: salesTable.totalAmount,
       paymentType: salesTable.paymentType,
       createdAt: salesTable.createdAt,
+      hasReturns: sql<boolean>`EXISTS(SELECT 1 FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
+      returnDifference: sql<string>`(SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
     })
     .from(salesTable)
     .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
@@ -111,6 +113,8 @@ router.get("/dashboard/recent-transactions", async (req, res) => {
     amount: numStr(s.totalAmount),
     customerName: s.customerName ?? null,
     createdAt: s.createdAt.toISOString(),
+    hasReturns: Boolean(s.hasReturns),
+    returnDifference: numStr(s.returnDifference),
   })));
 });
 

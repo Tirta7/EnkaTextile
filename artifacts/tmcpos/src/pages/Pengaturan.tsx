@@ -284,289 +284,288 @@ export default function Pengaturan() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
-        >
-          <Settings size={18} className="text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Pengaturan</h1>
-          <p className="text-sm text-muted-foreground">Konfigurasi sistem VOCpos</p>
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex flex-col pt-2 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pengaturan</h1>
+            <p className="text-sm text-slate-500">Konfigurasi sistem & tampilan</p>
+          </div>
         </div>
       </div>
 
       {/* App Appearance Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Palette size={16} className="text-violet-500" />
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+            <Palette size={18} className="text-violet-500" />
             Tampilan Aplikasi
-          </CardTitle>
-          <CardDescription className="mt-1">
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 ml-6.5">
             Sesuaikan mode warna aplikasi sesuai dengan kenyamanan mata Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between bg-muted/30 p-4 rounded-xl border border-muted/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-background border shadow-sm">
-                {theme === "dark" ? (
-                  <Moon className="w-5 h-5 text-indigo-400" />
-                ) : (
-                  <Sun className="w-5 h-5 text-amber-500" />
-                )}
-              </div>
-              <div>
-                <p className="font-medium text-sm">Mode Gelap (Dark Mode)</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {theme === "dark" ? "Mode gelap sedang aktif" : "Gunakan mode gelap untuk malam hari"}
-                </p>
-              </div>
+          </p>
+        </div>
+        <div 
+          onClick={toggleTheme}
+          className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100/80 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-slate-100 shadow-sm">
+              {theme === "dark" ? (
+                <Moon className="w-5 h-5 text-indigo-500" />
+              ) : (
+                <Sun className="w-5 h-5 text-amber-500" />
+              )}
             </div>
-            <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+            <div>
+              <p className="font-bold text-sm text-slate-800">Mode Gelap (Dark Mode)</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {theme === "dark" ? "Mode gelap sedang aktif" : "Gunakan mode gelap untuk malam hari"}
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} className="data-[state=checked]:bg-violet-600" />
+        </div>
+      </div>
 
       {/* General Settings Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <MonitorSmartphone size={16} className="text-violet-500" />
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+            <MonitorSmartphone size={18} className="text-violet-500" />
             Pengaturan Utama
-          </CardTitle>
-          <CardDescription className="mt-1">
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 ml-6.5">
             Ubah nama aplikasi yang akan ditampilkan di layar dan notifikasi.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-end gap-3">
-            <div className="space-y-1.5 w-full sm:max-w-sm">
-              <Label>Nama Aplikasi</Label>
-              <Input 
-                value={appNameInput} 
-                onChange={(e) => setAppNameInput(e.target.value)} 
-                placeholder="mis: Enka Textile POS" 
-                disabled={isLoadingSettings}
-              />
-            </div>
-            
-            <div className="space-y-1.5 w-full sm:max-w-sm">
-              <Label>Alamat Toko</Label>
-              <Input 
-                value={appAddressInput} 
-                onChange={(e) => setAppAddressInput(e.target.value)} 
-                placeholder="mis: Jl. Jend. Sudirman No. 1" 
-                disabled={isLoadingSettings}
-              />
-            </div>
-            
-            <div className="space-y-1.5 w-full sm:w-auto">
-              <Label>Logo Aplikasi (Opsional)</Label>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 border rounded-lg flex items-center justify-center bg-muted/50 overflow-hidden shrink-0">
-                  {appLogoInput ? (
-                    <img src={appLogoInput} alt="Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <ImageIcon size={16} className="text-muted-foreground" />
-                  )}
-                </div>
-                <Label htmlFor="logo-upload" className="cursor-pointer">
-                  <div className="h-10 px-3 border rounded-md hover:bg-muted/50 transition-colors flex items-center text-sm">
-                    Pilih Gambar
-                  </div>
-                </Label>
-                <input 
-                  id="logo-upload" 
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleLogoUpload}
-                  disabled={isLoadingSettings}
-                />
-              </div>
-            </div>
-
-            <Button 
-              onClick={handleSaveSettings}
-              disabled={isLoadingSettings || updateSettingsMutation.isPending || !appNameInput.trim()}
-              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
-              className="w-full sm:w-auto flex items-center gap-2"
-            >
-              <Save size={16} />
-              {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
-            </Button>
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-end gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-1.5 w-full sm:max-w-sm">
+            <Label className="text-xs font-semibold text-slate-600">Nama Aplikasi</Label>
+            <Input 
+              value={appNameInput} 
+              onChange={(e) => setAppNameInput(e.target.value)} 
+              placeholder="mis: Enka Textile POS" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="space-y-1.5 w-full sm:max-w-sm">
+            <Label className="text-xs font-semibold text-slate-600">Alamat Toko</Label>
+            <Input 
+              value={appAddressInput} 
+              onChange={(e) => setAppAddressInput(e.target.value)} 
+              placeholder="mis: Jl. Jend. Sudirman No. 1" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
+          </div>
+          
+          <div className="space-y-1.5 w-full sm:w-auto">
+            <Label className="text-xs font-semibold text-slate-600">Logo Aplikasi (Opsional)</Label>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 border border-slate-200 rounded-xl flex items-center justify-center bg-white overflow-hidden shrink-0 shadow-sm">
+                {appLogoInput ? (
+                  <img src={appLogoInput} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon size={16} className="text-slate-400" />
+                )}
+              </div>
+              <Label htmlFor="logo-upload" className="cursor-pointer">
+                <div className="h-10 px-3 border border-slate-200 bg-white rounded-xl hover:bg-slate-50 transition-colors flex items-center text-sm font-medium text-slate-700 shadow-sm">
+                  Pilih Gambar
+                </div>
+              </Label>
+              <input 
+                id="logo-upload" 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={handleLogoUpload}
+                disabled={isLoadingSettings}
+              />
+            </div>
+          </div>
+
+          <Button 
+            onClick={handleSaveSettings}
+            disabled={isLoadingSettings || updateSettingsMutation.isPending || !appNameInput.trim()}
+            className="w-full sm:w-auto flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+          >
+            <Save size={16} />
+            {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
+          </Button>
+        </div>
+      </div>
 
       {/* Invoice Settings Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt size={16} className="text-violet-500" />
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+            <Receipt size={18} className="text-violet-500" />
             Pengaturan Nota / Invoice
-          </CardTitle>
-          <CardDescription className="mt-1">
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 ml-6.5">
             Ubah detail informasi bank dan keterangan tambahan yang dicetak pada nota.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-            <div className="space-y-1.5 w-full sm:max-w-[200px]">
-              <Label>Nama Rekening</Label>
-              <Input 
-                value={invoiceBankNameInput} 
-                onChange={(e) => setInvoiceBankNameInput(e.target.value)} 
-                placeholder="mis: A.n PT XYZ" 
-                disabled={isLoadingSettings}
-              />
-            </div>
-            
-            <div className="space-y-1.5 w-full sm:max-w-[200px]">
-              <Label>Nomor Rekening</Label>
-              <Input 
-                value={invoiceBankAccountInput} 
-                onChange={(e) => setInvoiceBankAccountInput(e.target.value)} 
-                placeholder="mis: BCA - 12345" 
-                disabled={isLoadingSettings}
-              />
-            </div>
-            
-            <div className="space-y-1.5 w-full">
-              <Label>Keterangan / Pesan Tambahan</Label>
-              <Input 
-                value={invoiceNotesInput} 
-                onChange={(e) => setInvoiceNotesInput(e.target.value)} 
-                placeholder="mis: Barang yang dibeli tidak dapat ditukar" 
-                disabled={isLoadingSettings}
-              />
-            </div>
-
-            <Button 
-              onClick={handleSaveInvoiceSettings}
-              disabled={isLoadingSettings || updateSettingsMutation.isPending}
-              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
-              className="w-full sm:w-auto flex items-center gap-2 shrink-0"
-            >
-              <Save size={16} />
-              {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
-            </Button>
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-1.5 w-full sm:max-w-[200px]">
+            <Label className="text-xs font-semibold text-slate-600">Nama Rekening</Label>
+            <Input 
+              value={invoiceBankNameInput} 
+              onChange={(e) => setInvoiceBankNameInput(e.target.value)} 
+              placeholder="mis: A.n PT XYZ" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="space-y-1.5 w-full sm:max-w-[200px]">
+            <Label className="text-xs font-semibold text-slate-600">Nomor Rekening</Label>
+            <Input 
+              value={invoiceBankAccountInput} 
+              onChange={(e) => setInvoiceBankAccountInput(e.target.value)} 
+              placeholder="mis: BCA - 12345" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
+          </div>
+          
+          <div className="space-y-1.5 w-full">
+            <Label className="text-xs font-semibold text-slate-600">Keterangan / Pesan Tambahan</Label>
+            <Input 
+              value={invoiceNotesInput} 
+              onChange={(e) => setInvoiceNotesInput(e.target.value)} 
+              placeholder="mis: Barang yang dibeli tidak dapat ditukar" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
+          </div>
+
+          <Button 
+            onClick={handleSaveInvoiceSettings}
+            disabled={isLoadingSettings || updateSettingsMutation.isPending}
+            className="w-full sm:w-auto flex items-center gap-2 shrink-0 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+          >
+            <Save size={16} />
+            {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
+          </Button>
+        </div>
+      </div>
 
       {/* Push Notification Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BellRing size={16} className="text-violet-500" />
-            Notifikasi Transaksi
-          </CardTitle>
-          <CardDescription className="mt-1">
-            Aktifkan fitur ini agar perangkat Anda menerima Push Notification seketika dari sistem setiap kali ada penjualan baru.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+              <BellRing size={18} className="text-violet-500" />
+              Notifikasi Transaksi
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 ml-6.5">
+              Aktifkan fitur ini agar perangkat Anda menerima Push Notification seketika dari sistem setiap kali ada penjualan baru.
+            </p>
+          </div>
           <Button 
             onClick={handleEnableNotification} 
             disabled={isEnablingPush}
-            style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
+            className="rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-sm w-full sm:w-auto"
           >
             {isEnablingPush ? "Memproses..." : "Aktifkan Perangkat Ini"}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Payment Methods Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <CreditCard size={16} className="text-violet-500" />
-                Metode Pembayaran
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Kelola metode pembayaran yang tersedia di transaksi penjualan dan pembelian
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              className="h-9 gap-1.5"
-              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
-              onClick={() => setIsAddOpen(true)}
-            >
-              <Plus size={14} />
-              Tambah
-            </Button>
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+              <CreditCard size={18} className="text-violet-500" />
+              Metode Pembayaran
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 ml-6.5">
+              Kelola metode pembayaran yang tersedia di transaksi
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-sm w-full sm:w-auto"
+            onClick={() => setIsAddOpen(true)}
+          >
+            <Plus size={14} />
+            Tambah
+          </Button>
+        </div>
+        
+        {/* Mobile View for Payment Methods */}
+        <div className="md:hidden flex flex-col divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-slate-500">Memuat...</div>
+          ) : methods.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500">Belum ada metode pembayaran</div>
+          ) : (
+            methods.map((m) => (
+              <div key={m.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                    {m.name}
+                    {!m.isActive && <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">Nonaktif</span>}
+                  </h4>
+                  <div className="flex gap-2 mt-1">
+                    <span className="text-[10px] bg-slate-50 border border-slate-200 text-slate-600 px-2 py-0.5 rounded font-mono">{m.code}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">Urutan: {m.sortOrder}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700 bg-slate-50 rounded-full" onClick={() => setEditItem({ id: m.id, name: m.name, isActive: m.isActive, sortOrder: m.sortOrder })}>
+                    <Pencil size={14} />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 bg-slate-50 rounded-full" onClick={() => handleDelete(m.id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View for Payment Methods */}
+        <div className="hidden md:block">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="border-slate-100">
                 <TableHead className="w-8 pl-6"></TableHead>
-                <TableHead className="pl-2">Nama</TableHead>
-                <TableHead>Kode</TableHead>
-                <TableHead className="w-24 text-center">Urutan</TableHead>
-                <TableHead className="w-24 text-center">Status</TableHead>
-                <TableHead className="w-28 text-right pr-6">Aksi</TableHead>
+                <TableHead className="pl-2 font-semibold text-slate-600 h-10">Nama</TableHead>
+                <TableHead className="font-semibold text-slate-600 h-10">Kode</TableHead>
+                <TableHead className="w-24 text-center font-semibold text-slate-600 h-10">Urutan</TableHead>
+                <TableHead className="w-24 text-center font-semibold text-slate-600 h-10">Status</TableHead>
+                <TableHead className="w-28 text-right pr-6 font-semibold text-slate-600 h-10">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                    Memuat...
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 text-slate-500">Memuat...</TableCell>
                 </TableRow>
               ) : methods.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                    Belum ada metode pembayaran
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center py-10 text-slate-500">Belum ada metode pembayaran</TableCell>
                 </TableRow>
               ) : (
                 methods.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell className="pl-6">
-                      <GripVertical size={14} className="text-muted-foreground/40" />
-                    </TableCell>
-                    <TableCell className="pl-2 font-medium">{m.name}</TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">{m.code}</code>
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">{m.sortOrder}</TableCell>
-                    <TableCell className="text-center">
-                      <Switch
-                        checked={m.isActive}
-                        onCheckedChange={() => handleToggleActive(m)}
-                        className="scale-90"
-                      />
-                    </TableCell>
+                  <TableRow key={m.id} className="border-slate-50">
+                    <TableCell className="pl-6"><GripVertical size={14} className="text-slate-300" /></TableCell>
+                    <TableCell className="pl-2 font-medium text-slate-800 text-sm">{m.name}</TableCell>
+                    <TableCell><code className="text-xs bg-slate-50 border border-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">{m.code}</code></TableCell>
+                    <TableCell className="text-center text-sm text-slate-500">{m.sortOrder}</TableCell>
+                    <TableCell className="text-center"><Switch checked={m.isActive} onCheckedChange={() => handleToggleActive(m)} className="scale-90 data-[state=checked]:bg-violet-500" /></TableCell>
                     <TableCell className="text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => setEditItem({ id: m.id, name: m.name, isActive: m.isActive, sortOrder: m.sortOrder })}
-                        >
-                          <Pencil size={13} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDelete(m.id)}
-                        >
-                          <Trash2 size={13} />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-100" onClick={() => setEditItem({ id: m.id, name: m.name, isActive: m.isActive, sortOrder: m.sortOrder })}><Pencil size={13} /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50" onClick={() => handleDelete(m.id)}><Trash2 size={13} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -574,84 +573,87 @@ export default function Pengaturan() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Units Card */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Box size={16} className="text-violet-500" />
-                Satuan Barang
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Kelola jenis satuan utama dan tambahan untuk data barang
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              className="h-9 gap-1.5"
-              style={{ background: "linear-gradient(135deg, #8b5cf6, #6366f1)" }}
-              onClick={() => setIsAddUnitOpen(true)}
-            >
-              <Plus size={14} />
-              Tambah
-            </Button>
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+              <Box size={18} className="text-violet-500" />
+              Satuan Barang
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 ml-6.5">
+              Kelola jenis satuan utama dan tambahan untuk data barang
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-sm w-full sm:w-auto"
+            onClick={() => setIsAddUnitOpen(true)}
+          >
+            <Plus size={14} />
+            Tambah
+          </Button>
+        </div>
+        
+        {/* Mobile View for Units */}
+        <div className="md:hidden flex flex-col divide-y divide-slate-100">
+          {isLoadingUnits ? (
+            <div className="p-8 text-center text-sm text-slate-500">Memuat...</div>
+          ) : units.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500">Belum ada satuan</div>
+          ) : (
+            units.map((u) => (
+              <div key={u.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-800 text-sm">{u.name}</h4>
+                  <span className="text-[10px] bg-slate-50 border border-slate-200 text-slate-600 px-2 py-0.5 rounded mt-1 inline-block">{u.symbol}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-700 bg-slate-50 rounded-full" onClick={() => setEditUnitItem({ id: u.id, name: u.name, symbol: u.symbol })}>
+                    <Pencil size={14} />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-600 bg-slate-50 rounded-full" onClick={() => handleDeleteUnit(u.id)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View for Units */}
+        <div className="hidden md:block">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="border-slate-100">
                 <TableHead className="w-8 pl-6"></TableHead>
-                <TableHead>Nama Satuan</TableHead>
-                <TableHead>Simbol</TableHead>
-                <TableHead className="w-28 text-right pr-6">Aksi</TableHead>
+                <TableHead className="font-semibold text-slate-600 h-10">Nama Satuan</TableHead>
+                <TableHead className="font-semibold text-slate-600 h-10">Simbol</TableHead>
+                <TableHead className="w-28 text-right pr-6 font-semibold text-slate-600 h-10">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoadingUnits ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                    Memuat...
-                  </TableCell>
+                  <TableCell colSpan={4} className="text-center py-10 text-slate-500">Memuat...</TableCell>
                 </TableRow>
               ) : units.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                    Belum ada satuan
-                  </TableCell>
+                  <TableCell colSpan={4} className="text-center py-10 text-slate-500">Belum ada satuan</TableCell>
                 </TableRow>
               ) : (
                 units.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="pl-6">
-                      <GripVertical size={14} className="text-muted-foreground/40" />
-                    </TableCell>
-                    <TableCell className="font-medium">{u.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{u.symbol}</Badge>
-                    </TableCell>
+                  <TableRow key={u.id} className="border-slate-50">
+                    <TableCell className="pl-6"><GripVertical size={14} className="text-slate-300" /></TableCell>
+                    <TableCell className="font-medium text-slate-800 text-sm">{u.name}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50">{u.symbol}</Badge></TableCell>
                     <TableCell className="text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => setEditUnitItem({ id: u.id, name: u.name, symbol: u.symbol })}
-                        >
-                          <Pencil size={13} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteUnit(u.id)}
-                        >
-                          <Trash2 size={13} />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-slate-800 rounded-full hover:bg-slate-100" onClick={() => setEditUnitItem({ id: u.id, name: u.name, symbol: u.symbol })}><Pencil size={13} /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-600 rounded-full hover:bg-red-50" onClick={() => handleDeleteUnit(u.id)}><Trash2 size={13} /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -659,8 +661,8 @@ export default function Pengaturan() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Add Dialog */}
       <Drawer open={isAddOpen} onOpenChange={setIsAddOpen}>

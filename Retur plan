@@ -1,0 +1,48 @@
+# Rencana Implementasi: Fitur Retur & Tukar Tambah Barang
+
+Poin yang Anda sebutkan sangat tepat dan merupakan standar operasi toko ritel/grosir (Tukar Guling / Tukar Tambah). Karena ada kemungkinan barang diganti dengan tipe lain yang harganya berbeda, sistem **Retur** tidak bisa sekadar "mengembalikan uang", tetapi harus mengakomodasi pertukaran (*Exchange*).
+
+Berikut adalah rancangan logika mutakhir untuk menangani kasus ini.
+
+## Alur Logika: Retur & Tukar Barang dalam Satu Transaksi
+
+Sistem akan dirancang agar Kasir dapat memproses Retur dan Pembelian Pengganti secara bersamaan dalam **1 Nota Retur/Tukar**.
+
+### 1. Struktur Form Transaksi Retur
+Di layar kasir untuk "Retur/Tukar", akan ada 2 bagian utama:
+*   **Bagian A: Barang yang Dikembalikan (Retur)**
+    Barang ini ditarik dari riwayat invoice lama. Masuk kembali ke toko (Stok Bertambah). Nilai dari barang ini akan dianggap sebagai **Deposit / Saldo Kredit** (-).
+*   **Bagian B: Barang Pengganti (Tukar)**
+    Kasir bisa *scan* barang baru yang ingin diambil pelanggan. Keluar dari toko (Stok Berkurang). Nilai barang ini akan menjadi **Tagihan Baru** (+).
+
+### 2. Logika Perhitungan Finansial (Selisih)
+Sistem akan menghitung: **Total Selisih = (Total Harga Barang Pengganti) - (Total Harga Barang Retur)**
+
+Dari hasil tersebut, ada 3 skenario otomatis:
+
+*   **Skenario 1: Selisih POSITIF (+)** (Barang pengganti lebih MAHAL)
+    *   **Kasus:** Pelanggan mengembalikan barang seharga Rp 100.000, dan menukarnya dengan barang seharga Rp 150.000. Selisih = Rp +50.000.
+    *   **Tindakan Sistem:** Sistem menagih Rp 50.000 ke pelanggan. Kasir bisa memilih pelanggan membayar sisa Rp 50.000 ini secara **Tunai** (masuk Buku Kas) atau dijadikan **Piutang** baru (jika diizinkan).
+*   **Skenario 2: Selisih NEGATIF (-)** (Barang pengganti lebih MURAH, atau tidak ada pengganti sama sekali)
+    *   **Kasus:** Pelanggan mengembalikan barang seharga Rp 100.000, tapi menukarnya dengan barang seharga Rp 80.000. Selisih = Rp -20.000 (Toko berhutang uang kembalian ke pelanggan).
+    *   **Tindakan Sistem:** Sistem mendeteksi Refund Rp 20.000.
+        *   Jika transaksi asli (Invoice awal) masih **Tempo / Punya Piutang**: Sistem akan otomatis memotong Piutang pelanggan sebesar Rp 20.000 (tanpa mengeluarkan uang kas).
+        *   Jika transaksi asli **Tunai / Sudah Lunas**: Sistem akan mencatat **Uang Keluar** dari Buku Kas sebesar Rp 20.000 untuk diserahkan kembali ke pelanggan.
+*   **Skenario 3: Selisih NOL (0)** (Harga sama persis)
+    *   **Tindakan Sistem:** Tidak ada pergerakan di Buku Kas maupun Piutang. Hanya terjadi pergerakan mutasi stok barang (Barang A bertambah, Barang B berkurang).
+
+### 3. Perubahan Skema Database
+Alih-alih membuat tabel retur yang kaku, kita mendesainnya agar tabel `returnsTable` mendukung sistem "Trade-in":
+*   `returnsTable`: Menyimpan data induk Retur/Tukar.
+*   `returnReturnedItemsTable`: Detail barang apa saja yang *diserahkan kembali* oleh pelanggan (Harga dihitung sebagai saldo kredit).
+*   `returnExchangedItemsTable`: Detail barang baru apa saja yang *dibawa pulang* oleh pelanggan (Harga dihitung sebagai tagihan).
+*   `returnsTable` akan memiliki field `paymentStatus` (apakah sisa kekurangannya sudah dibayar tunai atau masuk tempo) dan `cashRefunded` (apakah ada uang kas yang dikembalikan).
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Pertanyaan Desain Alur:**
+> 1. Apakah Anda setuju dengan pendekatan **"1 Form, 2 Bagian"** (Barang Kembali & Barang Pengganti) dalam satu layar yang sama? Ini jauh lebih cepat untuk kasir daripada harus membuat 2 dokumen terpisah (dokumen retur dan dokumen penjualan baru).
+> 2. Khusus untuk barang tekstil/kain (Roll & Meteran), saat pelanggan mengembalikan sebagian meteran kain, apakah kita akan membuat **Barcode (Stiker) Roll baru** khusus untuk kain potongan sisa tersebut, atau ditambahkan ke Roll yang lama secara manual?
+
+*(Silakan setujui logika Tukar/Retur ini, dan kita akan mulai memprogram sistem yang sangat cerdas ini!)*

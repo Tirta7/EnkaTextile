@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, User as UserIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, User as UserIcon, Shield, ShieldCheck, MoreVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
@@ -118,94 +119,132 @@ export default function Karyawan() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Karyawan"
-        description="Kelola akses akun dan role karyawan."
-        actions={<Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Tambah Karyawan
-        </Button>}
-      />
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex items-center justify-between pt-2 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Karyawan</h1>
+          <p className="text-sm text-slate-500">Kelola akses akun dan role</p>
+        </div>
+        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Plus className="mr-2 h-4 w-4" /> Tambah
+        </Button>
+      </div>
 
-      <Card>
-        <CardHeader className="py-4 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-medium">Daftar Karyawan</CardTitle>
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Cari nama/username..." 
-              className="pl-9"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-            />
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari nama atau username..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <div className="flex-1 space-y-2 py-1">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          ))
+        ) : filteredUsers?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <UserIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Tidak ada karyawan</h3>
+            <p className="text-sm text-slate-500 mt-1">Belum ada data karyawan yang ditambahkan.</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Lengkap</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Bergabung</TableHead>
-                <TableHead className="text-right w-[100px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(3).fill(0).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-5 w-[150px]" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredUsers?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Tidak ada karyawan ditemukan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsers?.slice((currentPage - 1) * 20, currentPage * 20).map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <UserIcon size={14} className="text-muted-foreground" />
+        ) : (
+          <>
+            {filteredUsers?.slice((currentPage - 1) * 20, currentPage * 20).map((u) => {
+              const isAdmin = u.role === 'admin';
+              const isCurrentUser = u.id === currentUser?.id;
+              
+              return (
+                <div key={u.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden">
+                  {/* Current User Highlight */}
+                  {isCurrentUser && (
+                    <div className="absolute top-0 right-0 bg-violet-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
+                      ANDA
+                    </div>
+                  )}
+                  
+                  {/* Top Row */}
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      @{u.username}
+                    </span>
+                  </div>
+
+                  {/* Main Content */}
+                  <div className="flex gap-3">
+                    <div className={`w-[60px] h-[60px] rounded-2xl shrink-0 flex items-center justify-center border ${isAdmin ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                      {isAdmin ? (
+                        <ShieldCheck className={`w-8 h-8 text-amber-500`} strokeWidth={1.5} />
+                      ) : (
+                        <UserIcon className={`w-8 h-8 text-emerald-500`} strokeWidth={1.5} />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
+                        {u.fullName}
+                      </h3>
+                      
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isAdmin ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {isAdmin ? 'Admin' : 'Kasir'}
+                        </span>
                       </div>
-                      {u.fullName} {u.id === currentUser?.id && <span className="text-xs text-muted-foreground">(Anda)</span>}
-                    </TableCell>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${u.role === 'admin' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>
-                        {u.role === 'admin' ? 'Admin' : 'Kasir'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(u.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        <Button variant="ghost" size="icon" disabled={u.id === currentUser?.id} onClick={() => {
-                          if (confirm('Hapus karyawan ini?')) deleteMutation.mutate({ id: u.id });
-                        }}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filteredUsers?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+                      
+                      <p className="text-[12px] text-slate-400 mt-2 truncate font-medium">
+                        Bergabung: {new Date(u.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+
+                    {/* Actions Dropdown */}
+                    <div className="flex items-start justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-600">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                          <DropdownMenuItem onClick={() => openEdit(u)} className="gap-2 cursor-pointer">
+                            <Pencil className="h-4 w-4 text-slate-500" /> Edit
+                          </DropdownMenuItem>
+                          {!isCurrentUser && (
+                            <DropdownMenuItem 
+                              className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
+                              onClick={() => { if (confirm('Hapus karyawan ini?')) deleteMutation.mutate({ id: u.id }); }}
+                            >
+                              <Trash2 className="h-4 w-4" /> Hapus
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {filteredUsers && filteredUsers.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filteredUsers.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isCreateOpen || !!editingUser} onOpenChange={(open) => {
         if (!open) {

@@ -1031,6 +1031,10 @@ export const GetSalesSummaryReportQueryParams = zod.object({
 
 export const GetSalesSummaryReportResponse = zod.object({
   "totalRevenue": zod.number(),
+  "netRevenue": zod.number(),
+  "totalReturnDeposit": zod.number(),
+  "totalReturnExchanged": zod.number(),
+  "netReturnImpact": zod.number(),
   "totalTransactions": zod.number(),
   "totalRolls": zod.number(),
   "totalMeters": zod.number(),
@@ -1245,5 +1249,197 @@ export const DeleteUserParams = zod.object({
 export const DeleteUserResponse = zod.object({
   "ok": zod.boolean().optional()
 })
+
+
+/**
+ * @summary List all returns
+ */
+export const ListReturnsResponseItem = zod.object({
+  "id": zod.number(),
+  "returnNumber": zod.string(),
+  "type": zod.string(),
+  "saleId": zod.number().nullish(),
+  "purchaseId": zod.number().nullish(),
+  "customerId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "totalReturnedValue": zod.string(),
+  "totalExchangedValue": zod.string(),
+  "differenceAmount": zod.string(),
+  "paymentStatus": zod.string(),
+  "cashRefunded": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "returnedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional(),
+  "exchangedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional()
+})
+export const ListReturnsResponse = zod.array(ListReturnsResponseItem)
+
+
+/**
+ * @summary Create a return with optional exchange items
+ */
+export const CreateReturnBody = zod.object({
+  "type": zod.enum(['penjualan', 'pembelian']),
+  "saleId": zod.number().nullish(),
+  "purchaseId": zod.number().nullish(),
+  "customerId": zod.number().nullish(),
+  "supplierId": zod.number().nullish(),
+  "paymentStatus": zod.enum(['lunas', 'tempo']),
+  "notes": zod.string().nullish(),
+  "returnedItems": zod.array(zod.object({
+  "productId": zod.number(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.number(),
+  "meters": zod.number(),
+  "pricePerMeter": zod.number(),
+  "subtotal": zod.number()
+})).optional(),
+  "exchangedItems": zod.array(zod.object({
+  "productId": zod.number(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.number(),
+  "meters": zod.number(),
+  "pricePerMeter": zod.number(),
+  "subtotal": zod.number()
+})).optional()
+})
+
+export const CreateReturnResponse = zod.object({
+  "id": zod.number(),
+  "returnNumber": zod.string(),
+  "type": zod.string(),
+  "saleId": zod.number().nullish(),
+  "purchaseId": zod.number().nullish(),
+  "customerId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "totalReturnedValue": zod.string(),
+  "totalExchangedValue": zod.string(),
+  "differenceAmount": zod.string(),
+  "paymentStatus": zod.string(),
+  "cashRefunded": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "returnedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional(),
+  "exchangedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional()
+})
+
+
+/**
+ * @summary Get a specific return by ID with its items
+ */
+export const GetReturnParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetReturnResponse = zod.object({
+  "id": zod.number(),
+  "returnNumber": zod.string(),
+  "type": zod.string(),
+  "saleId": zod.number().nullish(),
+  "purchaseId": zod.number().nullish(),
+  "customerId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish(),
+  "totalReturnedValue": zod.string(),
+  "totalExchangedValue": zod.string(),
+  "differenceAmount": zod.string(),
+  "paymentStatus": zod.string(),
+  "cashRefunded": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "returnedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional(),
+  "exchangedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional()
+}).and(zod.object({
+  "returnedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional(),
+  "exchangedItems": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "returnId": zod.number().optional(),
+  "productId": zod.number().optional(),
+  "productName": zod.string().optional(),
+  "rollId": zod.number().nullish(),
+  "rolls": zod.string().optional(),
+  "meters": zod.string().optional(),
+  "pricePerMeter": zod.string().optional(),
+  "subtotal": zod.string().optional()
+})).optional()
+}))
 
 

@@ -9,7 +9,7 @@ export function setupWebSocket(server: Server) {
 
   wss.on("connection", (ws) => {
     logger.info("WebSocket client connected");
-    ws.send(JSON.stringify({ type: "connected", message: "VOCpos Live" }));
+    ws.send(JSON.stringify({ type: "connected", message: "EnkaTextile Live" }));
 
     ws.on("close", () => {
       logger.info("WebSocket client disconnected");

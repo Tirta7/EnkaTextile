@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Truck } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Truck, Store, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -56,65 +57,136 @@ export default function Supplier() {
   const filtered = suppliers?.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || (s.phone && s.phone.includes(search)));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Supplier"
-        description="Kelola data supplier dan hutang."
-        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Tambah Supplier</Button>}
-      />
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex items-center justify-between pt-2 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Supplier</h1>
+          <p className="text-sm text-slate-500">Kelola daftar pemasok</p>
+        </div>
+        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Plus className="mr-2 h-4 w-4" /> Tambah
+        </Button>
+      </div>
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Daftar Supplier</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari nama supplier..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari nama supplier..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(4).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <div className="flex-1 space-y-2 py-1">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          ))
+        ) : filtered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Truck className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Tidak ada supplier</h3>
+            <p className="text-sm text-slate-500 mt-1">Belum ada data pemasok yang ditambahkan.</p>
           </div>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Supplier</TableHead>
-                <TableHead>Contact Person</TableHead>
-                <TableHead>Telepon</TableHead>
-                <TableHead>Alamat</TableHead>
-                <TableHead className="text-right">Total Hutang</TableHead>
-                <TableHead className="text-right w-[80px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(6).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    <Truck className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Tidak ada supplier ditemukan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{(s as any).contactPerson || "-"}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.phone || "-"}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{s.address || "-"}</TableCell>
-                    <TableCell className="text-right font-medium text-destructive">{formatRupiah((s as any).currentDebt ?? 0)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (confirm('Hapus supplier ini?')) deleteMutation.mutate({ id: s.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        ) : (
+          <>
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => {
+              const currentDebt = (s as any).currentDebt ?? 0;
+              const hasDebt = currentDebt > 0;
+              return (
+                <div key={s.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
+                  {/* Top Row */}
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      {s.phone || "Tanpa No. HP"}
+                    </span>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 block mb-0.5">Total Hutang Ke Supplier</span>
+                      <span className={`text-sm font-bold ${hasDebt ? 'text-red-600' : 'text-slate-800'}`}>
+                        {formatRupiah(currentDebt)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Main Content */}
+                  <div className="flex gap-3">
+                    <div className={`w-[60px] h-[60px] rounded-2xl shrink-0 flex items-center justify-center border ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
+                      <Store className={`w-8 h-8 ${hasDebt ? 'text-red-400' : 'text-violet-300'}`} strokeWidth={1.5} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
+                        {s.name}
+                      </h3>
+                      
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        {hasDebt ? (
+                          <AlertCircle className="w-4 h-4 text-red-500 fill-red-50" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
+                        )}
+                        <span className={`text-xs font-medium capitalize ${hasDebt ? 'text-red-600' : 'text-slate-600'}`}>
+                          {hasDebt ? "Ada Hutang" : "Lunas / Bersih"}
+                        </span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+                      
+                      <p className="text-[12px] text-slate-400 mt-1 truncate font-medium">
+                        Kontak: {(s as any).contactPerson || "-"}
+                      </p>
+                    </div>
+
+                    {/* Actions Dropdown */}
+                    <div className="flex items-start justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-600">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                          <DropdownMenuItem onClick={() => openEdit(s)} className="gap-2 cursor-pointer">
+                            <Pencil className="h-4 w-4 text-slate-500" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
+                            onClick={() => { if (confirm('Hapus supplier ini?')) deleteMutation.mutate({ id: s.id }); }}
+                          >
+                            <Trash2 className="h-4 w-4" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Bottom Bar: Address Info */}
+                  {s.address && (
+                    <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
+                      <span className="truncate pr-4 flex-1">Alamat: {s.address}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+        {filtered && filtered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

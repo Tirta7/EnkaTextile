@@ -17,7 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     if (appName) {
       document.title = appName;
     } else {
-      document.title = "VOCpos";
+      document.title = "EnkaTextile";
     }
 
     const appLogo = settings?.["app_logo"];

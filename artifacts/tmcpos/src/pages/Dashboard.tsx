@@ -247,9 +247,25 @@ export default function Dashboard() {
                           {String(tx.type).toLowerCase()}
                         </Badge>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                        {tx.customerName ? `${tx.customerName} · ` : ""}
-                        {new Date(tx.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="text-xs text-muted-foreground truncate">
+                          {tx.customerName ? `${tx.customerName} · ` : ""}
+                          {new Date(tx.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                        {(tx as any).hasReturns && (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-[8px] h-3 py-0 px-1 border-amber-200 text-amber-700 bg-amber-50 uppercase tracking-widest font-bold">
+                              Retur/Tukar
+                            </Badge>
+                            {((tx as any).returnDifference !== undefined && (tx as any).returnDifference !== 0) && (
+                              <span className={`text-[9px] font-bold ${(tx as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {(tx as any).returnDifference > 0 
+                                  ? `(+Rp ${new Intl.NumberFormat('id-ID').format((tx as any).returnDifference)})` 
+                                  : `(-Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((tx as any).returnDifference))})`}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className={cn(

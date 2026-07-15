@@ -31,7 +31,7 @@ type FormData = z.infer<typeof schema>;
 export default function BukuKas() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("all");
+  const [activeTab, setActiveTab] = useState<"semua" | "income" | "expense">("semua");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function BukuKas() {
 
   const filteredBase = entries?.filter(e => {
     const matchSearch = e.description.toLowerCase().includes(search.toLowerCase());
-    const matchType = filterType === "all" || e.type === filterType;
+    const matchType = activeTab === "semua" || e.type === activeTab;
     return matchSearch && matchType;
   });
   const filtered = filterByDateRange(filteredBase ?? [], dateFrom, dateTo);
@@ -71,98 +71,170 @@ export default function BukuKas() {
   const totalOut = entries?.filter(e => e.type === "expense").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Buku Kas"
-        description="Catat pemasukan dan pengeluaran kas."
-        actions={<Button onClick={() => setIsOpen(true)}><Plus className="mr-2 h-4 w-4" /> Catat Transaksi</Button>}
-      />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-primary flex items-center gap-2"><TrendingUp size={16} /> Saldo Kas</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-primary">{formatRupiah((balance as any)?.balance ?? 0)}</div></CardContent>
-        </Card>
-        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-2"><ArrowDownToLine size={16} /> Total Pemasukan</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-700 dark:text-green-400">{formatRupiah(totalIn)}</div></CardContent>
-        </Card>
-        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-red-700 dark:text-red-400 flex items-center gap-2"><ArrowUpFromLine size={16} /> Total Pengeluaran</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-700 dark:text-red-400">{formatRupiah(totalOut)}</div></CardContent>
-        </Card>
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex flex-col pt-2 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Buku Kas</h1>
+            <p className="text-sm text-slate-500">Catat pemasukan & pengeluaran</p>
+          </div>
+          <Button onClick={() => setIsOpen(true)} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+            <Plus className="mr-2 h-4 w-4" /> Baru
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <CardTitle className="text-lg font-medium flex-1">Riwayat Transaksi</CardTitle>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="income">Pemasukan</SelectItem>
-                  <SelectItem value="expense">Pengeluaran</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari keterangan..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-violet-50 rounded-3xl p-4 border border-violet-100 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <TrendingUp className="w-24 h-24" />
+          </div>
+          <span className="text-xs font-semibold text-violet-600 mb-1">Saldo Kas</span>
+          <span className="text-lg font-bold text-violet-900">{formatRupiah((balance as any)?.balance ?? 0)}</span>
+        </div>
+        <div className="bg-green-50 rounded-3xl p-4 border border-green-200 flex flex-col justify-center">
+          <span className="text-xs font-semibold text-green-700 mb-1">Total Pemasukan</span>
+          <span className="text-lg font-bold text-green-900">{formatRupiah(totalIn)}</span>
+        </div>
+        <div className="bg-red-50 rounded-3xl p-4 border border-red-200 flex flex-col justify-center col-span-2 md:col-span-1">
+          <span className="text-xs font-semibold text-red-700 mb-1">Total Pengeluaran</span>
+          <span className="text-lg font-bold text-red-900">{formatRupiah(totalOut)}</span>
+        </div>
+      </div>
+
+      {/* Scrollable Tabs */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {(['semua', 'income', 'expense'] as const).map((tab) => {
+          let label = "Semua";
+          if (tab === "income") label = "Pemasukan";
+          if (tab === "expense") label = "Pengeluaran";
+          return (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                activeTab === tab
+                  ? "bg-violet-900 text-white shadow-md shadow-violet-200"
+                  : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari keterangan transaksi..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="w-12 h-12 rounded-2xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
               </div>
             </div>
+          ))
+        ) : filtered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <BookOpen className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Belum ada transaksi kas</h3>
+            <p className="text-sm text-slate-500 mt-1">Catat pemasukan atau pengeluaran Anda.</p>
           </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal</TableHead>
-                <TableHead>Keterangan</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Tipe</TableHead>
-                <TableHead className="text-right">Jumlah</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(5).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                    <BookOpen className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Belum ada transaksi kas
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="text-muted-foreground">{formatDate(e.createdAt)}</TableCell>
-                    <TableCell className="font-medium">{e.description}</TableCell>
-                    <TableCell className="text-muted-foreground">{(e as any).reference || "-"}</TableCell>
-                    <TableCell>
-                      {e.type === "income" ? (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 font-medium">
-                          <ArrowDownToLine size={12} /> Pemasukan
+        ) : (
+          <>
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e) => {
+              const isIncome = e.type === "income";
+              
+              // Decorative Badge Class
+              let badgeClass = "bg-red-100 text-red-700";
+              let iconClass = "text-red-500";
+              let iconBgClass = "bg-red-50 border-red-100";
+              let StatusIcon = ArrowUpFromLine;
+              
+              if (isIncome) {
+                badgeClass = "bg-green-100 text-green-700";
+                iconClass = "text-green-500";
+                iconBgClass = "bg-green-50 border-green-100";
+                StatusIcon = ArrowDownToLine;
+              }
+
+              return (
+                <div key={e.id} className={`bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md`}>
+                  
+                  {/* Decorative side accent */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${badgeClass.split(' ')[0]}`} />
+
+                  {/* Header: Waktu */}
+                  <div className="flex justify-between items-start pl-2">
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                        {formatDate(e.createdAt)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-sm font-bold block ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                        {isIncome ? '+' : '-'}{formatRupiah((e as any).amount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body: Info Transaksi */}
+                  <div className="flex gap-3 items-center pl-2">
+                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${iconBgClass}`}>
+                      <StatusIcon className={`w-6 h-6 ${iconClass}`} strokeWidth={2} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
+                        {e.description}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+                          {isIncome ? "Pemasukan" : "Pengeluaran"}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 font-medium">
-                          <ArrowUpFromLine size={12} /> Pengeluaran
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className={`text-right font-bold ${e.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                      {e.type === "income" ? "+" : "-"}{formatRupiah((e as any).amount)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+                        {(e as any).reference && (
+                          <span className="text-xs font-medium text-slate-400 capitalize">
+                            Ref: {(e as any).reference}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {filtered && filtered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) setIsOpen(false); }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

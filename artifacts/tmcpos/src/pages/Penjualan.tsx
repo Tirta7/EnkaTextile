@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
@@ -12,13 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
-type SaleItem = { productId: number; productName: string; rollId?: number; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
+type SaleItem = { productId: number; productName: string; rollId?: number; selectedRolls?: {id: number, currentLength: number}[]; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -31,6 +33,8 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
   const { data: rolls } = useGetProductRolls(item.productId, {
     query: { queryKey: getGetProductRollsQueryKey(item.productId), enabled: !!item.productId }
   });
+  
+  const drawerContainer = typeof document !== 'undefined' ? document.getElementById("drawer-portal-target") : null;
 
   const availableRolls = rolls?.filter(r => r.status === 'available') || [];
   const lengthGroups: Record<string, number> = {};
@@ -68,7 +72,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Barang</label>
-        <Select value={item.productId ? item.productId.toString() : ""} onValueChange={v => { updateItem(index, "productId", parseInt(v)); }}>
+        <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => { updateItem(index, "productId", parseInt(v)); }}>
           <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
           <SelectContent>
             <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
@@ -83,74 +87,106 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Roll (Stiker)</label>
-        <Select 
-          value={item.rollId ? `r_${item.rollId}` : (item.targetLength ? `len_${item.targetLength}` : "none")} 
-          onValueChange={v => { 
-            if (v === "none") { 
-              updateItem(index, "rollId", undefined);
-              updateItem(index, "targetLength", undefined);
-              return;
-            }
-            if (v.startsWith("len_")) {
-              const targetLen = parseFloat(v.replace("len_", ""));
-              updateItem(index, "rollId", undefined);
-              updateItem(index, "targetLength", targetLen);
-              updateItem(index, "unit", "roll");
-              updateItem(index, "rolls", 1);
-              updateItem(index, "meters", targetLen);
-              return;
-            }
-            if (v.startsWith("r_")) {
-              const rollId = parseInt(v.replace("r_", ""));
-              updateItem(index, "rollId", rollId);
-              updateItem(index, "targetLength", undefined);
-              const roll = availableRolls.find(r => r.id === rollId);
-              if (roll) {
-                updateItem(index, "unit", "roll");
-                updateItem(index, "rolls", 1);
-                updateItem(index, "meters", roll.currentLength);
-              }
-            }
-          }}
-          disabled={!item.productId || !rolls || rolls.length === 0}
-        >
-          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih roll" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none" className="border shadow-sm hover:border-primary/50 mb-2 w-full text-base">
-              Potong Bebas (Meteran)
-            </SelectItem>
-            {Object.keys(lengthGroups).length > 0 && (
-              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 mb-2">
-                <div className="col-span-full"><SelectLabel className="pb-1">Pilih Otomatis (Per Ukuran)</SelectLabel></div>
-                {Object.entries(lengthGroups).map(([len, count]) => (
-                  <SelectItem key={`len_${len}`} value={`len_${len}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="font-semibold text-base">{len}m</span>
-                      <span className="text-xs text-muted-foreground">Tersedia: {count} roll</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
-            {availableRolls.length > 0 && (
-              <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                <div className="col-span-full"><SelectLabel className="pb-1">Pilih Spesifik Barcode</SelectLabel></div>
-                {availableRolls.map(r => (
-                  <SelectItem key={`r_${r.id}`} value={`r_${r.id}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto">
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="font-semibold text-base">{r.currentLength}m</span>
-                      <span className="text-[10px] text-muted-foreground truncate w-full text-center">{r.barcode}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
-          </SelectContent>
-        </Select>
+        <Popover modal={false}>
+          <PopoverTrigger asChild>
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full h-12 justify-between font-normal px-3" 
+              disabled={!item.productId || !rolls || rolls.length === 0}
+            >
+              <span className="truncate">
+                {item.selectedRolls && item.selectedRolls.length > 0 
+                  ? `${item.selectedRolls.length} Roll Terpilih`
+                  : item.targetLength 
+                    ? `${item.targetLength}m (Auto)`
+                    : "Potong Bebas / Manual"}
+              </span>
+              <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent container={drawerContainer} className="w-[240px] p-0" align="start">
+            <div className="max-h-[300px] overflow-y-auto p-1">
+              <label className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
+                <Checkbox 
+                  checked={!item.targetLength && (!item.selectedRolls || item.selectedRolls.length === 0)}
+                  onCheckedChange={() => {
+                    updateItem(index, "selectedRolls", []);
+                    updateItem(index, "targetLength", undefined);
+                  }}
+                />
+                Potong Bebas (Meteran)
+              </label>
+              
+              {Object.keys(lengthGroups).length > 0 && (
+                <>
+                  <div className="my-1 h-px bg-slate-100" />
+                  <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">Pilih Otomatis (Per Ukuran)</div>
+                  {Object.entries(lengthGroups).map(([len, count]) => (
+                    <label key={`len_${len}`} className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
+                      <Checkbox 
+                        checked={item.targetLength === parseFloat(len)}
+                        onCheckedChange={() => {
+                          updateItem(index, "selectedRolls", []);
+                          updateItem(index, "targetLength", parseFloat(len));
+                          updateItem(index, "unit", "roll");
+                          updateItem(index, "rolls", 1);
+                          updateItem(index, "meters", parseFloat(len));
+                        }}
+                      />
+                      {len}m <span className="text-slate-400 text-xs">(Tersedia: {count})</span>
+                    </label>
+                  ))}
+                </>
+              )}
+
+              {availableRolls.length > 0 && (
+                <>
+                  <div className="my-1 h-px bg-slate-100" />
+                  <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">Pilih Spesifik Barcode</div>
+                  {availableRolls.map(r => {
+                    const isChecked = item.selectedRolls?.some((sr: any) => sr.id === r.id);
+                    return (
+                      <label key={r.id} className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
+                        <Checkbox 
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            let newSelected = [...(item.selectedRolls || [])];
+                            if (checked) {
+                              newSelected.push({ id: r.id, currentLength: parseFloat(r.currentLength as unknown as string) });
+                            } else {
+                              newSelected = newSelected.filter((sr: any) => sr.id !== r.id);
+                            }
+                            updateItem(index, "targetLength", undefined);
+                            updateItem(index, "selectedRolls", newSelected);
+                            
+                            if (newSelected.length > 0) {
+                              const sumMeters = newSelected.reduce((sum, sr) => sum + sr.currentLength, 0);
+                              updateItem(index, "unit", "roll");
+                              updateItem(index, "rolls", newSelected.length);
+                              updateItem(index, "meters", sumMeters);
+                            } else {
+                              updateItem(index, "rolls", "");
+                              updateItem(index, "meters", "");
+                            }
+                          }}
+                        />
+                        <div className="flex flex-col">
+                          <span>{r.currentLength}m</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{r.barcode || r.id}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="md:col-span-1">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Satuan</label>
-        <Select value={item.unit} onValueChange={v => updateItem(index, "unit", v)} disabled={!!item.rollId}>
+        <Select value={item.unit} onValueChange={(v: string) => updateItem(index, "unit", v)} disabled={!!item.rollId}>
           <SelectTrigger className="h-12 font-medium"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="meter">{item.primaryUnit || "Meter"}</SelectItem>
@@ -285,12 +321,14 @@ export default function Penjualan() {
         const prod = products?.find(p => p.id === i.productId);
         const cat = categories?.find(c => c.id === prod?.categoryId);
         return {
+          productId: i.productId,
+          rollId: i.rollId,
           categoryName: cat?.name,
           productName: i.productName,
           meters: typeof i.meters === "number" ? i.meters : 0,
           rolls: typeof i.rolls === "number" ? i.rolls : 0,
           pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0,
-          subtotal: i.subtotal
+          subtotal: i.subtotal,
         };
       })
     });
@@ -308,14 +346,28 @@ export default function Penjualan() {
         paymentType: paymentType as any,
         dueDate: dueDate || undefined,
         notes: notes || undefined,
-        items: items.map(i => ({ 
-          productId: i.productId, 
-          rollId: i.rollId || undefined, 
-          rolls: typeof i.rolls === "number" ? i.rolls : 0, 
-          meters: typeof i.meters === "number" ? i.meters : 0, 
-          pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0, 
-          subtotal: i.subtotal 
-        }))
+        items: items.flatMap(i => {
+          // Explode multi-select rolls into individual items for the backend
+          if (i.selectedRolls && i.selectedRolls.length > 0) {
+            return i.selectedRolls.map(r => ({
+              productId: i.productId,
+              rollId: r.id,
+              rolls: 1,
+              meters: r.currentLength,
+              pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0,
+              subtotal: r.currentLength * (typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0)
+            }));
+          }
+          // Normal fallback
+          return [{ 
+            productId: i.productId, 
+            rollId: i.rollId || undefined, 
+            rolls: typeof i.rolls === "number" ? i.rolls : 0, 
+            meters: typeof i.meters === "number" ? i.meters : 0, 
+            pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0, 
+            subtotal: i.subtotal 
+          }];
+        })
       }
     });
   };
@@ -335,7 +387,7 @@ export default function Penjualan() {
   }, [baseFiltered, activeTab]);
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-20">
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
       
       {/* Mobile-optimized Header */}
       <div className="flex items-center justify-between pt-2 pb-4">
@@ -373,10 +425,8 @@ export default function Penjualan() {
             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
           />
         </div>
-        <div className="flex gap-2">
            {/* Replace standard date filter with simpler or keep as is, but styled */}
            <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-        </div>
       </div>
 
       {/* Activity Feed List */}
@@ -420,7 +470,7 @@ export default function Penjualan() {
 
                   {/* Main Content: Avatar, Title, Status */}
                   <div className="flex gap-3">
-                    <div className="w-[60px] h-[60px] rounded-2xl flex-shrink-0 bg-violet-50 flex items-center justify-center border border-violet-100">
+                    <div className="w-[60px] h-[60px] rounded-2xl shrink-0 bg-violet-50 flex items-center justify-center border border-violet-100">
                       <UserIcon className="w-8 h-8 text-violet-300" strokeWidth={1.5} />
                     </div>
                     
@@ -442,9 +492,25 @@ export default function Penjualan() {
                         </span>
                       </div>
                       
-                      <p className="text-[11px] text-slate-400 mt-1 truncate">
-                        1 [INV] {s.invoiceNumber} • {s.paymentType}
-                      </p>
+                      <div className="flex flex-col gap-1 mt-1">
+                        <p className="text-[11px] text-slate-400 truncate">
+                          1 [INV] {s.invoiceNumber} • {s.paymentType}
+                        </p>
+                        {(s as any).hasReturns && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-amber-200 text-amber-700 bg-amber-50 uppercase tracking-widest font-bold">
+                              Ada Retur/Tukar
+                            </Badge>
+                            {((s as any).returnDifference !== undefined && (s as any).returnDifference !== 0) && (
+                              <span className={`text-[10px] font-bold ${(s as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {(s as any).returnDifference > 0 
+                                  ? `(Kurang Bayar Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)})` 
+                                  : `(Refund Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))})`}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Action Button */}
@@ -482,6 +548,7 @@ export default function Penjualan() {
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
         <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-6 pt-2">
           <DrawerHeader><DrawerTitle className="text-xl">Buat Penjualan Baru</DrawerTitle></DrawerHeader>
+          <div id="drawer-portal-target" />
           <div className="overflow-y-auto max-h-[calc(96vh-6rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">

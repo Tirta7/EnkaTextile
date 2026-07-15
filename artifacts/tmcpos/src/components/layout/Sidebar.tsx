@@ -18,6 +18,7 @@ import {
   Settings,
   LogOut,
   Home,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -78,7 +79,7 @@ export function Sidebar({ isOpen, setOpen }: { isOpen: boolean; setOpen: (open: 
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const { data: settings } = useSettings();
-  const appName = settings?.["app_name"] || "VOCpos";
+  const appName = settings?.["app_name"] || "EnkaTextile";
   const appLogo = settings?.["app_logo"];
 
   const handleLogout = async () => {

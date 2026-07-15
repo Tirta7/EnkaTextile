@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Wallet, Plus } from "lucide-react";
+import { Search, Wallet, Plus, AlertTriangle, CheckCircle2, AlertCircle, ArrowRightCircle, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -25,7 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Piutang() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [activeTab, setActiveTab] = useState<"semua" | "belum_bayar" | "partial" | "lunas">("semua");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function Piutang() {
     receivables?.filter(r => {
       const q = search.toLowerCase();
       const matchSearch = (r as any).customerName?.toLowerCase().includes(q) || (r as any).invoiceNumber?.toLowerCase().includes(q);
-      const matchStatus = filterStatus === "all" || r.status === filterStatus;
+      const matchStatus = activeTab === "semua" || r.status === activeTab;
       return matchSearch && matchStatus;
     }) ?? [],
     dateFrom,
@@ -73,105 +73,201 @@ export default function Piutang() {
   const overdueCount = receivables?.filter(r => (r as any).isOverdue).length ?? 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Piutang" description="Kelola tagihan dan pembayaran piutang pelanggan." />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Piutang Aktif</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-primary">{formatRupiah(totalPiutang)}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Invoice Aktif</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{receivables?.filter(r => r.status !== "lunas").length ?? 0}</div></CardContent>
-        </Card>
-        <Card className={overdueCount > 0 ? "bg-destructive/10 border-destructive/30" : ""}>
-          <CardHeader className="pb-2"><CardTitle className={`text-sm font-medium ${overdueCount > 0 ? "text-destructive" : "text-muted-foreground"}`}>Jatuh Tempo</CardTitle></CardHeader>
-          <CardContent><div className={`text-2xl font-bold ${overdueCount > 0 ? "text-destructive" : ""}`}>{overdueCount} Invoice</div></CardContent>
-        </Card>
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex flex-col pt-2 pb-2">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Piutang</h1>
+            <p className="text-sm text-slate-500">Kelola tagihan pelanggan</p>
+          </div>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <CardTitle className="text-lg font-medium flex-1">Daftar Piutang</CardTitle>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="belum_bayar">Belum Bayar</SelectItem>
-                  <SelectItem value="partial">Sebagian</SelectItem>
-                  <SelectItem value="lunas">Lunas</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Cari pelanggan / invoice..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-violet-50 rounded-3xl p-4 border border-violet-100 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <Wallet className="w-24 h-24" />
+          </div>
+          <span className="text-xs font-semibold text-violet-600 mb-1">Total Aktif</span>
+          <span className="text-lg font-bold text-violet-900">{formatRupiah(totalPiutang)}</span>
+        </div>
+        <div className="bg-white rounded-3xl p-4 border border-slate-200 flex flex-col justify-center">
+          <span className="text-xs font-semibold text-slate-500 mb-1">Invoice Aktif</span>
+          <span className="text-lg font-bold text-slate-900">{receivables?.filter(r => r.status !== "lunas").length ?? 0}</span>
+        </div>
+        <div className={`${overdueCount > 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-200"} rounded-3xl p-4 border flex flex-col justify-center col-span-2 md:col-span-1`}>
+          <span className={`text-xs font-semibold mb-1 ${overdueCount > 0 ? "text-red-600" : "text-slate-500"}`}>Jatuh Tempo</span>
+          <span className={`text-lg font-bold ${overdueCount > 0 ? "text-red-700" : "text-slate-900"}`}>{overdueCount} Invoice</span>
+        </div>
+      </div>
+
+      {/* Scrollable Tabs */}
+      <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {(['semua', 'belum_bayar', 'partial', 'lunas'] as const).map((tab) => {
+          let label = "Semua";
+          if (tab === "belum_bayar") label = "Belum Bayar";
+          if (tab === "partial") label = "Sebagian";
+          if (tab === "lunas") label = "Lunas";
+          return (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+                activeTab === tab
+                  ? "bg-violet-900 text-white shadow-md shadow-violet-200"
+                  : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari pelanggan atau invoice..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {isLoading ? (
+          Array(3).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
+              </div>
+              <div className="flex gap-3">
+                <Skeleton className="w-12 h-12 rounded-2xl" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
               </div>
             </div>
+          ))
+        ) : filtered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Wallet className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Tidak ada piutang</h3>
+            <p className="text-sm text-slate-500 mt-1">Belum ada tagihan untuk pelanggan.</p>
           </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Pelanggan</TableHead>
-                <TableHead>Tgl. Transaksi</TableHead>
-                <TableHead>Jatuh Tempo</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[100px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => <TableRow key={i}>{Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}</TableRow>)
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    <Wallet className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Tidak ada piutang
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((r) => {
-                  const pct = (r as any).totalAmount > 0 ? Math.round(((r as any).paidAmount / (r as any).totalAmount) * 100) : 0;
-                  return (
-                    <TableRow key={r.id} className={(r as any).isOverdue && r.status !== "lunas" ? "bg-red-50/50 dark:bg-red-900/10" : ""}>
-                      <TableCell className="font-mono text-sm">{(r as any).invoiceNumber || `#${r.id}`}</TableCell>
-                      <TableCell className="font-medium">{(r as any).customerName || "-"}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(r.createdAt)}</TableCell>
-                      <TableCell className={`text-sm ${(r as any).isOverdue && r.status !== "lunas" ? "text-destructive font-medium" : "text-muted-foreground"}`}>{formatDate((r as any).dueDate)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatRupiah((r as any).totalAmount)}</TableCell>
-                      <TableCell className="w-[120px]">
-                        <div className="space-y-1">
-                          <Progress value={pct} className="h-2" />
-                          <div className="text-xs text-muted-foreground">{pct}% ({formatRupiah((r as any).paidAmount)})</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded-full border font-medium ${STATUS_COLORS[r.status ?? "belum_bayar"] || "bg-gray-100 text-gray-700"}`}>{r.status?.replace("_", " ")}</span>
-                      </TableCell>
-                      <TableCell>
-                        {r.status !== "lunas" && (
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openPayment(r.id)}>
-                            <Plus className="mr-1 h-3 w-3" /> Bayar
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+        ) : (
+          <>
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((r) => {
+              const pct = (r as any).totalAmount > 0 ? Math.round(((r as any).paidAmount / (r as any).totalAmount) * 100) : 0;
+              const isOverdue = (r as any).isOverdue && r.status !== "lunas";
+              
+              // Decorative Badge Class
+              let badgeClass = "bg-slate-100 text-slate-700";
+              let iconClass = "text-slate-500";
+              let iconBgClass = "bg-slate-50 border-slate-100";
+              let StatusIcon = AlertCircle;
+              
+              if (r.status === 'lunas') {
+                badgeClass = "bg-green-100 text-green-700";
+                iconClass = "text-green-500";
+                iconBgClass = "bg-green-50 border-green-100";
+                StatusIcon = CheckCircle2;
+              } else if (r.status === 'partial') {
+                badgeClass = "bg-blue-100 text-blue-700";
+                iconClass = "text-blue-500";
+                iconBgClass = "bg-blue-50 border-blue-100";
+                StatusIcon = DollarSign;
+              } else {
+                badgeClass = "bg-red-100 text-red-700";
+                iconClass = "text-red-500";
+                iconBgClass = "bg-red-50 border-red-100";
+                StatusIcon = AlertTriangle;
+              }
+
+              return (
+                <div key={r.id} className={`bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border ${isOverdue ? 'border-red-200 bg-red-50/10' : 'border-slate-100'} flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md`}>
+                  
+                  {/* Decorative side accent */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${isOverdue ? 'bg-red-500' : badgeClass.split(' ')[0]}`} />
+
+                  {/* Header: Waktu & Invoice */}
+                  <div className="flex justify-between items-start pl-2">
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                        {formatDate(r.createdAt)}
+                      </span>
+                      <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded-full inline-block mt-1">
+                        {(r as any).invoiceNumber || `#${r.id}`}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-slate-900 block">
+                        {formatRupiah((r as any).totalAmount)}
+                      </span>
+                      <span className={`text-[10px] font-medium block mt-0.5 ${isOverdue ? 'text-red-600' : 'text-slate-400'}`}>
+                        Jatuh Tempo: {formatDate((r as any).dueDate)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body: Info Pelanggan */}
+                  <div className="flex gap-3 items-center pl-2">
+                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${iconBgClass}`}>
+                      <StatusIcon className={`w-6 h-6 ${iconClass}`} strokeWidth={2} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
+                        {(r as any).customerName || "-"}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+                          {r.status?.replace("_", " ")}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {r.status !== "lunas" && (
+                      <Button size="sm" className="h-8 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs px-4 shadow-sm" onClick={() => openPayment(r.id)}>
+                        <Plus className="mr-1 h-3.5 w-3.5" /> Bayar
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Footer: Progress Pembayaran */}
+                  <div className="mt-2 pl-2 border-t border-slate-100 pt-3">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="font-medium text-slate-500">Progress Pembayaran</span>
+                      <span className="font-bold text-slate-700">{pct}%</span>
+                    </div>
+                    <Progress value={pct} className="h-1.5 bg-slate-100" />
+                    <div className="flex justify-between text-[11px] mt-1.5">
+                      <span className="text-slate-400">Terbayar: <span className="font-medium text-slate-600">{formatRupiah((r as any).paidAmount)}</span></span>
+                      {(r as any).remainingAmount > 0 && (
+                        <span className="text-amber-600 font-medium">Sisa: {formatRupiah((r as any).remainingAmount)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+        {filtered && filtered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

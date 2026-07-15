@@ -13,7 +13,7 @@ interface HeaderProps {
 export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
   const { isConnected } = useWebSocket();
   const { data: settings } = useSettings();
-  const appName = settings?.["app_name"] || "VOCpos";
+  const appName = settings?.["app_name"] || "EnkaTextile";
 
   return (
     <header

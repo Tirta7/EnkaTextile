@@ -11,8 +11,9 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, AlertTriangle, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
@@ -132,12 +133,17 @@ export default function Barang() {
   const lowStockCount = products?.filter(p => p.isLowStock).length ?? 0;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Barang"
-        description="Kelola inventori barang tekstil."
-        actions={<Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Tambah Barang</Button>}
-      />
+    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+      {/* Mobile-optimized Header */}
+      <div className="flex items-center justify-between pt-2 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Barang</h1>
+          <p className="text-sm text-slate-500">Kelola inventaris dan stok</p>
+        </div>
+        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Plus className="mr-2 h-4 w-4" /> Tambah
+        </Button>
+      </div>
 
       {lowStockCount > 0 && (
         <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -150,7 +156,7 @@ export default function Barang() {
       )}
 
       {/* Premium Category Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 pb-4 pt-2 mb-4 w-full">
+      <div className="flex flex-wrap gap-2 pb-4 pt-2 mb-4 w-full">
         {categories?.map(c => {
           const count = products?.filter(p => p.categoryId === c.id).length || 0;
           const isActive = selectedCategoryId === c.id;
@@ -158,13 +164,13 @@ export default function Barang() {
             <button 
               key={c.id}
               onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
-              className={`group relative flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border w-full ${
+              className={`group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
                 isActive 
                   ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
                   : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
               }`}
             >
-              <span className="truncate text-left" title={c.name}>{c.name}</span>
+              <span className="text-left leading-snug whitespace-normal">{c.name}</span>
               <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
                 isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
               }`}>
@@ -175,83 +181,129 @@ export default function Barang() {
         })}
       </div>
 
-      <Card>
-        <CardHeader className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <CardTitle className="text-lg font-medium flex-1">Daftar Barang</CardTitle>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Cari nama / no lot..." className="pl-9" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+      {/* Filter & Search */}
+      <div className="flex flex-col gap-3">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input 
+            placeholder="Cari nama barang atau no lot..." 
+            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
+            value={search} 
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+          />
+        </div>
+      </div>
+
+      {/* Activity Feed List */}
+      <div className="space-y-4">
+        {selectedCategoryId === null ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3>
+            <p className="text-sm text-slate-500 mt-1">Pilih kategori di atas untuk menampilkan barang.</p>
           </div>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama Barang</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Kode/Barcode</TableHead>
-                <TableHead>No. Lot / Rak</TableHead>
-                <TableHead className="text-right">Harga Utama</TableHead>
-                <TableHead className="text-right">Stok (Tambahan)</TableHead>
-                <TableHead className="text-right">Stok (Utama)</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right w-[80px]">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {selectedCategoryId === null ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
-                    <Package className="mx-auto mb-4 h-12 w-12 opacity-20" />
-                    <p className="text-lg font-medium text-foreground mb-1">Pilih Kategori</p>
-                    <p className="text-sm">Silakan pilih kategori bahan di atas untuk menampilkan daftar barang.</p>
-                  </TableCell>
-                </TableRow>
-              ) : isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array(8).fill(0).map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
-                  </TableRow>
-                ))
-              ) : filtered?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                    <Package className="mx-auto mb-2 h-8 w-8 opacity-30" />
-                    Tidak ada barang ditemukan
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
-                  <TableRow key={p.id} className={p.isLowStock ? "bg-amber-50/50 dark:bg-amber-900/10" : ""}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell><Badge variant="secondary">{p.categoryName || "-"}</Badge></TableCell>
-                    <TableCell><code className="text-xs bg-muted px-2 py-1 rounded">{p.barcode || "-"}</code></TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{p.lotNumber || "-"} {p.rackLocation ? `• ${p.rackLocation}` : ""}</TableCell>
-                    <TableCell className="text-right font-medium">{formatRupiah(p.pricePerMeter)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(p.rollStock)} {p.secondaryUnit?.toLowerCase()}</TableCell>
-                    <TableCell className="text-right">{formatNumber(p.meterStock)} {p.primaryUnit?.toLowerCase()}</TableCell>
-                    <TableCell>
+        ) : isLoading ? (
+          Array(4).fill(0).map((_, i) => (
+            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
+              <Skeleton className="w-14 h-14 rounded-2xl" />
+              <div className="flex-1 space-y-2 py-1">
+                <Skeleton className="h-5 w-1/3" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+          ))
+        ) : filtered?.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
+            <h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3>
+            <p className="text-sm text-slate-500 mt-1">Belum ada barang pada kategori ini.</p>
+          </div>
+        ) : (
+          <>
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
+              <div key={p.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
+                {/* Top Row */}
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    {p.barcode || "NO BARCODE"}
+                  </span>
+                  <span className="text-sm font-bold text-slate-800">
+                    {formatRupiah(p.pricePerMeter)}
+                  </span>
+                </div>
+
+                {/* Main Content */}
+                <div className="flex gap-3">
+                  <div className={`w-[60px] h-[60px] rounded-2xl shrink-0 flex items-center justify-center border ${p.isLowStock ? 'bg-amber-50 border-amber-100' : 'bg-violet-50 border-violet-100'}`}>
+                    <Package className={`w-8 h-8 ${p.isLowStock ? 'text-amber-400' : 'text-violet-300'}`} strokeWidth={1.5} />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
+                      {p.name}
+                    </h3>
+                    
+                    <div className="flex items-center gap-1.5 mt-1.5">
                       {p.isLowStock ? (
-                        <Badge variant="destructive" className="text-xs">Stok Rendah</Badge>
+                        <AlertCircle className="w-4 h-4 text-amber-500 fill-amber-50" />
                       ) : (
-                        <Badge variant="outline" className="text-xs text-green-600 border-green-200">OK</Badge>
+                        <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="Lihat Roll" onClick={() => openViewRolls(p)}><Package className="h-4 w-4 text-primary" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(p)}><Pencil className="h-4 w-4 text-muted-foreground" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil((filtered?.length || 0) / 20)} onPageChange={setCurrentPage} />
-        </CardContent>
-      </Card>
+                      <span className={`text-xs font-medium capitalize ${p.isLowStock ? 'text-amber-600' : 'text-slate-600'}`}>
+                        {p.isLowStock ? "Stok Rendah" : "Stok Aman"}
+                      </span>
+                    </div>
+                    
+                    <p className="text-[12px] text-slate-400 mt-1 truncate font-medium">
+                      Lot/Rak: {p.lotNumber || "-"} {p.rackLocation ? `• ${p.rackLocation}` : ""}
+                    </p>
+                  </div>
+
+                  {/* Actions Dropdown */}
+                  <div className="flex items-start justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-600">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                        <DropdownMenuItem onClick={() => openViewRolls(p)} className="gap-2 cursor-pointer">
+                          <Package className="h-4 w-4 text-slate-500" /> Lihat Roll
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEdit(p)} className="gap-2 cursor-pointer">
+                          <Pencil className="h-4 w-4 text-slate-500" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
+                          onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}
+                        >
+                          <Trash2 className="h-4 w-4" /> Hapus
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                {/* Bottom Bar: Stock Info */}
+                <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
+                    <span className="text-slate-500">Total Stok:</span>
+                    <span className="text-slate-700 font-bold">{formatNumber(p.meterStock)} {p.primaryUnit?.toLowerCase()}</span>
+                    <span className="text-slate-300">|</span>
+                    <span className="text-slate-700 font-bold">{formatNumber(p.rollStock)} {p.secondaryUnit?.toLowerCase()}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+        {filtered && filtered.length > 20 && (
+          <div className="pt-4 flex justify-center pb-8">
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+      </div>
 
       <Drawer 
         open={isOpen} 
@@ -281,7 +333,7 @@ export default function Barang() {
                   <FormField control={form.control} name="categoryId" render={({ field }) => (
                     <FormItem className="tour-category">
                       <FormLabel>Kategori</FormLabel>
-                      <Select onValueChange={v => field.onChange(parseInt(v))} value={field.value?.toString()}>
+                      <Select onValueChange={(v: string) => field.onChange(parseInt(v))} value={field.value?.toString()}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
                         <SelectContent>
                           {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}

@@ -483,6 +483,10 @@ export interface CashBalance {
 
 export interface SalesSummaryReport {
   totalRevenue: number;
+  netRevenue: number;
+  totalReturnDeposit: number;
+  totalReturnExchanged: number;
+  netReturnImpact: number;
   totalTransactions: number;
   totalRolls: number;
   totalMeters: number;
@@ -544,6 +548,89 @@ export interface UserUpdate {
   password?: string;
   fullName?: string;
   role?: string;
+}
+
+export interface ReturnReturnedItem {
+  id?: number;
+  returnId?: number;
+  productId?: number;
+  productName?: string;
+  rollId?: number | null;
+  rolls?: string;
+  meters?: string;
+  pricePerMeter?: string;
+  subtotal?: string;
+}
+
+export interface ReturnExchangedItem {
+  id?: number;
+  returnId?: number;
+  productId?: number;
+  productName?: string;
+  rollId?: number | null;
+  rolls?: string;
+  meters?: string;
+  pricePerMeter?: string;
+  subtotal?: string;
+}
+
+export interface Return {
+  id: number;
+  returnNumber: string;
+  type: string;
+  saleId?: number | null;
+  purchaseId?: number | null;
+  customerId?: number | null;
+  customerName?: string | null;
+  supplierId?: number | null;
+  supplierName?: string | null;
+  totalReturnedValue: string;
+  totalExchangedValue: string;
+  differenceAmount: string;
+  paymentStatus: string;
+  cashRefunded: string;
+  status: string;
+  notes?: string | null;
+  createdAt: string;
+  returnedItems?: ReturnReturnedItem[];
+  exchangedItems?: ReturnExchangedItem[];
+}
+
+export type CreateReturnInputType = typeof CreateReturnInputType[keyof typeof CreateReturnInputType];
+
+
+export const CreateReturnInputType = {
+  penjualan: 'penjualan',
+  pembelian: 'pembelian',
+} as const;
+
+export type CreateReturnInputPaymentStatus = typeof CreateReturnInputPaymentStatus[keyof typeof CreateReturnInputPaymentStatus];
+
+
+export const CreateReturnInputPaymentStatus = {
+  lunas: 'lunas',
+  tempo: 'tempo',
+} as const;
+
+export interface CreateReturnItemInput {
+  productId: number;
+  rollId?: number | null;
+  rolls: number;
+  meters: number;
+  pricePerMeter: number;
+  subtotal: number;
+}
+
+export interface CreateReturnInput {
+  type: CreateReturnInputType;
+  saleId?: number | null;
+  purchaseId?: number | null;
+  customerId?: number | null;
+  supplierId?: number | null;
+  paymentStatus: CreateReturnInputPaymentStatus;
+  notes?: string | null;
+  returnedItems?: CreateReturnItemInput[];
+  exchangedItems?: CreateReturnItemInput[];
 }
 
 export type GetDashboardSalesChartParams = {
@@ -608,5 +695,10 @@ endDate?: string;
 
 export type DeleteUser200 = {
   ok?: boolean;
+};
+
+export type GetReturn200 = Return & {
+  returnedItems?: ReturnReturnedItem[];
+  exchangedItems?: ReturnExchangedItem[];
 };
 

@@ -64,7 +64,7 @@ export const pushService = {
       if (subs.length === 0) return;
 
       // Get dynamic app name
-      let appName = "VOCpos";
+      let appName = "EnkaTextile";
       try {
         const appNameSetting = await db.select().from(settingsTable).where(eq(settingsTable.key, "app_name")).limit(1);
         if (appNameSetting.length > 0) {

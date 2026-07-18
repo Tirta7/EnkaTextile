@@ -98,11 +98,17 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          {/* Public shop route — no auth required */}
-          <Route path="/shop" component={Shop} />
-          <AuthGate>
-            <Router />
-          </AuthGate>
+          <Switch>
+            {/* Public shop route — no auth required */}
+            <Route path="/shop" component={Shop} />
+            
+            {/* Protected routes */}
+            <Route>
+              <AuthGate>
+                <Router />
+              </AuthGate>
+            </Route>
+          </Switch>
         </WouterRouter>
         <Toaster />
       </TooltipProvider>

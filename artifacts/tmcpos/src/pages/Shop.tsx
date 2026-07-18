@@ -345,8 +345,8 @@ export default function Shop() {
   const displayProducts = [...inStockProducts, ...outOfStockProducts];
 
   return (
-    <div className="min-h-screen bg-[#e5e5ea] flex justify-center w-full" style={{ fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif" }}>
-      <div className="w-full max-w-[428px] bg-[#f7f7f9] min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-[#f7f7f9] w-full" style={{ fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif" }}>
+      <div className="w-full max-w-7xl mx-auto min-h-screen relative flex flex-col">
         {/* CSS Animations */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -458,7 +458,7 @@ export default function Shop() {
 
         {/* Loading Skeleton */}
         {loading && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-white rounded-2xl overflow-hidden animate-pulse">
                 <div className="aspect-square bg-slate-100" />
@@ -473,7 +473,7 @@ export default function Shop() {
 
         {/* Product Grid */}
         {!loading && displayProducts.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4">
             {displayProducts.map(product => (
               <ProductCard key={product.id} product={product} onClick={() => openProduct(product)} />
             ))}

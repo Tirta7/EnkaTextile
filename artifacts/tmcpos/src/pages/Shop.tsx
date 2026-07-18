@@ -69,9 +69,17 @@ function ProductImage({ src, name, className = "" }: { src: string | null; name:
     );
   }
 
+  let actualSrc = src;
+  if (actualSrc && actualSrc.startsWith("/uploads/")) {
+    actualSrc = `/api${actualSrc}`;
+  }
+  if (actualSrc && !actualSrc.startsWith("http")) {
+    actualSrc = `${API_BASE}${actualSrc}`;
+  }
+
   return (
     <img
-      src={src}
+      src={actualSrc}
       alt={name}
       className={`object-cover ${className}`}
       onError={() => setError(true)}

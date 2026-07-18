@@ -19,7 +19,11 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatRupiah, formatNumber } from "@/lib/utils";
-import { ProductRollsModal } from "@/components/ProductRollsModal";const schema = z.object({
+import { ProductRollsModal } from "@/components/ProductRollsModal";
+
+const API_BASE = window.location.origin;
+
+const schema = z.object({
   name: z.string().min(1, "Nama wajib diisi"),
   categoryId: z.number({ required_error: "Kategori wajib dipilih" }),
   barcode: z.string().optional(),
@@ -354,7 +358,11 @@ export default function Barang() {
                   <div className="relative flex-shrink-0">
                     {imageUrl ? (
                       <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-100">
-                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <img 
+                          src={imageUrl.startsWith("http") ? imageUrl : (imageUrl.startsWith("/uploads/") ? `${API_BASE}/api${imageUrl}` : `${API_BASE}${imageUrl}`)} 
+                          alt="Preview" 
+                          className="w-full h-full object-cover" 
+                        />
                         <button
                           type="button"
                           onClick={() => setImageUrl(null)}

@@ -295,7 +295,7 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
         </p>
         {product.rollStock > 0 && (
           <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
-            ✓ {product.rollStock} roll tersedia
+            ✓ {product.rollStock} roll tersedia ({product.meterStock} {product.primaryUnit})
           </p>
         )}
       </div>

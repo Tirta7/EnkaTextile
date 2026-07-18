@@ -516,7 +516,7 @@ export default function Barang() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                   <FormField control={form.control} name="rollStock" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Stok Awal Gulungan (Roll)</FormLabel>
+                      <FormLabel>Jumlah Roll Fisik</FormLabel>
                       <FormControl>
                         <Input 
                           type="number" step="any" min={0} 

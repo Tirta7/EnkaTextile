@@ -35,7 +35,7 @@ router.post("/upload/product-image", async (req, res): Promise<void> => {
       const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
       const filename = `product-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const filePath = path.join(uploadsDir, filename);
-      savedUrl = `/uploads/products/${filename}`;
+      savedUrl = `/api/uploads/products/${filename}`;
 
       const writeStream = fs.createWriteStream(filePath);
       file.pipe(writeStream);

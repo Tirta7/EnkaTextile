@@ -345,8 +345,9 @@ export default function Shop() {
   const displayProducts = [...inStockProducts, ...outOfStockProducts];
 
   return (
-    <div className="min-h-screen bg-[#f7f7f9]" style={{ fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif" }}>
-      {/* CSS Animations */}
+    <div className="min-h-screen bg-[#e5e5ea] flex justify-center w-full" style={{ fontFamily: "'SF Pro Display', 'Inter', system-ui, sans-serif" }}>
+      <div className="w-full max-w-[428px] bg-[#f7f7f9] min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+        {/* CSS Animations */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         @keyframes slideUp {
@@ -505,6 +506,7 @@ export default function Shop() {
           whatsapp={shopSettings.whatsapp}
         />
       )}
+      </div>
     </div>
   );
 }

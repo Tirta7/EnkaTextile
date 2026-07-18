@@ -34,5 +34,5 @@ EXPOSE 8080
 # Set working directory to root for pnpm to find workspaces, but run api-server explicitly
 WORKDIR /app
 
-# Start the server directly after pushing schema changes to the database
-CMD ["sh", "-c", "pnpm -F @workspace/db run push && cd /app/artifacts/api-server && node ./dist/index.mjs"]
+# Start the server - run safe migrations first (does NOT delete data, only applies new changes)
+CMD ["sh", "-c", "pnpm -F @workspace/db run migrate && cd /app/artifacts/api-server && node ./dist/index.mjs"]

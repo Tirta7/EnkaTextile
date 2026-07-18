@@ -462,14 +462,14 @@ export default function Barang() {
                     )} />
                     <FormField control={form.control} name="costPricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Beli (Rp)</FormLabel>
+                        <FormLabel>Harga Beli / Satuan Utama (Rp)</FormLabel>
                         <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="pricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Jual (Rp)</FormLabel>
+                        <FormLabel>Harga Jual / Satuan Utama (Rp)</FormLabel>
                         <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -492,14 +492,14 @@ export default function Barang() {
                     )} />
                     <FormField control={form.control} name="costPricePerRoll" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Beli (Rp)</FormLabel>
+                        <FormLabel>Harga Beli Grosir / Satuan Utama (Rp)</FormLabel>
                         <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="pricePerRoll" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Jual (Rp)</FormLabel>
+                        <FormLabel>Harga Jual Grosir / Satuan Utama (Rp)</FormLabel>
                         <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
                         <FormMessage />
                       </FormItem>

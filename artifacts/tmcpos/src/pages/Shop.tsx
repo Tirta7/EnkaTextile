@@ -173,12 +173,21 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
                 </span>
               </div>
               {product.pricePerRoll && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Harga Grosir (1 Roll)</span>
-                  <span className="text-base font-semibold text-violet-600">
-                    {formatRupiah(product.pricePerRoll)}
-                    <span className="text-xs font-medium text-slate-400">/roll</span>
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 mt-1">
+                  <span className="text-sm text-slate-500">
+                    {selectedSize ? `Total 1 Roll (${selectedSize} ${product.primaryUnit})` : "Harga Grosir (Beli Roll-an)"}
                   </span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-base font-bold text-violet-600">
+                      {selectedSize ? formatRupiah(product.pricePerRoll * selectedSize) : formatRupiah(product.pricePerRoll)}
+                      {!selectedSize && <span className="text-xs font-medium text-slate-400">/{product.primaryUnit}</span>}
+                    </span>
+                    {selectedSize && (
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        (Harga grosir {formatRupiah(product.pricePerRoll)}/{product.primaryUnit})
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

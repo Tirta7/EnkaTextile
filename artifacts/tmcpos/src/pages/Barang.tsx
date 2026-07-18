@@ -48,6 +48,29 @@ export default function Barang() {
   const [viewRollsId, setViewRollsId] = useState<number | null>(null);
   const [viewRollsName, setViewRollsName] = useState("");
   const [calcPerRoll, setCalcPerRoll] = useState<number | ''>('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/upload/product-image", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setImageUrl(data.url);
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const { data: products, isLoading } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
@@ -81,10 +104,11 @@ export default function Barang() {
 
   const onSubmit = async (data: FormData) => {
     try {
+      const payload = { ...data, imageUrl: imageUrl ?? undefined };
       if (editingId) {
-        await updateMutation.mutateAsync({ id: editingId, data });
+        await updateMutation.mutateAsync({ id: editingId, data: payload });
       } else {
-        await createMutation.mutateAsync({ data });
+        await createMutation.mutateAsync({ data: payload });
       }
     } catch (error) {
       console.error(error);
@@ -94,6 +118,7 @@ export default function Barang() {
   const openCreate = () => {
     form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0 });
     setEditingId(null);
+    setImageUrl(null);
     setIsOpen(true);
   };
 
@@ -115,6 +140,7 @@ export default function Barang() {
       minStock: p.minStock,
     });
     setEditingId(p.id);
+    setImageUrl(p.imageUrl || null);
     setIsOpen(true);
   };
 
@@ -322,6 +348,45 @@ export default function Barang() {
               {/* Informasi Dasar */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold tracking-tight uppercase text-muted-foreground">Informasi Dasar</h3>
+
+                {/* Upload Foto Produk */}
+                <div className="flex items-start gap-4 p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 hover:border-primary/50 transition-colors">
+                  <div className="relative flex-shrink-0">
+                    {imageUrl ? (
+                      <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-100">
+                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setImageUrl(null)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow text-slate-500 hover:text-red-500"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-24 h-24 rounded-xl bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors gap-1">
+                        {uploadingImage ? (
+                          <svg className="w-6 h-6 text-slate-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        ) : (
+                          <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        )}
+                        <span className="text-[10px] text-slate-400 font-medium">Upload Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
+                          disabled={uploadingImage}
+                        />
+                      </label>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-700">Foto Produk</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Akan ditampilkan di katalog online. Format JPG/PNG, max 5MB.</p>
+                    {imageUrl && <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Foto berhasil diupload</p>}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem className="md:col-span-2 tour-name">

@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
   kredit: "bg-blue-100 text-blue-700 border-blue-200",
 };
 
-function SaleItemRow({ item, index, products, categories, updateItem, removeItem }: any) {
+function SaleItemRow({ item, index, products, categories, updateItem, removeItem, allItems }: any) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
   const { data: rolls } = useGetProductRolls(item.productId, {
     query: { queryKey: getGetProductRollsQueryKey(item.productId), enabled: !!item.productId }
@@ -36,14 +36,63 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
   
   const drawerContainer = typeof document !== 'undefined' ? document.getElementById("drawer-portal-target") : null;
 
-  const availableRolls = rolls?.filter(r => r.status === 'available') || [];
+  // Kumpulkan semua roll ID yang sudah dipilih di baris lain (mode Pilih Spesifik Barcode)
+  const usedRollIds = new Set<number>(
+    (allItems as any[] || []).flatMap((otherItem: any, i: number) => {
+      if (i === index) return []; // skip baris ini sendiri
+      return (otherItem.selectedRolls || []).map((sr: any) => sr.id);
+    })
+  );
+
+  // Kumpulkan berapa roll per panjang yang sudah dikonsumsi baris lain (mode Pilih Otomatis Per Ukuran)
+  const usedLengthCounts: Record<string, number> = {};
+  (allItems as any[] || []).forEach((otherItem: any, i: number) => {
+    if (i === index) return; // skip baris ini sendiri
+    if (otherItem.targetLength && typeof otherItem.rolls === "number" && otherItem.rolls > 0) {
+      const key = otherItem.targetLength.toString();
+      usedLengthCounts[key] = (usedLengthCounts[key] || 0) + otherItem.rolls;
+    }
+  });
+
+  // Reservasi virtual: roll yang diklaim mode Otomatis di baris lain → sembunyikan juga dari Barcode Spesifik
+  const reservedRollIds = new Set<number>();
+  if (rolls) {
+    // Kelompokkan roll berdasarkan panjang (kecuali yang sudah dipakai selectedRolls)
+    const rollsByLength: Record<string, any[]> = {};
+    rolls.filter((r: any) => r.status === 'available' && !usedRollIds.has(r.id)).forEach((r: any) => {
+      const len = r.currentLength.toString();
+      if (!rollsByLength[len]) rollsByLength[len] = [];
+      rollsByLength[len].push(r);
+    });
+    // Tandai N roll pertama per panjang sebagai "reserved" sesuai klaim baris lain
+    Object.entries(usedLengthCounts).forEach(([len, count]) => {
+      (rollsByLength[len] || []).slice(0, count).forEach((r: any) => reservedRollIds.add(r.id));
+    });
+  }
+
+  // Roll yang tersedia = tidak dipakai barcode spesifik DAN tidak direservasi mode Otomatis
+  const availableRolls = rolls?.filter((r: any) => r.status === 'available' && !usedRollIds.has(r.id) && !reservedRollIds.has(r.id)) || [];
   const lengthGroups: Record<string, number> = {};
-  availableRolls.forEach(r => {
+  availableRolls.forEach((r: any) => {
     const len = r.currentLength.toString();
     lengthGroups[len] = (lengthGroups[len] || 0) + 1;
   });
 
-  const maxRolls = item.unit === "roll" && item.targetLength ? lengthGroups[item.targetLength.toString()] : undefined;
+  const maxRolls = item.unit === "roll" && item.targetLength ? lengthGroups[item.targetLength.toString()] ?? 0 : undefined;
+
+  // Auto-zero subtotal saat stok habis diklaim baris lain (mode Pilih Otomatis)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (item.targetLength !== undefined && maxRolls === 0) {
+      // Reset ke 0 agar subtotal tidak terhitung ke total
+      if (typeof item.rolls === "number" && item.rolls > 0) {
+        updateItem(index, "rolls", 0);
+      }
+      if (typeof item.meters === "number" && item.meters > 0) {
+        updateItem(index, "meters", 0);
+      }
+    }
+  }, [maxRolls, item.targetLength]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredProducts = selectedCategoryId === "all" ? products : products?.filter((p: any) => p.categoryId.toString() === selectedCategoryId);
 
@@ -97,10 +146,10 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
             >
               <span className="truncate">
                 {item.selectedRolls && item.selectedRolls.length > 0 
-                  ? `${item.selectedRolls.length} Roll Terpilih`
-                  : item.targetLength 
-                    ? `${item.targetLength}m (Auto)`
-                    : "Potong Bebas / Manual"}
+                   ? `${item.selectedRolls.length} Roll Terpilih`
+                   : item.targetLength 
+                     ? `${item.targetLength} ${item.primaryUnit || 'unit'} (Auto)`
+                     : "Potong Bebas / Manual"}
               </span>
               <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
             </Button>
@@ -134,7 +183,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                           updateItem(index, "meters", parseFloat(len));
                         }}
                       />
-                      {len}m <span className="text-slate-400 text-xs">(Tersedia: {count})</span>
+                      {len} {item.primaryUnit || 'unit'} <span className="text-slate-400 text-xs">(Tersedia: {count})</span>
                     </label>
                   ))}
                 </>
@@ -172,7 +221,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                           }}
                         />
                         <div className="flex flex-col">
-                          <span>{r.currentLength}m</span>
+                          <span>{r.currentLength} {item.primaryUnit || 'unit'}</span>
                           <span className="text-[10px] text-slate-400 font-mono">{r.barcode || r.id}</span>
                         </div>
                       </label>
@@ -189,23 +238,48 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         <Select value={item.unit} onValueChange={(v: string) => updateItem(index, "unit", v)} disabled={!!item.rollId}>
           <SelectTrigger className="h-12 font-medium"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="meter">{item.primaryUnit || "Meter"}</SelectItem>
-            <SelectItem value="roll">{item.secondaryUnit || "Roll"}</SelectItem>
+            <SelectItem value="meter">
+              {item.primaryUnit || "Meter"}
+              {item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit
+                ? " (Potongan)" : ""}
+            </SelectItem>
+            <SelectItem value="roll">
+              {item.secondaryUnit || "Roll"}
+              {item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit
+                ? " (Gulungan)" : ""}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
       <div className="md:col-span-1">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "m"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "roll"})`}</label>
-        <Input className="h-12 text-center text-lg font-medium" type="number" step="any" min={0} max={maxRolls} value={item.unit === "meter" ? item.meters : item.rolls}
+        <Input 
+          className={`h-12 text-center text-lg font-medium ${item.unit === "roll" && item.targetLength && maxRolls === 0 ? "border-destructive bg-destructive/10 text-destructive" : ""} ${item.selectedRolls && item.selectedRolls.length > 0 ? "bg-muted/50 cursor-not-allowed" : ""}`} 
+          type="number" step="any" min={0} max={maxRolls} 
+          value={
+            // Saat Pilih Spesifik Barcode aktif → tampilkan total panjang (meters), bukan jumlah roll
+            (item.selectedRolls && item.selectedRolls.length > 0)
+              ? item.meters
+              : item.unit === "meter" ? item.meters : item.rolls
+          }
           onChange={e => {
+            // Jika selectedRolls aktif, input terkunci — tolak perubahan
+            if (item.selectedRolls && item.selectedRolls.length > 0) return;
             let val: number | "" = e.target.value === "" ? "" : parseFloat(e.target.value);
             if (item.unit === "roll" && maxRolls !== undefined && typeof val === "number" && val > maxRolls) {
               val = maxRolls;
             }
             updateItem(index, item.unit === "meter" ? "meters" : "rolls", val);
           }} 
-          disabled={(item.unit === "meter" && !!item.rollId) || (item.unit === "roll" && !!item.rollId)} 
+          readOnly={!!(item.selectedRolls && item.selectedRolls.length > 0)}
+          disabled={(item.unit === "meter" && !!item.rollId) || (item.unit === "roll" && !!item.rollId) || (item.unit === "roll" && !!item.targetLength && maxRolls === 0)} 
         />
+        {item.selectedRolls && item.selectedRolls.length > 0 && (
+          <p className="text-[10px] text-slate-400 mt-1">{item.selectedRolls.length} roll • {item.meters} {item.primaryUnit || 'unit'} total</p>
+        )}
+        {item.unit === "roll" && item.targetLength && maxRolls === 0 && (
+          <p className="text-[10px] text-destructive mt-1">Stok habis dipakai baris lain</p>
+        )}
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Harga/satuan</label>
@@ -611,7 +685,7 @@ export default function Penjualan() {
                 </div>
               )}
                 {items.map((item, index) => (
-                  <SaleItemRow key={index} item={item} index={index} products={products} categories={categories} updateItem={updateItem} removeItem={removeItem} />
+                  <SaleItemRow key={index} item={item} index={index} products={products} categories={categories} updateItem={updateItem} removeItem={removeItem} allItems={items} />
                 ))}
             </div>
 

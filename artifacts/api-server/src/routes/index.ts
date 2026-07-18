@@ -18,6 +18,7 @@ import usersRouter from "./users";
 import notificationsRouter from "./notifications";
 import { settingsRouter } from "./settings";
 import returnsRouter from "./returns";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -37,6 +38,7 @@ router.use(reportsRouter);
 router.use(paymentMethodsRouter);
 router.use(unitsRouter);
 router.use(returnsRouter);
+router.use(uploadRouter);
 
 router.use("/users", usersRouter);
 router.use("/notifications", notificationsRouter);

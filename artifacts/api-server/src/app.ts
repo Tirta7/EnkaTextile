@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import session from "express-session";
 import authRouter from "./routes/auth";
 import router from "./routes";
+import shopRouter from "./routes/shop";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -38,6 +39,16 @@ app.use(
 // Public auth routes — no auth required
 app.use("/api", authRouter);
 
+// Public shop routes — no auth required (e-commerce storefront)
+app.use("/api", shopRouter);
+
+// Serve uploaded product images publicly
+import path from "path";
+import fs from "fs";
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use("/uploads", express.static(uploadsDir));
+
 // Auth guard — protect all other /api routes
 app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
   const publicPaths = ["/healthz", "/settings/manifest.json"];
@@ -53,7 +64,6 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
 app.use("/api", router);
 
 // Serve static frontend files in production
-import path from "path";
 if (process.env.NODE_ENV === "production") {
   const publicPath = path.resolve(process.cwd(), "../tmcpos/dist/public");
   app.use(express.static(publicPath));

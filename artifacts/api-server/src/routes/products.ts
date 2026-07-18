@@ -34,6 +34,8 @@ router.get("/products", async (req, res): Promise<void> => {
       secondaryUnit: productsTable.secondaryUnit,
       lotNumber: productsTable.lotNumber,
       rackLocation: productsTable.rackLocation,
+      imageUrl: productsTable.imageUrl,
+      description: productsTable.description,
       costPricePerMeter: productsTable.costPricePerMeter,
       costPricePerRoll: productsTable.costPricePerRoll,
       pricePerMeter: productsTable.pricePerMeter,
@@ -124,6 +126,8 @@ router.get("/products/:id", async (req, res): Promise<void> => {
       secondaryUnit: productsTable.secondaryUnit,
       lotNumber: productsTable.lotNumber,
       rackLocation: productsTable.rackLocation,
+      imageUrl: productsTable.imageUrl,
+      description: productsTable.description,
       costPricePerMeter: productsTable.costPricePerMeter,
       costPricePerRoll: productsTable.costPricePerRoll,
       pricePerMeter: productsTable.pricePerMeter,
@@ -179,6 +183,8 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   if (d.secondaryUnit != null) updateData.secondaryUnit = d.secondaryUnit;
   if (d.lotNumber != null) updateData.lotNumber = d.lotNumber;
   if (d.rackLocation != null) updateData.rackLocation = d.rackLocation;
+  if (d.imageUrl !== undefined) updateData.imageUrl = d.imageUrl;
+  if (d.description !== undefined) updateData.description = d.description;
   if (d.costPricePerMeter != null) updateData.costPricePerMeter = String(d.costPricePerMeter);
   if (d.costPricePerRoll != null) updateData.costPricePerRoll = String(d.costPricePerRoll);
   if (d.pricePerMeter != null) updateData.pricePerMeter = String(d.pricePerMeter);

@@ -23,6 +23,7 @@ import Laporan from "@/pages/Laporan";
 import Pengaturan from "@/pages/Pengaturan";
 import Karyawan from "@/pages/Karyawan";
 import { Loader2 } from "lucide-react";
+import Shop from "@/pages/Shop";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          {/* Public shop route — no auth required */}
+          <Route path="/shop" component={Shop} />
           <AuthGate>
             <Router />
           </AuthGate>

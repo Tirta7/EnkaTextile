@@ -43,6 +43,8 @@ export const productsTable = pgTable("products", {
   secondaryUnit: text("secondary_unit").notNull().default("ROLL"),
   lotNumber: text("lot_number").notNull().default(""),
   rackLocation: text("rack_location").notNull().default(""),
+  imageUrl: text("image_url"),
+  description: text("description"),
   pricePerMeter: numeric("price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
   pricePerRoll: numeric("price_per_roll", { precision: 15, scale: 2 }),
   costPricePerMeter: numeric("cost_price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),

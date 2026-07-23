@@ -127,7 +127,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     };
   }, [open, displayData]);
 
-  const appName = settings?.["app_name"] || "ENKA TEXTILE";
+  const appName = (settings?.["app_name"] || "ENKA TEXTILE").replace(/ENKATEXTILE/gi, "ENKA TEXTILE").replace(/EnkaTextile/gi, "ENKA TEXTILE");
   const appAddress = settings?.["app_address"] || "Jl. Raya Jrebengkembang, Kedolon Gang Griya Azzahra, Karangdadap Kab. Pekalongan";
   const invoiceBankName = settings?.["invoice_bank_name"] || "A.n Spectra Jaya Fashion PT";
   const invoiceBankAccount = settings?.["invoice_bank_account"] || "BCA - 2384564444";
@@ -337,8 +337,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               )}
 
               <div className="flex justify-between items-start mb-8 pb-8 border-b-2 border-indigo-100 relative z-10">
-                <div className="w-[35%]">
-                  <h1 className="font-black text-2xl tracking-tighter text-indigo-900 mb-2 uppercase">{appName}</h1>
+                <div className="w-[38%]">
+                  <div className="inline-flex flex-col items-center text-center mb-2">
+                    <h1 className="font-black text-[24px] leading-tight tracking-tighter text-indigo-900 mb-0.5 uppercase">{appName}</h1>
+                    <p className="text-slate-800 font-bold text-[11px] tracking-tight uppercase">PT. Spectra Jaya Fashion</p>
+                  </div>
                   <p className="text-slate-500 whitespace-pre-line text-xs leading-relaxed">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
@@ -602,14 +605,16 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </div>
               
               <div className="flex justify-end gap-16 mt-12 pr-4 min-w-[700px]">
-                <div className="text-center w-32 flex flex-col items-center">
-                  <p className="text-slate-500 text-xs mb-16">Tanda Terima</p>
-                  <div className="border-b border-slate-300 w-full"></div>
+                <div className="text-center w-48 flex flex-col items-center">
+                  <p className="text-slate-500 text-xs mb-16 font-medium">Tanda Terima,</p>
+                  <div className="border-b border-slate-400 w-full"></div>
+                  <p className="text-slate-500 text-[11px] mt-2 uppercase">Pelanggan</p>
                 </div>
-                <div className="text-center w-32 flex flex-col items-center">
-                  <p className="text-slate-500 text-xs mb-16">Hormat Kami</p>
-                  <div className="border-b border-slate-300 w-full"></div>
-                  <p className="text-slate-400 text-[10px] mt-1">{appName}</p>
+                <div className="text-center w-48 flex flex-col items-center">
+                  <p className="text-slate-500 text-xs mb-16 font-medium">Hormat Kami,</p>
+                  <div className="border-b border-slate-400 w-full"></div>
+                  <p className="text-slate-900 font-bold text-xs mt-2 uppercase">{appName}</p>
+                  <p className="text-slate-600 font-semibold text-[7px] mt-0.5 uppercase tracking-tight">PT. Spectra Jaya Fashion</p>
                 </div>
               </div>
             </div>

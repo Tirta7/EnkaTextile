@@ -57,7 +57,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
     };
   }, [open, returnDoc]);
 
-  const appName = settings?.["app_name"] || "ENKA TEXTILE";
+  const appName = (settings?.["app_name"] || "ENKA TEXTILE").replace(/ENKATEXTILE/gi, "ENKA TEXTILE").replace(/EnkaTextile/gi, "ENKA TEXTILE");
   const appAddress = settings?.["app_address"] || "Alamat belum diatur (Ubah di Pengaturan)";
 
   const handlePrint = () => {
@@ -181,7 +181,10 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                   {/* Header */}
                   <div className="flex justify-between items-start border-b-2 border-red-500 pb-6 mb-8">
                     <div>
-                      <h1 className="text-4xl font-black text-slate-900 tracking-tight uppercase">{appName}</h1>
+                      <div className="inline-flex flex-col items-center text-center mb-2">
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{appName}</h1>
+                        <div className="text-xs font-bold text-slate-800 tracking-tight mt-0.5 uppercase">PT. Spectra Jaya Fashion</div>
+                      </div>
                       <div className="text-sm text-slate-500 mt-2 max-w-[280px] leading-relaxed">{appAddress}</div>
                     </div>
                     <div className="text-right">
@@ -302,14 +305,15 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                   {/* Footer Signatures */}
                   <div className="flex justify-between items-end mt-16 pt-8 border-t border-slate-200">
                     <div className="text-center w-48">
-                      <div className="mb-16 text-sm font-medium text-slate-500">Diterima Oleh,</div>
-                      <div className="border-b border-slate-400 pb-1 font-bold text-slate-800"></div>
-                      <div className="text-xs text-slate-500 mt-1 uppercase">Pihak Toko</div>
-                    </div>
-                    <div className="text-center w-48">
-                      <div className="mb-16 text-sm font-medium text-slate-500">Diserahkan Oleh,</div>
+                      <div className="mb-16 text-sm font-medium text-slate-500">Tanda Terima,</div>
                       <div className="border-b border-slate-400 pb-1 font-bold text-slate-800"></div>
                       <div className="text-xs text-slate-500 mt-1 uppercase">Pelanggan</div>
+                    </div>
+                    <div className="text-center w-48">
+                      <div className="mb-16 text-sm font-medium text-slate-500">Hormat Kami,</div>
+                      <div className="border-b border-slate-400 pb-1 font-bold text-slate-800"></div>
+                      <div className="text-xs font-bold text-slate-900 mt-1 uppercase">{appName}</div>
+                      <div className="text-[7px] font-semibold text-slate-600 mt-0.5 uppercase tracking-tight">PT. Spectra Jaya Fashion</div>
                     </div>
                   </div>
                   

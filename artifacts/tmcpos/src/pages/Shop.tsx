@@ -415,15 +415,12 @@ export default function Shop() {
         
         {/* ── Left Sidebar (Desktop) ── */}
         <aside className="hidden lg:flex w-[260px] flex-col shrink-0 h-screen sticky top-0 border-r border-slate-200 bg-[#fafafa] py-6 px-5 z-30">
-          {/* User Profile */}
+          {/* Brand/Store Name */}
           <div className="flex items-center gap-3 mb-8 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-slate-500">Selamat pagi, Tamu</span>
-              <a href="#" className="text-xs font-black text-rose-600 hover:underline tracking-wide">MASUK / DAFTAR</a>
-            </div>
+             <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+               <span className="text-white font-black text-lg">E</span>
+             </div>
+             <h2 className="text-base font-black text-slate-900 tracking-tight">{shopSettings.storeName}</h2>
           </div>
 
           {/* Navigation Links */}
@@ -658,7 +655,7 @@ export default function Shop() {
           <div className="relative w-[280px] bg-white h-full shadow-2xl flex flex-col p-6 animate-[slideRight_0.3s_ease-out]">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm">
+                 <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-sm">
                    <span className="text-white font-black text-lg">E</span>
                  </div>
                  <h2 className="text-xl font-black text-slate-900">{shopSettings.storeName}</h2>
@@ -669,16 +666,6 @@ export default function Shop() {
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-            </div>
-            
-            <div className="flex items-center gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100 cursor-pointer active:scale-95 transition-transform" onClick={() => window.location.href = "/"}>
-              <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center shrink-0">
-                <svg className="w-6 h-6 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-slate-500">Selamat pagi</span>
-                <span className="text-sm font-black text-rose-600 tracking-wide">MASUK / DAFTAR</span>
-              </div>
             </div>
 
             <nav className="flex flex-col gap-2">

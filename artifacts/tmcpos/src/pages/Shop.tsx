@@ -330,6 +330,30 @@ export default function Shop() {
   const [selectedProduct, setSelectedProduct] = useState<ShopProductDetail | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shopSettings, setShopSettings] = useState({ storeName: "EnkaTextile", whatsapp: "" });
+  const [activeSection, setActiveSection] = useState<"beranda" | "katalog" | "promo" | "kontak" | "akun">("beranda");
+
+  const sectionRefs = {
+    beranda: useRef<HTMLDivElement>(null),
+    promo: useRef<HTMLDivElement>(null),
+    katalog: useRef<HTMLDivElement>(null),
+  };
+
+  const scrollTo = (section: "beranda" | "katalog" | "promo" | "kontak" | "akun") => {
+    setActiveSection(section);
+    if (section === "beranda") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (section === "katalog") {
+      sectionRefs.katalog.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (section === "promo") {
+      sectionRefs.promo.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (section === "kontak") {
+      const wa = shopSettings.whatsapp || "";
+      const msg = encodeURIComponent(`Halo ${shopSettings.storeName}! 👋\nSaya ingin bertanya tentang produk kain Anda.`);
+      window.open(`https://wa.me/${wa}?text=${msg}`, "_blank");
+    } else if (section === "akun") {
+      window.location.href = "/";
+    }
+  };
 
   // Load shop settings
   useEffect(() => {
@@ -408,21 +432,30 @@ export default function Shop() {
 
           {/* Navigation Links */}
           <nav className="flex flex-col gap-1 flex-1">
-            <a href="#" className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white shadow-sm border border-slate-100 text-rose-600 font-bold">
-              <span className="text-xl">🏠</span> Beranda
-            </a>
-            <a href="#" className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-colors">
-              <span className="text-xl">🛍️</span> Katalog Kain
-            </a>
-            <a href="#" className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-colors">
-              <span className="text-xl">🎁</span> Promo Khusus
-            </a>
-            <a href="#" className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-colors">
-              <span className="text-xl">📞</span> Hubungi Kami
-            </a>
-            <a href="#" className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-colors mt-auto">
+            {([
+              { key: "beranda", icon: "🏠", label: "Beranda" },
+              { key: "katalog", icon: "🛍️", label: "Katalog Kain" },
+              { key: "promo",   icon: "🎁", label: "Promo Khusus" },
+              { key: "kontak",  icon: "📞", label: "Hubungi Kami" },
+            ] as const).map(({ key, icon, label }) => (
+              <button
+                key={key}
+                onClick={() => scrollTo(key)}
+                className={`flex items-center gap-4 px-4 py-3 rounded-xl font-semibold transition-all text-left ${
+                  activeSection === key
+                    ? "bg-white shadow-sm border border-slate-100 text-rose-600 font-bold"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <span className="text-xl">{icon}</span> {label}
+              </button>
+            ))}
+            <button
+              onClick={() => scrollTo("akun")}
+              className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-all mt-auto text-left"
+            >
               <span className="text-xl">⚙️</span> Akun
-            </a>
+            </button>
           </nav>
         </aside>
 
@@ -463,12 +496,15 @@ export default function Shop() {
 
           <main className="flex-1 overflow-x-hidden p-4 lg:p-8 space-y-8">
              {/* Promotional Banner */}
-             <div className="w-full bg-gradient-to-r from-[#2B1B54] to-[#EE4566] rounded-3xl overflow-hidden relative shadow-md">
+             <div ref={sectionRefs.promo} className="w-full bg-gradient-to-r from-[#2B1B54] to-[#EE4566] rounded-3xl overflow-hidden relative shadow-md">
                 <div className="px-8 py-10 lg:py-16 md:w-2/3 lg:w-1/2 relative z-10">
                    <span className="inline-block px-3 py-1 bg-white/20 text-white text-[10px] font-bold rounded-full backdrop-blur-md mb-4 uppercase tracking-widest">Penawaran Spesial</span>
                    <h2 className="text-3xl lg:text-5xl font-black text-white leading-tight mb-4">{shopSettings.storeName}</h2>
                    <p className="text-white/90 text-sm lg:text-base font-medium mb-8 max-w-md">Koleksi kain premium untuk segala kebutuhan fashion Anda. Belanja grosir lebih murah dan mudah.</p>
-                   <button className="px-6 py-3 bg-white text-rose-600 font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform">Belanja Sekarang</button>
+                   <button
+                     onClick={() => scrollTo("katalog")}
+                     className="px-6 py-3 bg-white text-rose-600 font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform"
+                   >Belanja Sekarang</button>
                 </div>
                 {/* Decoration */}
                 <div className="absolute right-0 bottom-0 w-1/2 h-full opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
@@ -504,7 +540,7 @@ export default function Shop() {
              )}
 
              {/* Section Title */}
-             <div className="flex items-center justify-between">
+             <div ref={sectionRefs.katalog} className="flex items-center justify-between scroll-mt-24">
                 <div>
                    <h3 className="text-xl font-black text-slate-900">Koleksi Terbaru</h3>
                    <p className="text-sm font-medium text-slate-500 mt-1">{displayProducts.length} produk tersedia</p>
@@ -596,6 +632,31 @@ export default function Shop() {
           </main>
         </div>
       </div>
+
+      {/* ── Mobile Bottom Navigation ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-xl" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+        <div className="flex items-center justify-around px-2 pt-2 pb-1">
+          {([
+            { key: "beranda", icon: "🏠",  label: "Beranda" },
+            { key: "katalog", icon: "🛍️", label: "Katalog" },
+            { key: "promo",   icon: "🎁",  label: "Promo" },
+            { key: "kontak",  icon: "📞",  label: "Hubungi" },
+            { key: "akun",    icon: "⚙️",  label: "Akun" },
+          ] as const).map(({ key, icon, label }) => (
+            <button
+              key={key}
+              onClick={() => scrollTo(key)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+                activeSection === key ? "text-rose-600" : "text-slate-400"
+              }`}
+            >
+              <span className="text-2xl leading-none">{icon}</span>
+              <span className={`text-[10px] font-bold ${ activeSection === key ? "text-rose-600" : "text-slate-400" }`}>{label}</span>
+              {activeSection === key && <div className="w-1 h-1 rounded-full bg-rose-500 mt-0.5" />}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {/* ── Bottom Sheet Modal ── */}
       {sheetOpen && (

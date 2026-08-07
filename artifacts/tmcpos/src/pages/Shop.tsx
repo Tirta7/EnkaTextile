@@ -233,7 +233,7 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
               <div className={`w-2 h-2 rounded-full ${product.inStock ? "bg-emerald-400" : "bg-slate-300"}`} />
               <span className="text-sm text-slate-500">
                 {product.inStock
-                  ? `${product.rollStock} roll tersedia (${product.meterStock.toFixed(1)} ${product.primaryUnit})`
+                  ? `${new Intl.NumberFormat('id-ID').format(product.rollStock)} roll tersedia (${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(product.meterStock)} ${product.primaryUnit})`
                   : "Stok habis"}
               </span>
             </div>
@@ -295,11 +295,15 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
           
           <div className="flex gap-2 mt-3">
             <div className="flex flex-col items-center justify-center border border-white/40 rounded-lg p-1.5 min-w-[3rem] bg-white/30 backdrop-blur-sm">
-              <span className="text-xs font-black text-slate-900 leading-none">{product.rollStock}</span>
+              <span className="text-xs font-black text-slate-900 leading-none">
+                {new Intl.NumberFormat('id-ID').format(product.rollStock)}
+              </span>
               <span className="text-[9px] font-bold text-slate-700 leading-none mt-1 uppercase">Roll</span>
             </div>
             <div className="flex flex-col items-center justify-center border border-white/40 rounded-lg p-1.5 px-3 bg-white/30 backdrop-blur-sm">
-              <span className="text-xs font-black text-slate-900 leading-none">{product.meterStock}</span>
+              <span className="text-xs font-black text-slate-900 leading-none">
+                {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(product.meterStock)}
+              </span>
               <span className="text-[9px] font-bold text-slate-700 leading-none mt-1 uppercase">{product.primaryUnit}</span>
             </div>
           </div>
@@ -449,35 +453,35 @@ export default function Shop() {
         <div className="flex-1 flex flex-col min-w-0 h-full">
           
           {/* Header & Search */}
-          <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 px-4 lg:px-8 py-4">
-             <div className="flex items-center justify-between gap-4">
+          <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 px-3 lg:px-8 py-3 lg:py-4">
+             <div className="flex items-center justify-between gap-2.5 lg:gap-4">
                 {/* Mobile menu button */}
                 <button 
                   onClick={() => setMobileMenuOpen(true)}
-                  className="lg:hidden p-2 -ml-2 rounded-lg bg-white shadow-sm active:scale-90 transition-transform cursor-pointer"
+                  className="lg:hidden p-2 rounded-xl bg-white shadow-sm border border-slate-100 active:scale-90 transition-transform cursor-pointer shrink-0"
                 >
                    <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
                 
                 {/* Search Bar */}
                 <div className="relative flex-1 max-w-2xl mx-auto flex items-center">
-                  <div className="absolute left-4 w-5 h-5 text-slate-400">
+                  <div className="absolute left-4 w-4 h-4 text-slate-400">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                   </div>
                   <input
                     type="text"
-                    placeholder="Cari kain katun, rayon, dll di sini..."
+                    placeholder="Cari kain katun, dll..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3.5 bg-white rounded-full text-sm font-medium text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-rose-500/20 border border-slate-200 shadow-sm transition-all"
+                    className="w-full pl-10 pr-10 py-3 bg-white rounded-full text-[13px] font-medium text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-rose-500/20 border border-slate-200 shadow-sm transition-all"
                   />
-                  <div className="absolute right-4 w-5 h-5 text-slate-400">
+                  <div className="absolute right-4 w-4 h-4 text-slate-400">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
                   </div>
                 </div>
 
                 {/* Mobile Store Icon */}
-                <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                <div className="lg:hidden w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
                   <span className="text-white font-black text-sm">E</span>
                 </div>
              </div>
@@ -579,7 +583,7 @@ export default function Shop() {
              )}
 
              {/* Footer */}
-             <footer className="mt-16 pt-12 pb-8 border-t border-slate-200">
+             <footer className="mt-16 pt-12 pb-24 lg:pb-8 border-t border-slate-200">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
                    <div>
                       <h4 className="font-bold text-slate-900 mb-4">Informasi</h4>

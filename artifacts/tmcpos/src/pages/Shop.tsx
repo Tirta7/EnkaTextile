@@ -329,8 +329,9 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<ShopProductDetail | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [shopSettings, setShopSettings] = useState({ storeName: "EnkaTextile", whatsapp: "" });
-  const [activeSection, setActiveSection] = useState<"beranda" | "katalog" | "promo" | "kontak" | "akun">("beranda");
+  const [activeSection, setActiveSection] = useState<"beranda" | "katalog" | "promo">("beranda");
 
   const sectionRefs = {
     beranda: useRef<HTMLDivElement>(null),
@@ -338,7 +339,7 @@ export default function Shop() {
     katalog: useRef<HTMLDivElement>(null),
   };
 
-  const scrollTo = (section: "beranda" | "katalog" | "promo" | "kontak" | "akun") => {
+  const scrollTo = (section: "beranda" | "katalog" | "promo") => {
     setActiveSection(section);
     if (section === "beranda") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -346,12 +347,6 @@ export default function Shop() {
       sectionRefs.katalog.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (section === "promo") {
       sectionRefs.promo.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else if (section === "kontak") {
-      const wa = shopSettings.whatsapp || "";
-      const msg = encodeURIComponent(`Halo ${shopSettings.storeName}! 👋\nSaya ingin bertanya tentang produk kain Anda.`);
-      window.open(`https://wa.me/${wa}?text=${msg}`, "_blank");
-    } else if (section === "akun") {
-      window.location.href = "/";
     }
   };
 
@@ -408,6 +403,7 @@ export default function Shop() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         * { -webkit-tap-highlight-color: transparent; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -436,12 +432,11 @@ export default function Shop() {
               { key: "beranda", icon: "🏠", label: "Beranda" },
               { key: "katalog", icon: "🛍️", label: "Katalog Kain" },
               { key: "promo",   icon: "🎁", label: "Promo Khusus" },
-              { key: "kontak",  icon: "📞", label: "Hubungi Kami" },
             ] as const).map(({ key, icon, label }) => (
               <button
                 key={key}
                 onClick={() => scrollTo(key)}
-                className={`flex items-center gap-4 px-4 py-3 rounded-xl font-semibold transition-all text-left ${
+                className={`flex items-center gap-4 px-4 py-3 rounded-xl font-semibold transition-all active:scale-[0.98] text-left ${
                   activeSection === key
                     ? "bg-white shadow-sm border border-slate-100 text-rose-600 font-bold"
                     : "text-slate-600 hover:bg-slate-100"
@@ -450,12 +445,6 @@ export default function Shop() {
                 <span className="text-xl">{icon}</span> {label}
               </button>
             ))}
-            <button
-              onClick={() => scrollTo("akun")}
-              className="flex items-center gap-4 px-4 py-3 rounded-xl text-slate-600 font-semibold hover:bg-slate-100 transition-all mt-auto text-left"
-            >
-              <span className="text-xl">⚙️</span> Akun
-            </button>
           </nav>
         </aside>
 
@@ -466,8 +455,11 @@ export default function Shop() {
           <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 px-4 lg:px-8 py-4">
              <div className="flex items-center justify-between gap-4">
                 {/* Mobile menu button */}
-                <button className="lg:hidden p-2 -ml-2 rounded-lg bg-white shadow-sm">
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <button 
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="lg:hidden p-2 -ml-2 rounded-lg bg-white shadow-sm active:scale-90 transition-transform cursor-pointer"
+                >
+                   <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
                 </button>
                 
                 {/* Search Bar */}
@@ -634,29 +626,89 @@ export default function Shop() {
       </div>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-xl" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
-        <div className="flex items-center justify-around px-2 pt-2 pb-1">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+        <div className="flex items-center justify-around px-2 pt-3 pb-2">
           {([
             { key: "beranda", icon: "🏠",  label: "Beranda" },
             { key: "katalog", icon: "🛍️", label: "Katalog" },
             { key: "promo",   icon: "🎁",  label: "Promo" },
-            { key: "kontak",  icon: "📞",  label: "Hubungi" },
-            { key: "akun",    icon: "⚙️",  label: "Akun" },
           ] as const).map(({ key, icon, label }) => (
             <button
               key={key}
               onClick={() => scrollTo(key)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
-                activeSection === key ? "text-rose-600" : "text-slate-400"
+              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all active:scale-90 relative ${
+                activeSection === key ? "text-rose-600" : "text-slate-400 hover:bg-slate-50"
               }`}
             >
-              <span className="text-2xl leading-none">{icon}</span>
-              <span className={`text-[10px] font-bold ${ activeSection === key ? "text-rose-600" : "text-slate-400" }`}>{label}</span>
-              {activeSection === key && <div className="w-1 h-1 rounded-full bg-rose-500 mt-0.5" />}
+              <span className={`text-2xl leading-none transition-transform duration-300 ${activeSection === key ? 'scale-110 -translate-y-1' : ''}`}>{icon}</span>
+              <span className={`text-[10px] font-bold transition-all duration-300 ${ activeSection === key ? "text-rose-600 opacity-100" : "text-slate-400 opacity-70" }`}>{label}</span>
+              {activeSection === key && <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-rose-500 shadow-sm shadow-rose-200" />}
             </button>
           ))}
         </div>
       </nav>
+
+      {/* ── Mobile Drawer ── */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-[280px] bg-white h-full shadow-2xl flex flex-col p-6 animate-[slideRight_0.3s_ease-out]">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm">
+                   <span className="text-white font-black text-lg">E</span>
+                 </div>
+                 <h2 className="text-xl font-black text-slate-900">{shopSettings.storeName}</h2>
+              </div>
+              <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 bg-slate-100 rounded-full text-slate-500 active:scale-90 transition-transform cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-3 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100 cursor-pointer active:scale-95 transition-transform" onClick={() => window.location.href = "/"}>
+              <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center shrink-0">
+                <svg className="w-6 h-6 text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-500">Selamat pagi</span>
+                <span className="text-sm font-black text-rose-600 tracking-wide">MASUK / DAFTAR</span>
+              </div>
+            </div>
+
+            <nav className="flex flex-col gap-2">
+              {([
+                { key: "beranda", icon: "🏠", label: "Beranda" },
+                { key: "katalog", icon: "🛍️", label: "Katalog Kain" },
+                { key: "promo",   icon: "🎁", label: "Promo Khusus" },
+              ] as const).map(({ key, icon, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { scrollTo(key); setMobileMenuOpen(false); }}
+                  className={`flex items-center gap-4 px-4 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-left ${
+                    activeSection === key
+                      ? "bg-rose-50 text-rose-600 font-bold"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="text-2xl">{icon}</span> {label}
+                </button>
+              ))}
+            </nav>
+            
+            <div className="mt-auto">
+              <p className="text-xs text-center text-slate-400 font-medium">
+                &copy; {new Date().getFullYear()} {shopSettings.storeName}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Bottom Sheet Modal ── */}
       {sheetOpen && (

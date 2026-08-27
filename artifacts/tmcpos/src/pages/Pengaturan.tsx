@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt, Moon, Sun, Palette } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt, Moon, Sun, Palette, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { registerAndSubscribePush } from "../lib/pushNotification";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
@@ -60,6 +60,8 @@ export default function Pengaturan() {
   const [invoiceBankAccountInput, setInvoiceBankAccountInput] = useState("");
   const [invoiceNotesInput, setInvoiceNotesInput] = useState("");
   
+  const [returPinInput, setReturPinInput] = useState("");
+  
   const { data: settings, isLoading: isLoadingSettings } = useSettings();
   const updateSettingsMutation = useUpdateSettings();
 
@@ -84,6 +86,9 @@ export default function Pengaturan() {
       }
       if (settings["invoice_notes"]) {
         setInvoiceNotesInput(settings["invoice_notes"]);
+      }
+      if (settings["retur_pin"]) {
+        setReturPinInput(settings["retur_pin"]);
       }
       setIsInitialized(true);
     }
@@ -124,6 +129,18 @@ export default function Pengaturan() {
       },
       {
         onSuccess: () => toast({ title: "Pengaturan Nota disimpan!" }),
+        onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleSaveSecuritySettings = () => {
+    updateSettingsMutation.mutate(
+      { 
+        retur_pin: returPinInput.trim()
+      },
+      {
+        onSuccess: () => toast({ title: "Pengaturan Keamanan disimpan!" }),
         onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
       }
     );
@@ -447,6 +464,41 @@ export default function Pengaturan() {
 
           <Button 
             onClick={handleSaveInvoiceSettings}
+            disabled={isLoadingSettings || updateSettingsMutation.isPending}
+            className="w-full sm:w-auto flex items-center gap-2 shrink-0 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+          >
+            <Save size={16} />
+            {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Security Settings Card */}
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+            <Lock size={18} className="text-violet-500" />
+            Keamanan & Otorisasi
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 ml-6.5">
+            Atur PIN khusus untuk memberikan izin tambahan pada beberapa fitur (seperti Tukar/Retur Barang).
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div className="space-y-1.5 w-full sm:max-w-[200px]">
+            <Label className="text-xs font-semibold text-slate-600">PIN Retur Barang</Label>
+            <Input 
+              type="password"
+              value={returPinInput} 
+              onChange={(e) => setReturPinInput(e.target.value)} 
+              placeholder="Kosongkan jika tidak butuh PIN" 
+              disabled={isLoadingSettings}
+              className="bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+            />
+          </div>
+          
+          <Button 
+            onClick={handleSaveSecuritySettings}
             disabled={isLoadingSettings || updateSettingsMutation.isPending}
             className="w-full sm:w-auto flex items-center gap-2 shrink-0 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold"
           >

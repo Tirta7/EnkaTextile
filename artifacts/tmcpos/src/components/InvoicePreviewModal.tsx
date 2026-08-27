@@ -65,6 +65,12 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   // Exchange Dialog State
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [itemToExchange, setItemToExchange] = useState<any>(null);
+
+  // PIN Dialog State
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pendingExchangeItem, setPendingExchangeItem] = useState<any>(null);
+
   const [replacementProductId, setReplacementProductId] = useState<string>("");
   const [replacementRollId, setReplacementRollId] = useState<string>("none");
   const [replacementMeters, setReplacementMeters] = useState<number | "">("");
@@ -237,6 +243,43 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     });
   };
 
+  const handlePinSubmit = () => {
+    if (settings?.["retur_pin"] && pinInput !== settings["retur_pin"]) {
+      toast({ title: "PIN Salah!", variant: "destructive" });
+      return;
+    }
+    
+    setPinDialogOpen(false);
+    setPinInput("");
+    
+    if (pendingExchangeItem) {
+      setItemToExchange(pendingExchangeItem);
+      setReplacementProductId("");
+      setReplacementRollId("none");
+      setReplacementMeters("");
+      setReplacementRolls(1);
+      setReplacementPrice("");
+      setExchangeOpen(true);
+      setPendingExchangeItem(null);
+    }
+  };
+
+  const openExchangeWithPinCheck = (item: any) => {
+    if (settings?.["retur_pin"]) {
+      setPendingExchangeItem(item);
+      setPinInput("");
+      setPinDialogOpen(true);
+    } else {
+      setItemToExchange(item);
+      setReplacementProductId("");
+      setReplacementRollId("none");
+      setReplacementMeters("");
+      setReplacementRolls(1);
+      setReplacementPrice("");
+      setExchangeOpen(true);
+    }
+  };
+
   const totalYds = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
   const totalRolls = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
   
@@ -398,13 +441,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                      <Button 
                                        variant="ghost" size="icon" className="h-4 w-4 ml-0.5 text-orange-400 hover:text-orange-600 no-print" 
                                        onClick={() => {
-                                         setItemToExchange(gr.originalItem);
-                                         setReplacementProductId("");
-                                         setReplacementRollId("none");
-                                         setReplacementMeters("");
-                                         setReplacementRolls(1);
-                                         setReplacementPrice("");
-                                         setExchangeOpen(true);
+                                         openExchangeWithPinCheck(gr.originalItem);
                                        }}
                                        title="Tukar Roll Ini"
                                      >
@@ -714,6 +751,39 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               {createReturnMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Simpan Retur
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIN Verification Dialog */}
+      <Dialog open={pinDialogOpen} onOpenChange={setPinDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Masukkan PIN Otorisasi</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Aksi ini memerlukan izin khusus. Silakan masukkan PIN Anda.
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Masukkan PIN"
+                value={pinInput}
+                onChange={(e) => setPinInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handlePinSubmit();
+                  }
+                }}
+                className="text-center tracking-widest text-lg"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4 sm:justify-center">
+            <Button variant="outline" onClick={() => setPinDialogOpen(false)}>Batal</Button>
+            <Button onClick={handlePinSubmit} disabled={!pinInput}>Lanjutkan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

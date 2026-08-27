@@ -167,9 +167,6 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center text-white/20 text-xs mt-6">
-            Default: <span className="text-white/40 font-mono">admin</span> / <span className="text-white/40 font-mono">vocpos2026</span>
-          </p>
         </div>
 
         <p className="text-center text-white/15 text-xs mt-6">

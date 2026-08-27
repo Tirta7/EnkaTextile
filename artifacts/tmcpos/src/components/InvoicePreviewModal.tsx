@@ -367,7 +367,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div className="w-full overflow-hidden pb-6" ref={containerRef} style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
+          <div className="flex-1 p-8 overflow-y-auto w-full min-w-[700px] pb-24" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
             <div id="printable-invoice" ref={invoiceRef} className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] origin-top-left" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
               {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
@@ -394,7 +394,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 
                 <div className="w-[30%] text-center flex flex-col items-center">
                   <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100">Nota Penjualan</div>
-                  <div className="flex flex-col items-center justify-center">
+                  <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <QrCode className="w-5 h-5 text-indigo-400" />
                       <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
@@ -458,8 +458,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           </div>
                         </td>
                         <td className="py-1.5 px-3 text-right whitespace-nowrap align-top">
-                          <span className="font-semibold text-slate-800 text-xs">{item.totalMeters.toFixed(2)} {item.primaryUnit || 'M'}</span>
-                          <span className="text-slate-400 ml-1 text-[10px]">/ {item.totalRolls} {item.secondaryUnit || 'Roll'}</span>
+                          <span className="font-semibold text-slate-800 text-xs">{item.totalMeters.toFixed(2)} {(item as any).primaryUnit || 'M'}</span>
+                          <span className="text-slate-400 ml-1 text-[10px]">/ {item.totalRolls} {(item as any).secondaryUnit || 'Roll'}</span>
                         </td>
                         <td className="py-1.5 px-3 text-right font-semibold text-slate-600 text-xs align-top">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
@@ -500,8 +500,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                   </div>
                                 </td>
                                 <td className="py-1 px-3 text-right whitespace-nowrap">
-                                  <span className="font-semibold text-slate-700 text-xs">{parseFloat(exc.meters || "0").toFixed(2)} {exc.primaryUnit || 'M'}</span>
-                                  <span className="text-slate-400 ml-1 text-[10px]">/ {exc.rolls} {exc.secondaryUnit || 'Roll'}</span>
+                                  <span className="font-semibold text-slate-700 text-xs">{parseFloat(exc.meters || "0").toFixed(2)} {(exc as any).primaryUnit || 'M'}</span>
+                                  <span className="text-slate-400 ml-1 text-[10px]">/ {exc.rolls} {(exc as any).secondaryUnit || 'Roll'}</span>
                                 </td>
                                 <td className="py-1 px-3 text-right font-semibold text-slate-600 text-xs">
                                   {new Intl.NumberFormat('id-ID').format(parseFloat(exc.pricePerMeter as string || "0"))}
@@ -563,7 +563,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   <div className="p-4 bg-slate-50 border-b border-slate-200">
                     <div className="flex justify-between items-center text-slate-600">
                       <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas Awal</span>
-                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} {displayData.items?.[0]?.primaryUnit || 'M'} / {totalRolls} {displayData.items?.[0]?.secondaryUnit || 'Roll'}</span>
+                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} {(displayData.items?.[0] as any)?.primaryUnit || 'M'} / {totalRolls} {(displayData.items?.[0] as any)?.secondaryUnit || 'Roll'}</span>
                     </div>
                     {uniqueReturns.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-200/60">
@@ -667,16 +667,16 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
       {/* Exchange / Retur Dialog */}
       <Dialog open={exchangeOpen} onOpenChange={setExchangeOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl">
+          <DialogHeader className="p-6 pb-0">
             <DialogTitle>Tukar Barang (Retur)</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 px-6 pb-6">
             <div className="bg-orange-50 border border-orange-100 p-3 rounded-lg flex flex-col gap-1">
               <span className="text-xs font-semibold text-orange-800 uppercase tracking-wider">Barang yang dikembalikan</span>
               <span className="font-bold text-sm">{itemToExchange?.productName}</span>
               <span className="text-xs text-orange-700">
-                {parseFloat(itemToExchange?.meters || 0)} {itemToExchange?.primaryUnit || 'M'} / {parseFloat(itemToExchange?.rolls || 0)} {itemToExchange?.secondaryUnit || 'Roll'} (Rp {new Intl.NumberFormat('id-ID').format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
+                {parseFloat(itemToExchange?.meters || 0)} {(itemToExchange as any)?.primaryUnit || 'M'} / {parseFloat(itemToExchange?.rolls || 0)} {(itemToExchange as any)?.secondaryUnit || 'Roll'} (Rp {new Intl.NumberFormat('id-ID').format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
               </span>
             </div>
 
@@ -749,7 +749,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
 
           </div>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 px-6 pb-6">
             <Button variant="outline" onClick={() => setExchangeOpen(false)}>Batal</Button>
             <Button onClick={handleExchangeSubmit} disabled={createReturnMutation.isPending || !replacementProductId || !replacementMeters}>
               {createReturnMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -761,11 +761,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
       {/* PIN Verification Dialog */}
       <Dialog open={pinDialogOpen} onOpenChange={setPinDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+          <DialogHeader className="p-6 pb-0">
             <DialogTitle>Masukkan PIN Otorisasi</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 px-6 pb-6">
             <p className="text-sm text-muted-foreground text-center">
               Aksi ini memerlukan izin khusus. Silakan masukkan PIN Anda.
             </p>

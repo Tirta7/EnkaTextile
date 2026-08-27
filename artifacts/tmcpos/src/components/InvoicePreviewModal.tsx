@@ -23,6 +23,8 @@ export type InvoicePreviewData = {
     rollId?: number;
     categoryName?: string;
     productName: string;
+    primaryUnit?: string;
+    secondaryUnit?: string;
     meters: number | string;
     rolls: number | string;
     pricePerMeter: number | string;
@@ -32,6 +34,8 @@ export type InvoicePreviewData = {
   exchangedItems?: Array<{
     categoryName?: string;
     productName: string;
+    primaryUnit?: string;
+    secondaryUnit?: string;
     meters: number | string;
     rolls: number | string;
     pricePerMeter: number | string;
@@ -454,8 +458,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           </div>
                         </td>
                         <td className="py-1.5 px-3 text-right whitespace-nowrap align-top">
-                          <span className="font-semibold text-slate-800 text-xs">{item.totalMeters.toFixed(2)} M</span>
-                          <span className="text-slate-400 ml-1 text-[10px]">/ {item.totalRolls} Roll</span>
+                          <span className="font-semibold text-slate-800 text-xs">{item.totalMeters.toFixed(2)} {item.primaryUnit || 'M'}</span>
+                          <span className="text-slate-400 ml-1 text-[10px]">/ {item.totalRolls} {item.secondaryUnit || 'Roll'}</span>
                         </td>
                         <td className="py-1.5 px-3 text-right font-semibold text-slate-600 text-xs align-top">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
@@ -496,8 +500,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                   </div>
                                 </td>
                                 <td className="py-1 px-3 text-right whitespace-nowrap">
-                                  <span className="font-semibold text-slate-700 text-xs">{parseFloat(exc.meters || "0").toFixed(2)} M</span>
-                                  <span className="text-slate-400 ml-1 text-[10px]">/ {exc.rolls} Roll</span>
+                                  <span className="font-semibold text-slate-700 text-xs">{parseFloat(exc.meters || "0").toFixed(2)} {exc.primaryUnit || 'M'}</span>
+                                  <span className="text-slate-400 ml-1 text-[10px]">/ {exc.rolls} {exc.secondaryUnit || 'Roll'}</span>
                                 </td>
                                 <td className="py-1 px-3 text-right font-semibold text-slate-600 text-xs">
                                   {new Intl.NumberFormat('id-ID').format(parseFloat(exc.pricePerMeter as string || "0"))}
@@ -559,7 +563,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   <div className="p-4 bg-slate-50 border-b border-slate-200">
                     <div className="flex justify-between items-center text-slate-600">
                       <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas Awal</span>
-                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} M / {totalRolls} Roll</span>
+                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} {displayData.items?.[0]?.primaryUnit || 'M'} / {totalRolls} {displayData.items?.[0]?.secondaryUnit || 'Roll'}</span>
                     </div>
                     {uniqueReturns.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-200/60">
@@ -672,7 +676,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               <span className="text-xs font-semibold text-orange-800 uppercase tracking-wider">Barang yang dikembalikan</span>
               <span className="font-bold text-sm">{itemToExchange?.productName}</span>
               <span className="text-xs text-orange-700">
-                {parseFloat(itemToExchange?.meters || 0)} M / {parseFloat(itemToExchange?.rolls || 0)} Roll (Rp {new Intl.NumberFormat('id-ID').format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
+                {parseFloat(itemToExchange?.meters || 0)} {itemToExchange?.primaryUnit || 'M'} / {parseFloat(itemToExchange?.rolls || 0)} {itemToExchange?.secondaryUnit || 'Roll'} (Rp {new Intl.NumberFormat('id-ID').format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
               </span>
             </div>
 

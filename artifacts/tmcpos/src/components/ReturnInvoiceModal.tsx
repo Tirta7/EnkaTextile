@@ -227,7 +227,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                                 <div className="font-bold">{item.productName}</div>
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
-                                {Number(item.meters) > 0 ? `${item.meters} m` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} roll)` : ""}
+                                {Number(item.meters) > 0 ? `${item.meters} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} ${item.secondaryUnit || 'Roll'})` : ""}
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>{formatRupiah(Number(item.pricePerMeter))}</td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee", fontWeight: "bold" }}>{formatRupiah(Number(item.subtotal))}</td>
@@ -263,7 +263,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                                 <div className="font-bold">{item.productName}</div>
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
-                                {Number(item.meters) > 0 ? `${item.meters} m` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} roll)` : ""}
+                                {Number(item.meters) > 0 ? `${item.meters} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} ${item.secondaryUnit || 'Roll'})` : ""}
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>{formatRupiah(Number(item.pricePerMeter))}</td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee", fontWeight: "bold" }}>{formatRupiah(Number(item.subtotal))}</td>

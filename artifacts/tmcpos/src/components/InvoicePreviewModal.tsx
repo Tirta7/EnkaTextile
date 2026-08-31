@@ -431,10 +431,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                             <span className={`font-bold uppercase text-slate-800 ${item.hasReturned ? 'text-slate-500' : ''}`}>
                               {item.categoryName ? <span className="text-xs text-indigo-400 font-bold mr-1">{item.categoryName} /</span> : ''}{productName}
                             </span>
-                            <div className="flex flex-wrap gap-1 mt-0 text-xs font-mono leading-none">
+                            <div className="flex flex-wrap gap-1 mt-0 text-xs leading-none text-slate-700">
                               {item.groupedRolls.map((gr: any, gIdx: number) => (
-                                 <span key={gIdx} className={`px-1 bg-slate-100 rounded text-slate-600 ${gr.isReturned ? 'line-through text-slate-400 opacity-60' : ''}`}>
-                                   [{gr.meters.toFixed(2)}]
+                                 <span key={gIdx} className={gr.isReturned ? 'italic' : ''}>
+                                   [{gr.meters.toFixed(2)}{gr.isReturned ? ' RETUR' : ''}]
                                  </span>
                               ))}
                               {!item.hasReturned && saleId && item.groupedRolls.some((gr:any) => !gr.isReturned) && (

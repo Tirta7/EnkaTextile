@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useSettings } from "@/hooks/useSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,20 +19,17 @@ export default function Login() {
   const [appName, setAppName] = useState("EnkaTextile");
   const [appLogo, setAppLogo] = useState("");
 
+  const { data: settings } = useSettings();
+
   useEffect(() => {
-    fetch("/api/settings/manifest.json")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.name) {
-          setAppName(data.name);
-          document.title = data.name;
-        }
-        if (data.app_logo && data.app_logo !== "/favicon.svg") {
-          setAppLogo(data.app_logo);
-        }
-      })
-      .catch(() => {});
-  }, []);
+    if (settings?.["app_name"]) {
+      setAppName(settings["app_name"]);
+      document.title = settings["app_name"];
+    }
+    if (settings?.["app_logo"] && settings["app_logo"] !== "/favicon.svg") {
+      setAppLogo(settings["app_logo"]);
+    }
+  }, [settings]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

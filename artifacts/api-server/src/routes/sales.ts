@@ -228,11 +228,6 @@ router.post("/sales", async (req, res): Promise<void> => {
   } catch (error) {
     console.error("Gagal mengirim push notif untuk sale", error);
   }
-  } catch (error: any) {
-    require('fs').writeFileSync('error.log', String(error) + '\n' + (error.stack || ''));
-    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
-    return;
-  }
   res.status(201).json({
     ...sale,
     totalAmount: numStr(sale.totalAmount),
@@ -242,6 +237,12 @@ router.post("/sales", async (req, res): Promise<void> => {
     createdAt: sale.createdAt.toISOString(),
     customerName: null,
   });
+  
+  } catch (error: any) {
+    require('fs').writeFileSync('error.log', String(error) + '\n' + (error.stack || ''));
+    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
+    return;
+  }
 });
 
 router.get("/sales/:id", async (req, res): Promise<void> => {

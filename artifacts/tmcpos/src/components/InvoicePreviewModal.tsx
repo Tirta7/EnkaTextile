@@ -488,7 +488,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 <td className="py-1 px-3">
                                   <div className="flex items-center gap-1.5">
                                     <CornerDownRight className="w-3 h-3 text-green-500" />
-                                    <Badge variant="outline" className="text-[8px] py-0 px-1 h-3 border-green-200 text-green-700 bg-green-50 uppercase mr-1">TUKAR</Badge>
+                                    <span className="text-[11px] font-bold text-green-700 uppercase mr-1 tracking-wider">TUKAR</span>
                                     <span className="font-bold uppercase text-xs text-slate-700">{exc.productName?.toUpperCase()}</span>
                                   </div>
                                 </td>
@@ -510,7 +510,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 <td colSpan={saleId ? 5 : 4} className="py-1 px-3">
                                   <div className="flex items-center gap-1.5">
                                     <CornerDownRight className="w-3 h-3 text-amber-500" />
-                                    <Badge variant="outline" className="text-[8px] py-0 px-1 h-3 border-amber-200 text-amber-700 bg-amber-50 uppercase">HANYA RETUR</Badge>
+                                    <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">HANYA RETUR</span>
                                   </div>
                                 </td>
                               </tr>

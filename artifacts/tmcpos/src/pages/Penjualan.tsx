@@ -700,16 +700,25 @@ export default function Penjualan() {
                           1 [INV] {s.invoiceNumber} • {s.paymentType}
                         </p>
                         {(s as any).hasReturns && (
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-amber-200 text-amber-700 bg-amber-50 uppercase tracking-widest font-bold">
-                              Ada Retur/Tukar
-                            </Badge>
-                            {((s as any).returnDifference !== undefined && (s as any).returnDifference !== 0) && (
-                              <span className={`text-[10px] font-bold ${(s as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {(s as any).returnDifference > 0 
-                                  ? `(Selisih Tukar: Kurang Pembayaran Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)})` 
-                                  : `(Selisih Tukar: Lebih Bayar Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))})`}
-                              </span>
+                          <div className="flex flex-col gap-1 mt-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-amber-200 text-amber-700 bg-amber-50 uppercase tracking-widest font-bold">
+                                Ada Retur/Tukar
+                              </Badge>
+                              {((s as any).returnDifference !== undefined && (s as any).returnDifference !== 0) && (
+                                <span className={`text-[10px] font-bold ${(s as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {(s as any).returnDifference > 0 
+                                    ? `(Selisih Tukar: Kurang Bayar Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)})` 
+                                    : `(Selisih Tukar: Lebih Bayar Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))})`}
+                                </span>
+                              )}
+                            </div>
+                            {((s as any).totalReturnedValue > 0 || (s as any).totalExchangedValue > 0) && (
+                              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium ml-0.5">
+                                <span className="text-rose-600">Retur: -Rp {new Intl.NumberFormat('id-ID').format((s as any).totalReturnedValue || 0)}</span>
+                                <span className="text-slate-300">|</span>
+                                <span className="text-emerald-600">Tukar: +Rp {new Intl.NumberFormat('id-ID').format((s as any).totalExchangedValue || 0)}</span>
+                              </div>
                             )}
                           </div>
                         )}

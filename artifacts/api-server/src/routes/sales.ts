@@ -34,6 +34,8 @@ router.get("/sales", async (req, res) => {
       hasReturns: sql<boolean>`EXISTS(SELECT 1 FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
       returnDifference: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id}), 0)`,
       returnDifferencePaid: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id} AND ${returnsTable.paymentStatus} = 'lunas'), 0)`,
+      totalReturnedValue: sql<string>`COALESCE((SELECT sum(${returnsTable.totalReturnedValue}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id}), 0)`,
+      totalExchangedValue: sql<string>`COALESCE((SELECT sum(${returnsTable.totalExchangedValue}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id}), 0)`,
     })
     .from(salesTable)
     .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
@@ -52,6 +54,8 @@ router.get("/sales", async (req, res) => {
       createdAt: s.createdAt.toISOString(),
       hasReturns: Boolean(s.hasReturns),
       returnDifference: numStr(s.returnDifference),
+      totalReturnedValue: numStr((s as any).totalReturnedValue),
+      totalExchangedValue: numStr((s as any).totalExchangedValue),
     };
   }));
 });

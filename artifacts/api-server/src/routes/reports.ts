@@ -11,8 +11,14 @@ function numStr(v: string | null | undefined) { return parseFloat(v ?? "0"); }
 router.get("/reports/sales-summary", async (req, res) => {
   const { startDate, endDate } = req.query;
   const conditions: any[] = [];
-  if (startDate) conditions.push(gte(salesTable.createdAt, new Date(startDate as string)));
-  if (endDate) conditions.push(lte(salesTable.createdAt, new Date(endDate as string)));
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    conditions.push(gte(salesTable.createdAt, start));
+  }
+  if (endDate) {
+    const end = new Date(`${endDate}T23:59:59.999`);
+    conditions.push(lte(salesTable.createdAt, end));
+  }
 
   const [summary] = await db
     .select({
@@ -64,8 +70,14 @@ router.get("/reports/sales-summary", async (req, res) => {
   const totalTx = Number(summary?.totalTransactions ?? 0);
 
   const returnConditions: any[] = [eq(returnsTable.type, 'penjualan')];
-  if (startDate) returnConditions.push(gte(returnsTable.createdAt, new Date(startDate as string)));
-  if (endDate) returnConditions.push(lte(returnsTable.createdAt, new Date(endDate as string)));
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    returnConditions.push(gte(returnsTable.createdAt, start));
+  }
+  if (endDate) {
+    const end = new Date(`${endDate}T23:59:59.999`);
+    returnConditions.push(lte(returnsTable.createdAt, end));
+  }
 
   const [returnSummary] = await db
     .select({
@@ -110,10 +122,12 @@ router.get("/reports/sales-summary", async (req, res) => {
 router.get("/reports/sales-detail", async (req, res) => {
   const { startDate, endDate, status } = req.query;
   const conditions: any[] = [];
-  if (startDate) conditions.push(gte(salesTable.createdAt, new Date(startDate as string)));
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    conditions.push(gte(salesTable.createdAt, start));
+  }
   if (endDate) {
-    const end = new Date(endDate as string);
-    end.setHours(23, 59, 59, 999);
+    const end = new Date(`${endDate}T23:59:59.999`);
     conditions.push(lte(salesTable.createdAt, end));
   }
   if (status && status !== 'semua') conditions.push(eq(salesTable.status, status as string));
@@ -180,10 +194,12 @@ router.get("/reports/sales-tax", async (req, res) => {
   const rate = ppnRate ? parseFloat(ppnRate as string) / 100 : PPN_RATE;
 
   const conditions: any[] = [];
-  if (startDate) conditions.push(gte(salesTable.createdAt, new Date(startDate as string)));
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    conditions.push(gte(salesTable.createdAt, start));
+  }
   if (endDate) {
-    const end = new Date(endDate as string);
-    end.setHours(23, 59, 59, 999);
+    const end = new Date(`${endDate}T23:59:59.999`);
     conditions.push(lte(salesTable.createdAt, end));
   }
 
@@ -237,10 +253,12 @@ router.get("/reports/sales-tax", async (req, res) => {
 router.get("/reports/sales-trend", async (req, res) => {
   const { startDate, endDate } = req.query;
   const conditions: any[] = [];
-  if (startDate) conditions.push(gte(salesTable.createdAt, new Date(startDate as string)));
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    conditions.push(gte(salesTable.createdAt, start));
+  }
   if (endDate) {
-    const end = new Date(endDate as string);
-    end.setHours(23, 59, 59, 999);
+    const end = new Date(`${endDate}T23:59:59.999`);
     conditions.push(lte(salesTable.createdAt, end));
   }
 

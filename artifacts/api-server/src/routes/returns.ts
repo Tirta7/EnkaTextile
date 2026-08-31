@@ -5,6 +5,7 @@ import {
   returnReturnedItemsTable,
   returnExchangedItemsTable,
   productsTable,
+  productRollsTable,
   stockMutationsTable,
   cashEntriesTable,
   receivablesTable,
@@ -12,7 +13,7 @@ import {
   customersTable,
   suppliersTable,
 } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { CreateReturnBody } from "@workspace/api-zod";
 
 const router = Router();

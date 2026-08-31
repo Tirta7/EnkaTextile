@@ -131,14 +131,15 @@ router.get("/reports/sales-detail", async (req, res) => {
       createdAt: salesTable.createdAt,
       hasReturns: sql<boolean>`EXISTS(SELECT 1 FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
       returnDifference: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id}), 0)`,
+      returnDifferencePaid: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id} AND ${returnsTable.paymentStatus} = 'lunas'), 0)`,
     })
     .from(salesTable)
     .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(salesTable.createdAt));
 
-  const totalGross = sales.reduce((s, r) => s + numStr(r.totalAmount), 0);
-  const totalPaid = sales.reduce((s, r) => s + numStr(r.paidAmount), 0);
+  const totalGross = sales.reduce((s, r) => s + numStr(r.totalAmount) + numStr(r.returnDifference as any), 0);
+  const totalPaid = sales.reduce((s, r) => s + numStr(r.paidAmount) + numStr((r as any).returnDifferencePaid), 0);
   const totalReturnAdj = sales.reduce((s, r) => s + numStr(r.returnDifference as any), 0);
 
   res.json({
@@ -148,22 +149,26 @@ router.get("/reports/sales-detail", async (req, res) => {
       totalPaid,
       totalRemaining: totalGross - totalPaid,
       totalReturnAdj,
-      netRevenue: totalGross + totalReturnAdj,
+      netRevenue: totalGross,
     },
-    transactions: sales.map(s => ({
-      id: s.id,
-      invoiceNumber: s.invoiceNumber,
-      customerName: s.customerName ?? "Pelanggan Umum",
-      paymentType: s.paymentType,
-      totalAmount: numStr(s.totalAmount),
-      paidAmount: numStr(s.paidAmount),
-      remainingAmount: numStr(s.totalAmount) - numStr(s.paidAmount),
-      status: s.status,
-      notes: s.notes,
-      createdAt: s.createdAt.toISOString(),
-      hasReturns: Boolean(s.hasReturns),
-      returnDifference: numStr(s.returnDifference as any),
-    }))
+    transactions: sales.map(s => {
+      const saleGross = numStr(s.totalAmount) + numStr(s.returnDifference as any);
+      const salePaid = numStr(s.paidAmount) + numStr((s as any).returnDifferencePaid);
+      return {
+        id: s.id,
+        invoiceNumber: s.invoiceNumber,
+        customerName: s.customerName ?? "Pelanggan Umum",
+        paymentType: s.paymentType,
+        totalAmount: saleGross,
+        paidAmount: salePaid,
+        remainingAmount: saleGross - salePaid,
+        status: s.status,
+        notes: s.notes,
+        createdAt: s.createdAt.toISOString(),
+        hasReturns: Boolean(s.hasReturns),
+        returnDifference: numStr(s.returnDifference as any),
+      };
+    })
   });
 });
 

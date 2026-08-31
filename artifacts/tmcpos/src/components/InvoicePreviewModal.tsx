@@ -515,15 +515,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 </td>
                               </tr>
                             )}
-                            {diff !== 0 && (
-                              <tr className="align-top bg-slate-50/80 border-b border-slate-100">
-                                <td></td>
-                                <td colSpan={saleId ? 5 : 4} className="py-1.5 px-3 text-right">
-                                  <span className="text-xs text-slate-500 uppercase tracking-widest font-bold mr-2">Selisih Tukar:</span>
-                                  <span className={`font-bold uppercase text-xs ${diffColor}`}>{diffSign} {diffText}</span>
-                                </td>
-                              </tr>
-                            )}
+
                           </React.Fragment>
                         );
                       })}

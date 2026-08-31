@@ -528,6 +528,30 @@ export default function Penjualan() {
     return baseFiltered.filter(s => s.status?.toLowerCase() === activeTab.toLowerCase());
   }, [baseFiltered, activeTab]);
 
+  const summaryData = useMemo(() => {
+    if (!filtered) return { subTotal: 0, diBayar: 0, sisaBayar: 0 };
+    return filtered.reduce((acc, s: any) => {
+      const baseTotal = parseFloat(s.totalAmount || "0");
+      const diffTotal = (s.returns || []).reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+      const grandTotal = baseTotal + diffTotal;
+      
+      const basePaid = parseFloat(s.paidAmount || "0");
+      const diffPaid = (s.returns || []).reduce((sum: number, ret: any) => {
+        const diff = parseFloat(ret.differenceAmount || "0");
+        if (ret.paymentStatus === 'lunas') return sum + diff;
+        return sum;
+      }, 0);
+      const actualPaid = basePaid + diffPaid;
+      
+      const rem = grandTotal - actualPaid;
+      
+      acc.subTotal += grandTotal;
+      acc.diBayar += actualPaid;
+      acc.sisaBayar += (rem > 0 ? rem : 0);
+      return acc;
+    }, { subTotal: 0, diBayar: 0, sisaBayar: 0 });
+  }, [filtered]);
+
   return (
     <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
       
@@ -681,8 +705,28 @@ export default function Penjualan() {
           </>
         )}
         {filtered && filtered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
+          <div className="pt-4 flex justify-center pb-2">
             <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
+        )}
+        
+        {/* Rekap Summary */}
+        {filtered && filtered.length > 0 && (
+          <div className="mt-6 bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex justify-end">
+            <div className="w-full sm:w-[350px]">
+              <div className="flex justify-between items-center py-2 text-sm">
+                <span className="font-semibold text-slate-600">Sub Total</span>
+                <span className="font-bold text-slate-900">{formatRupiah(summaryData.subTotal)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 text-sm border-t border-slate-100">
+                <span className="font-semibold text-slate-600">Di Bayar</span>
+                <span className="font-bold text-slate-900">{formatRupiah(summaryData.diBayar)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 text-sm border-t border-slate-100">
+                <span className="font-semibold text-slate-600">Sisa Bayar</span>
+                <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -781,3 +825,4 @@ export default function Penjualan() {
     </div>
   );
 }
+

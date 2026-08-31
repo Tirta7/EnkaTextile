@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { useLocation, Link } from "wouter";
 import { 
@@ -38,6 +39,31 @@ export default function Home() {
   // Fetch real recent sales
   const { data: salesList } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const recentSales = salesList?.slice(0, 5) || [];
+
+  const summaryData = useMemo(() => {
+    if (!salesList) return { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0 };
+    return salesList.reduce((acc, s: any) => {
+      const baseTotal = parseFloat(s.totalAmount || "0");
+      const diffTotal = (s.returns || []).reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+      const grandTotal = baseTotal + diffTotal;
+      
+      const basePaid = parseFloat(s.paidAmount || "0");
+      const diffPaid = (s.returns || []).reduce((sum: number, ret: any) => {
+        const diff = parseFloat(ret.differenceAmount || "0");
+        if (ret.paymentStatus === 'lunas') return sum + diff;
+        return sum;
+      }, 0);
+      const actualPaid = basePaid + diffPaid;
+      
+      const rem = grandTotal - actualPaid;
+      
+      acc.subTotal += grandTotal;
+      acc.diBayar += actualPaid;
+      acc.sisaBayar += (rem > 0 ? rem : 0);
+      acc.count += 1;
+      return acc;
+    }, { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0 });
+  }, [salesList]);
 
   const allMenuItems = [
     { name: "Kategori", href: "/kategori", icon: Tags, color: "text-blue-600", bg: "bg-blue-100", badge: "" },
@@ -228,6 +254,36 @@ export default function Home() {
           <Link href="/laporan">
             <Button size="sm" variant="secondary" className="rounded-full text-xs font-bold px-4 h-8 relative z-10">Cek <ChevronRight className="h-3 w-3 ml-1" /></Button>
           </Link>
+        </div>
+      </div>
+      
+      {/* Rekap Summary on Home */}
+      <div className="px-4 md:px-8 mb-6 max-w-7xl mx-auto">
+        <div className="bg-white p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
+              <Receipt className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-slate-800 text-sm">Rekap Semua Penjualan</h2>
+              <p className="text-xs text-slate-500">{summaryData.count} Transaksi Ditemukan</p>
+            </div>
+          </div>
+          
+          <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 sm:gap-8 justify-end">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Omset</span>
+              <span className="font-bold text-slate-800">{formatRupiah(summaryData.subTotal)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Kas Diterima</span>
+              <span className="font-bold text-slate-800">{formatRupiah(summaryData.diBayar)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Piutang</span>
+              <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
+            </div>
+          </div>
         </div>
       </div>
 

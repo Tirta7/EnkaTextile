@@ -197,7 +197,7 @@ export type StockMutation = typeof stockMutationsTable.$inferSelect;
 export const receivablesTable = pgTable("receivables", {
   id: serial("id").primaryKey(),
   saleId: integer("sale_id").notNull().references(() => salesTable.id),
-  customerId: integer("customer_id").notNull().references(() => customersTable.id),
+  customerId: integer("customer_id").references(() => customersTable.id),
   totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   paidAmount: numeric("paid_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   status: text("status").notNull().default("unpaid"),

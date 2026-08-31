@@ -285,10 +285,10 @@ router.post("/returns", async (req, res): Promise<void> => {
     // Financial Sync
     if (data.type === 'penjualan') {
       if (differenceAmount > 0) {
-         if (data.paymentStatus === 'tempo' && data.customerId && data.saleId) {
+         if (data.paymentStatus === 'tempo' && data.saleId) {
             await db.insert(receivablesTable).values({
                saleId: data.saleId,
-               customerId: data.customerId,
+               customerId: data.customerId ?? null,
                totalAmount: differenceAmount.toString(),
                paidAmount: "0"
             });

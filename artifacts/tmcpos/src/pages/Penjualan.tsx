@@ -491,23 +491,30 @@ export default function Penjualan() {
         items: items.flatMap(i => {
           // Explode multi-select rolls into individual items for the backend
           if (i.selectedRolls && i.selectedRolls.length > 0) {
-            return i.selectedRolls.map(r => ({
-              productId: i.productId,
-              rollId: r.id,
-              rolls: 1,
-              meters: r.currentLength,
-              pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0,
-              subtotal: r.currentLength * (typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0)
-            }));
+            return i.selectedRolls.map(r => {
+              const metersNum = typeof r.currentLength === "string" ? parseFloat(r.currentLength) : (r.currentLength || 0);
+              const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0;
+              return {
+                productId: i.productId,
+                rollId: r.id,
+                rolls: 1,
+                meters: metersNum || 0,
+                pricePerMeter: priceNum,
+                subtotal: (metersNum || 0) * priceNum
+              };
+            });
           }
           // Normal fallback
+          const metersNum = typeof i.meters === "number" ? i.meters : (typeof i.meters === "string" ? parseFloat(i.meters) : 0);
+          const rollsNum = typeof i.rolls === "number" ? i.rolls : (typeof i.rolls === "string" ? parseFloat(i.rolls) : 0);
+          const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0;
           return [{ 
             productId: i.productId, 
             rollId: i.rollId || undefined, 
-            rolls: typeof i.rolls === "number" ? i.rolls : 0, 
-            meters: typeof i.meters === "number" ? i.meters : 0, 
-            pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0, 
-            subtotal: i.subtotal 
+            rolls: rollsNum || 0, 
+            meters: metersNum || 0, 
+            pricePerMeter: priceNum, 
+            subtotal: i.subtotal || 0 
           }];
         })
       }

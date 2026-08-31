@@ -52,6 +52,7 @@ router.get("/sales", async (req, res) => {
 });
 
 router.post("/sales", async (req, res): Promise<void> => {
+  try {
   const parsed = CreateSaleBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
@@ -227,7 +228,11 @@ router.post("/sales", async (req, res): Promise<void> => {
   } catch (error) {
     console.error("Gagal mengirim push notif untuk sale", error);
   }
-
+  } catch (error: any) {
+    require('fs').writeFileSync('error.log', String(error) + '\n' + (error.stack || ''));
+    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
+    return;
+  }
   res.status(201).json({
     ...sale,
     totalAmount: numStr(sale.totalAmount),

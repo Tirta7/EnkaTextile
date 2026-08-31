@@ -568,7 +568,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       {(() => {
                         const hasReturns = uniqueReturns.length > 0;
                         if (!hasReturns) return null;
-                        const baseTotal = parseFloat(displayData.totalAmount as string || "0");
+                        const diffTotal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+                        const baseTotal = parseFloat(displayData.totalAmount as string || "0") - diffTotal; // Backend now returns saleGross, so we subtract diff to get original
                         const totalRetVal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.totalReturnedValue || "0"), 0);
                         const totalExcVal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.totalExchangedValue || "0"), 0);
                         return (
@@ -592,53 +593,20 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       <tr className="bg-indigo-600 text-white">
                         <td className="py-1 px-2 font-bold text-xs uppercase tracking-widest text-indigo-100">Grand Total</td>
                         <td className="py-1 px-2 font-bold text-sm tracking-tight">
-                          Rp {new Intl.NumberFormat('id-ID').format(
-                            (() => {
-                              const baseTotal = parseFloat(displayData.totalAmount as string || "0");
-                              const diffTotal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
-                              return baseTotal + diffTotal;
-                            })()
-                          )}
+                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}
                         </td>
                       </tr>
                       
                       <tr>
                         <td className="py-1 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
                         <td className="py-1 px-2 font-medium text-slate-800">
-                          Rp {new Intl.NumberFormat('id-ID').format(
-                            (() => {
-                              const basePaid = parseFloat(displayData.paidAmount as string || "0");
-                              const diffPaid = uniqueReturns.reduce((sum: number, ret: any) => {
-                                const diff = parseFloat(ret.differenceAmount || "0");
-                                if (ret.paymentStatus === 'lunas') return sum + diff;
-                                return sum;
-                              }, 0);
-                              return basePaid + diffPaid;
-                            })()
-                          )}
+                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}
                         </td>
                       </tr>
                       <tr className="border-b border-slate-100">
                         <td className="py-1 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
                         <td className="py-1 px-2 font-medium text-rose-600">
-                          Rp {new Intl.NumberFormat('id-ID').format(
-                            (() => {
-                              const baseTotal = parseFloat(displayData.totalAmount as string || "0");
-                              const diffTotal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
-                              const grandTotal = baseTotal + diffTotal;
-                              
-                              const basePaid = parseFloat(displayData.paidAmount as string || "0");
-                              const diffPaid = uniqueReturns.reduce((sum: number, ret: any) => {
-                                const diff = parseFloat(ret.differenceAmount || "0");
-                                if (ret.paymentStatus === 'lunas') return sum + diff;
-                                return sum;
-                              }, 0);
-                              const totalPaid = basePaid + diffPaid;
-                              
-                              const rem = grandTotal - totalPaid;
-                              return rem > 0 ? rem : 0;
-                            })()
-                          )}
+                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}
                         </td>
                       </tr>
                     </tbody>

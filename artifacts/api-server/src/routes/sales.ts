@@ -45,11 +45,22 @@ router.get("/sales", async (req, res) => {
   res.json(sales.map(s => {
     const saleGross = numStr(s.totalAmount) + numStr(s.returnDifference);
     const salePaid = numStr(s.paidAmount) + numStr((s as any).returnDifferencePaid);
+    const remainingAmount = saleGross - salePaid;
+    
+    // Dynamically calculate status because total/paid amounts might have changed due to returns
+    let finalStatus = s.status;
+    if (remainingAmount <= 0) {
+      finalStatus = 'lunas';
+    } else if (salePaid > 0 && finalStatus === 'tempo') {
+      finalStatus = 'partial';
+    }
+
     return {
       ...s,
+      status: finalStatus,
       totalAmount: saleGross,
       paidAmount: salePaid,
-      remainingAmount: saleGross - salePaid,
+      remainingAmount: remainingAmount > 0 ? remainingAmount : 0,
       dueDate: s.dueDate?.toISOString() ?? null,
       createdAt: s.createdAt.toISOString(),
       hasReturns: Boolean(s.hasReturns),
@@ -343,11 +354,26 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     });
   }
 
+  const returnDiffPaid = returnsHistory.reduce((sum, r) => r.paymentStatus === 'lunas' ? sum + parseFloat(r.differenceAmount as string || "0") : sum, 0);
+  const returnDiff = returnsHistory.reduce((sum, r) => sum + parseFloat(r.differenceAmount as string || "0"), 0);
+  
+  const saleGross = numStr(sale.totalAmount) + returnDiff;
+  const salePaid = numStr(sale.paidAmount) + returnDiffPaid;
+  const remainingAmount = saleGross - salePaid;
+  
+  let finalStatus = sale.status;
+  if (remainingAmount <= 0) {
+    finalStatus = 'lunas';
+  } else if (salePaid > 0 && finalStatus === 'tempo') {
+    finalStatus = 'partial';
+  }
+
   res.json({
     ...sale,
-    totalAmount: numStr(sale.totalAmount),
-    paidAmount: numStr(sale.paidAmount),
-    remainingAmount: numStr(sale.totalAmount) - numStr(sale.paidAmount),
+    status: finalStatus,
+    totalAmount: saleGross,
+    paidAmount: salePaid,
+    remainingAmount: remainingAmount > 0 ? remainingAmount : 0,
     dueDate: sale.dueDate?.toISOString() ?? null,
     createdAt: sale.createdAt.toISOString(),
     items: (() => {

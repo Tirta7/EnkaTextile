@@ -406,7 +406,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </div>
               
               {/* Table */}
-              <div className="w-full border border-indigo-100 rounded-lg overflow-hidden mb-2 relative z-10">
+              <div className="w-full rounded-lg overflow-hidden mb-2 relative z-10">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
@@ -529,7 +529,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               {/* Footer */}
               <div className="flex justify-between items-start w-full text-sm mt-2 relative z-10">
                 <div className="w-[50%] flex flex-col justify-between">
-                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-lg p-2 w-11/12 mb-2">
+                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 rounded-lg p-2 w-11/12 mb-2">
                     <div className="flex items-center gap-1.5 mb-1">
                       <div className="w-5 h-5 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-xs">Rp</div>
                       <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>
@@ -555,7 +555,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   </div>
                 </div>
 
-                <div className="w-[45%] border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                <div className="w-[45%] rounded-lg overflow-hidden bg-white shadow-xs">
                   <table className="w-full text-right text-sm border-collapse">
                     <tbody>
                       <tr className="bg-slate-50 border-b border-slate-200">

@@ -93,9 +93,39 @@ function Router() {
   );
 }
 
+import { useEffect } from "react";
+import { useSettings } from "@/hooks/useSettings";
+
+function GlobalAppEffects() {
+  const { data: settings } = useSettings();
+
+  useEffect(() => {
+    const appName = settings?.["app_name"];
+    if (appName) {
+      document.title = appName;
+    } else {
+      document.title = "EnkaTextile";
+    }
+
+    const appLogo = settings?.["app_logo"];
+    if (appLogo && appLogo !== "/favicon.svg") {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = appLogo;
+    }
+  }, [settings]);
+
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <GlobalAppEffects />
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Switch>

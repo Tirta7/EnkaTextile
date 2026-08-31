@@ -327,6 +327,9 @@ if not exist "!INSTALL_DIR!docker.env" (
         echo PORT=8080
         echo DATABASE_URL="postgresql://postgres:vocpos2026@db:5432/vocpos"
         echo SESSION_SECRET="vocpos-production-secret-key-xyz987"
+        echo VAPID_PUBLIC_KEY="BLmRQxniwUVmZJaOZFthGgfShhVdFjgZFWQ3kC4bckWoQvjaFJZBuJgY9JMRpxGmPhu7hT2ZAICQrbsli5hWi3k"
+        echo VAPID_PRIVATE_KEY="dBo3rHkJrTSPTfPzEf1TfVB1igEan7hFXxahnr_B3Uc"
+        echo VAPID_SUBJECT="mailto:admin@vocpos.com"
     ) > "!INSTALL_DIR!docker.env"
     echo  [OK] File docker.env dibuat.
 ) else (

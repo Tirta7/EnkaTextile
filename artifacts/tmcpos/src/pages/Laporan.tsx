@@ -122,8 +122,8 @@ function KpiCard({ label, value, sub, color = "slate" }: { label: string; value:
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function Laporan() {
   const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
-  const todayStr = today.toISOString().split("T")[0];
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toLocaleDateString("en-CA");
+  const todayStr = today.toLocaleDateString("en-CA");
 
   const [startDate, setStartDate] = useState(firstOfMonth);
   const [endDate, setEndDate] = useState(todayStr);

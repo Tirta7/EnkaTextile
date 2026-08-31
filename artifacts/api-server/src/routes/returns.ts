@@ -301,7 +301,7 @@ router.post("/returns", async (req, res): Promise<void> => {
             });
          }
       } else if (differenceAmount < 0) {
-         if (data.paymentStatus === 'tempo' && data.customerId && data.saleId) {
+         if (data.paymentStatus === 'tempo' && data.saleId) {
             const [receivable] = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, data.saleId));
             if (receivable) {
                const newTotal = numStr(receivable.totalAmount) - Math.abs(differenceAmount);

@@ -424,7 +424,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     
                     return (
                       <React.Fragment key={index}>
-                      <tr className="align-top border-b border-slate-100 hover:bg-slate-50/50 transition-colors last:border-0">
+                      <tr className="align-top border-0 hover:bg-slate-50/50 transition-colors">
                         <td className="py-1 px-2 text-center text-slate-500 font-medium">{index + 1}</td>
                         <td className="py-1 px-2">
                           <div className="flex flex-col gap-0.5">
@@ -483,7 +483,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                         return (
                           <React.Fragment key={`ret_${index}_${retIdx}`}>
                             {ret.exchangedItems && ret.exchangedItems.length > 0 ? ret.exchangedItems.map((exc: any, excIdx: number) => (
-                              <tr key={`exc_${index}_${retIdx}_${excIdx}`} className="align-top border-b border-slate-100 last:border-0 bg-green-50/30">
+                              <tr key={`exc_${index}_${retIdx}_${excIdx}`} className="align-top border-0 bg-green-50/30">
                                 <td className="py-1 px-2"></td>
                                 <td className="py-1 px-3">
                                   <div className="flex items-center gap-1.5">
@@ -505,7 +505,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 {saleId && <td className="no-print"></td>}
                               </tr>
                             )) : (
-                              <tr key={`exc_none_${index}_${retIdx}`} className="align-top border-b border-slate-100 last:border-0 bg-amber-50/30">
+                              <tr key={`exc_none_${index}_${retIdx}`} className="align-top border-0 bg-amber-50/30">
                                 <td className="py-1 px-2"></td>
                                 <td colSpan={saleId ? 5 : 4} className="py-1 px-3">
                                   <div className="flex items-center gap-1.5">

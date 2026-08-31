@@ -431,23 +431,21 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                             <span className={`font-medium uppercase text-slate-800 ${item.hasReturned ? 'text-slate-500' : ''}`}>
                               {item.categoryName ? <span className="text-xs text-indigo-400 font-medium mr-1">{item.categoryName} /</span> : ''}{productName}
                             </span>
-                            <div className="flex flex-wrap gap-1 mt-0 text-xs leading-none text-slate-700">
+                            <div className="flex flex-wrap gap-1 mt-0 text-xs leading-none text-slate-700 items-center">
                               {item.groupedRolls.map((gr: any, gIdx: number) => (
-                                 <span key={gIdx} className={gr.isReturned ? 'italic' : ''}>
+                                 <span key={gIdx} className={`inline-flex items-center ${gr.isReturned ? 'italic text-slate-400' : ''}`}>
                                    [{gr.meters.toFixed(2)}{gr.isReturned ? ' RETUR' : ''}]
+                                   {!gr.isReturned && saleId && (
+                                     <Button 
+                                       variant="ghost" size="sm" className="h-4 w-4 ml-0.5 p-0 text-orange-400 hover:text-orange-600 no-print" 
+                                       onClick={() => openExchangeWithPinCheck(gr.originalItem)}
+                                       title="Tukar Barang Ini"
+                                     >
+                                       <RefreshCcw className="h-3 w-3" />
+                                     </Button>
+                                   )}
                                  </span>
                               ))}
-                              {!item.hasReturned && saleId && item.groupedRolls.some((gr:any) => !gr.isReturned) && (
-                                <Button 
-                                  variant="ghost" size="sm" className="h-4 w-4 ml-1 p-0 text-orange-400 hover:text-orange-600 no-print" 
-                                  onClick={() => {
-                                    openExchangeWithPinCheck(item.groupedRolls.find((gr:any) => !gr.isReturned)?.originalItem);
-                                  }}
-                                  title="Tukar Barang"
-                                >
-                                  <RefreshCcw className="h-3 w-3" />
-                                </Button>
-                              )}
                             </div>
                           </div>
                         </td>

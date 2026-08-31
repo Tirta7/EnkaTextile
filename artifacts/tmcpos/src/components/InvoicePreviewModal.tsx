@@ -158,7 +158,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         body > *:not(#print-container-temp) { display: none !important; }
         body { background: white; }
         #print-container-temp {
-          display: block !important; width: 100%; position: absolute; left: 0; top: 0; margin: 0; padding: 0;
+          display: block !important; width: 100%; position: absolute; left: 0; top: 0; margin: 0; padding: 0.5cm;
           -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
         }
         #print-container-temp * { color: #000 !important; background: transparent !important; box-shadow: none !important; border-radius: 0 !important; }
@@ -167,7 +167,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         #print-container-temp .lunas-stamp { border: 2px solid #000 !important; }
         #print-container-temp .lunas-watermark { display: none !important; }
         #print-container-temp .no-print { display: none !important; }
-        @page { margin: 1cm 0.5cm; }
+        @page { margin: 0; }
       }
     `;
     document.head.appendChild(style);
@@ -572,47 +572,15 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           {totalYds.toFixed(2)} {(displayData.items?.[0] as any)?.primaryUnit || 'M'} / {totalRolls} Roll
                         </td>
                       </tr>
-                      
-                      {uniqueReturns.length > 0 && (
-                        <>
-                          {uniqueReturns.map((ret: any) => {
-                            const diff = parseFloat(ret.differenceAmount || "0");
-                            if (diff === 0) return null;
-                            const isOwed = diff > 0;
-                            const pStatus = ret.paymentStatus === 'lunas' ? '(Lunas)' : ret.paymentStatus === 'tempo' ? '(Piutang)' : '';
-                            return (
-                              <tr key={`ret_sum_${ret.id}`} className="border-b border-slate-100">
-                                <td className="py-1 px-2 text-[10px] font-bold text-slate-500 uppercase">{isOwed ? `Kurang Bayar ${pStatus}` : `Kembalian ${pStatus}`}</td>
-                                <td className={`py-1 px-2 font-bold ${isOwed ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                  {isOwed ? '+' : '-'} Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diff))}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                          <tr className="bg-slate-100/50">
-                            <td className="py-1 px-2 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Grand Total Awal</td>
-                            <td className="py-1 px-2 font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</td>
-                          </tr>
-                          <tr className="bg-indigo-600 text-white">
-                            <td className="py-1 px-2 font-bold text-[10px] uppercase tracking-widest text-indigo-100">Grand Total Akhir</td>
-                            <td className="py-1 px-2 font-black text-sm tracking-tight">
-                              Rp {new Intl.NumberFormat('id-ID').format(
-                                parseFloat(displayData.totalAmount as string || "0") + 
-                                uniqueReturns.reduce((sum, ret) => sum + parseFloat(ret.differenceAmount || "0"), 0)
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                      
-                      {uniqueReturns.length === 0 && (
-                        <tr className="bg-indigo-600 text-white">
-                          <td className="py-1 px-2 font-bold text-[10px] uppercase tracking-widest text-indigo-100">Grand Total</td>
-                          <td className="py-1 px-2 font-black text-sm tracking-tight">
-                            Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}
-                          </td>
-                        </tr>
-                      )}
+                      <tr className="bg-indigo-600 text-white">
+                        <td className="py-1 px-2 font-bold text-[10px] uppercase tracking-widest text-indigo-100">Grand Total</td>
+                        <td className="py-1 px-2 font-black text-sm tracking-tight">
+                          Rp {new Intl.NumberFormat('id-ID').format(
+                            parseFloat(displayData.totalAmount as string || "0") + 
+                            uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0)
+                          )}
+                        </td>
+                      </tr>
                       
                       <tr>
                         <td className="py-1 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
@@ -622,26 +590,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                         <td className="py-1 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
                         <td className="py-1 px-2 font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</td>
                       </tr>
-                      
-                      {uniqueReturns.length > 0 && (
-                        <tr className="bg-slate-50/50">
-                          <td className="py-1 px-2 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Penyesuaian</td>
-                          <td className="py-1 px-2 font-bold text-slate-800">
-                            {(() => {
-                              const totalAdjust = uniqueReturns.reduce((sum, ret) => {
-                                const diff = parseFloat(ret.differenceAmount || "0");
-                                if (ret.paymentStatus === 'lunas') return sum + diff;
-                                return sum;
-                              }, 0);
-                              return totalAdjust > 0 
-                                ? `+ Rp ${new Intl.NumberFormat('id-ID').format(totalAdjust)}`
-                                : totalAdjust < 0 
-                                  ? `- Rp ${new Intl.NumberFormat('id-ID').format(Math.abs(totalAdjust))}`
-                                  : 'Rp 0';
-                            })()}
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>

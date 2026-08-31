@@ -46,6 +46,27 @@ router.get("/logo", async (req, res) => {
   }
 });
 
+router.get("/logo.svg", async (req, res) => {
+  try {
+    const settings = await db.select().from(settingsTable).where(eq(settingsTable.key, "app_logo"));
+    const appLogo = settings[0]?.value;
+    
+    if (appLogo && appLogo.startsWith("data:image/")) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <image href="${appLogo}" width="512" height="512" preserveAspectRatio="xMidYMid meet" />
+</svg>`;
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.send(svg);
+      return;
+    }
+    
+    res.redirect("/favicon.svg");
+  } catch (error) {
+    res.status(500).end();
+  }
+});
+
 router.get("/manifest.json", async (req, res) => {
   try {
     const settings = await db.select().from(settingsTable);
@@ -56,8 +77,8 @@ router.get("/manifest.json", async (req, res) => {
     
     const appName = result["app_name"] || "EnkaTextile";
     const appLogo = result["app_logo"] || "/favicon.svg";
-    const logoUrl = appLogo !== "/favicon.svg" ? "/api/settings/logo" : "/favicon.svg";
-    const logoType = appLogo.startsWith("data:image/") ? appLogo.substring(5, appLogo.indexOf(";")) : "image/svg+xml";
+    const logoUrl = appLogo !== "/favicon.svg" ? "/api/settings/logo.svg" : "/favicon.svg";
+    const logoType = "image/svg+xml";
     
     res.setHeader("Content-Type", "application/manifest+json");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");

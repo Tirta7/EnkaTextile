@@ -80,6 +80,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const [replacementMeters, setReplacementMeters] = useState<number | "">("");
   const [replacementRolls, setReplacementRolls] = useState<number | "">(1);
   const [replacementPrice, setReplacementPrice] = useState<number | "">("");
+  const [exchangePaymentStatus, setExchangePaymentStatus] = useState<"lunas" | "tempo" | "">("");
   
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey(), enabled: exchangeOpen } });
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey(), enabled: exchangeOpen } });
@@ -219,7 +220,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     const returnedSubtotal = parseFloat(itemToExchange.subtotal as string || "0");
     const exchangeSubtotal = (typeof replacementMeters === "number" ? replacementMeters : 0) * (typeof replacementPrice === "number" ? replacementPrice : 0);
     
-    const paymentStatus = displayData?.remainingAmount && parseFloat(displayData.remainingAmount as string) > 0 ? "tempo" : "lunas";
+    const defaultPaymentStatus = displayData?.remainingAmount && parseFloat(displayData.remainingAmount as string) > 0 ? "tempo" : "lunas";
+    const paymentStatus = exchangePaymentStatus || defaultPaymentStatus;
     
     createReturnMutation.mutate({
       data: {
@@ -723,6 +725,33 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               <label className="text-sm font-medium">Harga/Meter Pengganti</label>
               <Input type="number" step="any" value={replacementPrice} onChange={e => setReplacementPrice(e.target.value === "" ? "" : parseFloat(e.target.value))} />
             </div>
+
+            {/* Payment Status Selector if there is an underpayment */}
+            {(() => {
+              const retSubtotal = parseFloat(itemToExchange?.subtotal as string || "0");
+              const exSubtotal = (typeof replacementMeters === "number" ? replacementMeters : 0) * (typeof replacementPrice === "number" ? replacementPrice : 0);
+              const diff = exSubtotal - retSubtotal;
+              
+              if (diff > 0) {
+                return (
+                  <div className="space-y-2 bg-rose-50 p-3 rounded-lg border border-rose-100 mt-2">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-sm font-bold text-rose-800">Kekurangan Bayar</label>
+                      <span className="font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(diff)}</span>
+                    </div>
+                    <label className="text-xs font-medium text-rose-700">Status Pembayaran Selisih</label>
+                    <Select value={exchangePaymentStatus || (displayData?.remainingAmount && parseFloat(displayData.remainingAmount as string) > 0 ? "tempo" : "lunas")} onValueChange={(val: "lunas" | "tempo") => setExchangePaymentStatus(val)}>
+                      <SelectTrigger className="bg-white"><SelectValue placeholder="Pilih status" /></SelectTrigger>
+                      <SelectContent className="z-[400]">
+                        <SelectItem value="lunas">Lunas (Bayar Sekarang)</SelectItem>
+                        <SelectItem value="tempo">Tempo (Masuk Piutang)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
           </div>
           <DialogFooter className="mt-4 px-6 pb-6">

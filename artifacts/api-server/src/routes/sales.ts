@@ -51,8 +51,8 @@ router.get("/sales", async (req, res) => {
     let finalStatus = s.status;
     if (remainingAmount <= 0) {
       finalStatus = 'lunas';
-    } else if (salePaid > 0 && finalStatus === 'tempo') {
-      finalStatus = 'partial';
+    } else {
+      finalStatus = salePaid > 0 ? 'partial' : 'tempo';
     }
 
     return {
@@ -364,8 +364,8 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
   let finalStatus = sale.status;
   if (remainingAmount <= 0) {
     finalStatus = 'lunas';
-  } else if (salePaid > 0 && finalStatus === 'tempo') {
-    finalStatus = 'partial';
+  } else {
+    finalStatus = salePaid > 0 ? 'partial' : 'tempo';
   }
 
   res.json({

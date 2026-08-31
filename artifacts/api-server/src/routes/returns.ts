@@ -181,6 +181,16 @@ router.post("/returns", async (req, res): Promise<void> => {
         })
         .where(eq(productsTable.id, item.productId));
 
+      if (item.rollId) {
+        await db.execute(sql`
+          UPDATE ${productRollsTable}
+          SET current_length = current_length ${sql.raw(rollOp)} ${item.meters},
+              status = CASE WHEN current_length ${sql.raw(rollOp)} ${item.meters} > 0.01 THEN 'available' ELSE 'empty' END,
+              updated_at = NOW()
+          WHERE id = ${item.rollId}
+        `);
+      }
+
       await db.insert(stockMutationsTable).values({
         productId: item.productId,
         rollId: item.rollId ?? null,
@@ -213,6 +223,52 @@ router.post("/returns", async (req, res): Promise<void> => {
           updatedAt: sql`NOW()`
         })
         .where(eq(productsTable.id, item.productId));
+
+      if (item.rollId) {
+        await db.execute(sql`
+          UPDATE ${productRollsTable}
+          SET current_length = current_length ${sql.raw(rollOp)} ${item.meters},
+              status = CASE WHEN current_length ${sql.raw(rollOp)} ${item.meters} > 0.01 THEN 'available' ELSE 'empty' END,
+              updated_at = NOW()
+          WHERE id = ${item.rollId}
+        `);
+      } else {
+        // Fallback or auto-deduct if exchanged items don't have rollId
+        if (item.rolls > 0) {
+          const availableRolls = await db.select().from(productRollsTable)
+            .where(and(
+              eq(productRollsTable.productId, item.productId),
+              eq(productRollsTable.status, 'available')
+            ));
+          
+          const targetLength = item.meters / item.rolls;
+          const exactRolls = availableRolls.filter(r => Math.abs(parseFloat(r.currentLength) - targetLength) < 0.01);
+          
+          if (exactRolls.length >= item.rolls) {
+            const idsToDeduct = exactRolls.slice(0, item.rolls).map(r => r.id);
+            for (const rId of idsToDeduct) {
+               await db.execute(sql`
+                UPDATE ${productRollsTable}
+                SET current_length = 0, status = 'empty', updated_at = NOW()
+                WHERE id = ${rId}
+              `);
+            }
+          } else {
+             let remainingMeters = item.meters;
+             for (const roll of availableRolls) {
+               if (remainingMeters <= 0.01) break;
+               const rollLen = parseFloat(roll.currentLength);
+               if (rollLen > remainingMeters) {
+                 await db.execute(sql`UPDATE ${productRollsTable} SET current_length = current_length - ${remainingMeters}, updated_at = NOW() WHERE id = ${roll.id}`);
+                 remainingMeters = 0;
+               } else {
+                 await db.execute(sql`UPDATE ${productRollsTable} SET current_length = 0, status = 'empty', updated_at = NOW() WHERE id = ${roll.id}`);
+                 remainingMeters -= rollLen;
+               }
+             }
+          }
+        }
+      }
 
       await db.insert(stockMutationsTable).values({
         productId: item.productId,

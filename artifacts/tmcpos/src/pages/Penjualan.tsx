@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type SaleItem = { productId: number; productName: string; rollId?: number; selectedRolls?: {id: number, currentLength: number}[]; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
@@ -30,6 +30,11 @@ const STATUS_COLORS: Record<string, string> = {
 
 function SaleItemRow({ item, index, products, categories, updateItem, removeItem, allItems }: any) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const [isRollModalOpen, setIsRollModalOpen] = useState(false);
+  const [rollSearch, setRollSearch] = useState("");
+  const [rollPage, setRollPage] = useState(1);
+  const itemsPerPage = 100; // Increased to 100 for grid layout
+  
   const { data: rolls } = useGetProductRolls(item.productId, {
     query: { queryKey: getGetProductRollsQueryKey(item.productId), enabled: !!item.productId }
   });
@@ -96,6 +101,14 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
 
   const filteredProducts = selectedCategoryId === "all" ? products : products?.filter((p: any) => p.categoryId.toString() === selectedCategoryId);
 
+  // Filter available rolls by search (currentLength)
+  const searchFilteredRolls = availableRolls.filter((r: any) => 
+    r.currentLength.toString().includes(rollSearch)
+  );
+  
+  const paginatedRolls = searchFilteredRolls.slice((rollPage - 1) * itemsPerPage, rollPage * itemsPerPage);
+  const totalPages = Math.ceil(searchFilteredRolls.length / itemsPerPage);
+
   return (
     <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
       <div className="md:col-span-2">
@@ -136,8 +149,8 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Roll (Stiker)</label>
-        <Popover modal={false}>
-          <PopoverTrigger asChild>
+        <Dialog open={isRollModalOpen} onOpenChange={setIsRollModalOpen}>
+          <DialogTrigger asChild>
             <Button 
               type="button" 
               variant="outline" 
@@ -153,85 +166,138 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
               </span>
               <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent container={drawerContainer} className="w-[240px] p-0" align="start">
-            <div className="max-h-[300px] overflow-y-auto p-1">
-              <label className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
-                <Checkbox 
-                  checked={!item.targetLength && (!item.selectedRolls || item.selectedRolls.length === 0)}
-                  onCheckedChange={() => {
-                    updateItem(index, "selectedRolls", []);
-                    updateItem(index, "targetLength", undefined);
-                  }}
-                />
-                Potong Bebas (Meteran)
-              </label>
+          </DialogTrigger>
+          <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] flex flex-col p-4" onInteractOutside={(e) => { e.preventDefault(); }}>
+            <DialogHeader className="pb-2 border-b">
+              <DialogTitle className="text-center font-bold text-base">
+                {item.productName || "Pilih Roll / Potongan"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto px-1 flex flex-col gap-2 min-h-0">
+              
+              <div className="flex flex-col">
+                <label className="flex items-center gap-2 rounded-sm px-2 py-1.5 border hover:bg-slate-50 cursor-pointer w-full sm:w-1/3 mx-auto justify-center">
+                  <Checkbox 
+                    checked={!item.targetLength && (!item.selectedRolls || item.selectedRolls.length === 0)}
+                    onCheckedChange={() => {
+                      updateItem(index, "selectedRolls", []);
+                      updateItem(index, "targetLength", undefined);
+                    }}
+                  />
+                  <span className="text-sm font-medium">Potong Bebas</span>
+                </label>
+              </div>
               
               {Object.keys(lengthGroups).length > 0 && (
-                <>
-                  <div className="my-1 h-px bg-slate-100" />
-                  <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">Pilih Otomatis (Per Ukuran)</div>
-                  {Object.entries(lengthGroups).map(([len, count]) => (
-                    <label key={`len_${len}`} className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
-                      <Checkbox 
-                        checked={item.targetLength === parseFloat(len)}
-                        onCheckedChange={() => {
-                          updateItem(index, "selectedRolls", []);
-                          updateItem(index, "targetLength", parseFloat(len));
-                          updateItem(index, "unit", "roll");
-                          updateItem(index, "rolls", 1);
-                          updateItem(index, "meters", parseFloat(len));
-                        }}
-                      />
-                      {len} {item.primaryUnit || 'unit'} <span className="text-slate-400 text-xs">(Tersedia: {count})</span>
-                    </label>
-                  ))}
-                </>
+                <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-100">
+                  <div className="text-xs font-semibold text-slate-700 text-center">Pilih Otomatis (Per Ukuran)</div>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 gap-1">
+                    {Object.entries(lengthGroups).map(([len, count]) => (
+                      <label key={`len_${len}`} className="flex items-center justify-center gap-1.5 rounded-sm px-1.5 py-1 bg-white border hover:border-primary/50 cursor-pointer text-center">
+                        <Checkbox 
+                          checked={item.targetLength === parseFloat(len)}
+                          onCheckedChange={() => {
+                            updateItem(index, "selectedRolls", []);
+                            updateItem(index, "targetLength", parseFloat(len));
+                            updateItem(index, "unit", "roll");
+                            updateItem(index, "rolls", 1);
+                            updateItem(index, "meters", parseFloat(len));
+                          }}
+                        />
+                        <span className="text-xs font-medium">{len} <span className="text-[9px] text-slate-400 font-normal">({count})</span></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {availableRolls.length > 0 && (
-                <>
-                  <div className="my-1 h-px bg-slate-100" />
-                  <div className="px-2 py-1.5 text-xs font-semibold text-slate-500">Pilih Spesifik Barcode</div>
-                  {availableRolls.map(r => {
-                    const isChecked = item.selectedRolls?.some((sr: any) => sr.id === r.id);
-                    return (
-                      <label key={r.id} className="flex items-center gap-2 rounded-sm px-2 py-2 text-sm hover:bg-slate-100 cursor-pointer">
-                        <Checkbox 
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            let newSelected = [...(item.selectedRolls || [])];
-                            if (checked) {
-                              newSelected.push({ id: r.id, currentLength: parseFloat(r.currentLength as unknown as string) });
-                            } else {
-                              newSelected = newSelected.filter((sr: any) => sr.id !== r.id);
-                            }
-                            updateItem(index, "targetLength", undefined);
-                            updateItem(index, "selectedRolls", newSelected);
-                            
-                            if (newSelected.length > 0) {
-                              const sumMeters = newSelected.reduce((sum, sr) => sum + sr.currentLength, 0);
-                              updateItem(index, "unit", "roll");
-                              updateItem(index, "rolls", newSelected.length);
-                              updateItem(index, "meters", sumMeters);
-                            } else {
-                              updateItem(index, "rolls", "");
-                              updateItem(index, "meters", "");
-                            }
-                          }}
-                        />
-                        <div className="flex flex-col">
-                          <span>{r.currentLength} {item.primaryUnit || 'unit'}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">{r.barcode || r.id}</span>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </>
+                <div className="flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-xs font-semibold text-slate-700">Pilih Spesifik Barcode</div>
+                    <div className="relative w-[150px]">
+                      <Search className="absolute left-2 top-2 h-3 w-3 text-slate-400" />
+                      <Input 
+                        placeholder="Cari..." 
+                        className="pl-7 h-7 text-xs bg-white" 
+                        value={rollSearch}
+                        onChange={e => { setRollSearch(e.target.value); setRollPage(1); }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto border rounded p-2 bg-slate-50/50">
+                    {paginatedRolls.length === 0 ? (
+                      <div className="text-center py-4 text-xs text-slate-500">Tidak ada roll ditemukan</div>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5">
+                        {paginatedRolls.map((r: any) => {
+                          const isChecked = item.selectedRolls?.some((sr: any) => sr.id === r.id);
+                          return (
+                            <label key={r.id} className={`flex items-center gap-2 rounded px-2 py-1.5 border cursor-pointer transition-colors ${isChecked ? 'bg-primary/5 border-primary' : 'bg-white hover:border-primary/50'}`} title={r.barcode || r.id}>
+                              <Checkbox 
+                                checked={isChecked}
+                                className="h-4 w-4 shrink-0"
+                                onCheckedChange={(checked) => {
+                                  let newSelected = [...(item.selectedRolls || [])];
+                                  if (checked) {
+                                    newSelected.push({ id: r.id, currentLength: parseFloat(r.currentLength as unknown as string) });
+                                  } else {
+                                    newSelected = newSelected.filter((sr: any) => sr.id !== r.id);
+                                  }
+                                  updateItem(index, "targetLength", undefined);
+                                  updateItem(index, "selectedRolls", newSelected);
+                                  
+                                  if (newSelected.length > 0) {
+                                    const sumMeters = newSelected.reduce((sum, sr) => sum + sr.currentLength, 0);
+                                    updateItem(index, "unit", "roll");
+                                    updateItem(index, "rolls", newSelected.length);
+                                    updateItem(index, "meters", sumMeters);
+                                  } else {
+                                    updateItem(index, "rolls", "");
+                                    updateItem(index, "meters", "");
+                                  }
+                                }}
+                              />
+                              <span className="text-sm font-medium text-slate-700 whitespace-nowrap overflow-hidden">{r.currentLength}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={rollPage === 1} 
+                        onClick={() => setRollPage(p => Math.max(1, p - 1))}
+                      >
+                        Sebelumnya
+                      </Button>
+                      <span className="text-xs text-slate-500 font-medium">
+                        Halaman {rollPage} dari {totalPages}
+                      </span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={rollPage === totalPages} 
+                        onClick={() => setRollPage(p => Math.min(totalPages, p + 1))}
+                      >
+                        Selanjutnya
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-          </PopoverContent>
-        </Popover>
+            <div className="flex justify-end pt-2">
+              <Button onClick={() => setIsRollModalOpen(false)}>Selesai</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="md:col-span-1">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Satuan</label>
@@ -403,6 +469,8 @@ export default function Penjualan() {
           rolls: typeof i.rolls === "number" ? i.rolls : 0,
           pricePerMeter: typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0,
           subtotal: i.subtotal,
+          primaryUnit: i.primaryUnit || prod?.primaryUnit,
+          secondaryUnit: i.secondaryUnit || prod?.secondaryUnit,
         };
       })
     });

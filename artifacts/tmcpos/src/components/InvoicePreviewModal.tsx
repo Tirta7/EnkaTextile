@@ -367,8 +367,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div className="flex-1 p-8 overflow-y-auto w-full min-w-[700px] pb-24" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
-            <div id="printable-invoice" ref={invoiceRef} className="p-8 md:p-12 text-slate-800 bg-white min-h-[400px] origin-top-left" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
+          <div ref={containerRef} className="flex-1 p-2 overflow-y-auto overflow-x-auto w-full pb-24" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
+            <div id="printable-invoice" ref={invoiceRef} className="p-2 text-slate-800 bg-white origin-top-left" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
               {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -376,50 +376,46 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             ) : !displayData ? (
               <div className="text-center pt-12 text-muted-foreground">Data tidak tersedia</div>
             ) : (
-            <div className="max-w-4xl mx-auto text-[13px] leading-relaxed relative">
+            <div className="mx-auto text-sm text-slate-800 font-sans leading-snug relative bg-white">
               {isPaid && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                   <div className="lunas-watermark text-[150px] font-black text-green-500/10 rotate-[-30deg] select-none border-8 border-green-500/10 p-8 rounded-3xl tracking-widest uppercase">LUNAS</div>
                 </div>
               )}
 
-              <div className="flex justify-between items-start mb-8 pb-8 border-b-2 border-indigo-100 relative z-10">
-                <div className="w-[38%]">
-                  <div className="inline-flex flex-col items-center text-center mb-2">
-                    <h1 className="font-black text-[24px] leading-tight tracking-tighter text-indigo-900 mb-0.5 uppercase">{appName}</h1>
-                    <p className="text-slate-800 font-bold text-[11px] tracking-tight uppercase">PT. Spectra Jaya Fashion</p>
-                  </div>
-                  <p className="text-slate-500 whitespace-pre-line text-xs leading-relaxed">{appAddress.replace(/, /g, ",\n")}</p>
+              {/* Header */}
+              <div className="flex justify-between items-start mb-1 pb-1 border-b-[1.5px] border-indigo-100 relative z-10">
+                <div className="w-[35%]">
+                  <h1 className="font-black text-xl text-indigo-900 uppercase tracking-tight">{appName}</h1>
+                  <p className="whitespace-pre-line text-xs text-slate-500 uppercase leading-snug">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
-                <div className="w-[30%] text-center flex flex-col items-center">
-                  <div className="bg-indigo-50 text-indigo-700 px-5 py-2 rounded-full font-bold text-[10px] tracking-widest mb-3 uppercase border border-indigo-100">Nota Penjualan</div>
-                  <div className="flex flex-col items-center justify-center h-full min-h-[100px] text-slate-400">
-                    <div className="flex items-center justify-center gap-2">
-                      <QrCode className="w-5 h-5 text-indigo-400" />
-                      <p className="text-slate-900 font-bold text-base tracking-tight">{displayData.invoiceNumber || "DRAFT"}</p>
-                    </div>
-                    {isPaid && <div className="lunas-stamp mt-2 inline-block border-[1.5px] border-green-600 text-green-600 px-3 py-1 font-black text-[10px] tracking-widest uppercase rounded">LUNAS</div>}
+                <div className="w-[30%] text-center flex flex-col items-center justify-start">
+                  <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-widest border border-indigo-100 shadow-xs mb-1">Nota Penjualan</div>
+                  <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-indigo-400 no-print" /> No. {displayData.invoiceNumber || "DRAFT"}
                   </div>
+                  {isPaid && <div className="lunas-stamp mt-1 inline-block border-[1.5px] border-green-600 text-green-600 px-2 py-0.5 font-bold text-[9px] tracking-widest uppercase rounded">LUNAS</div>}
                 </div>
                 
-                <div className="w-[35%] text-right text-xs">
-                  <p className="text-slate-500 mb-3 text-[11px]">Tanggal: <span className="text-slate-900 font-semibold">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
-                  <p className="text-indigo-400 font-bold text-[10px] uppercase tracking-widest mb-1">Kepada Yth.</p>
-                  <p className="font-extrabold text-slate-900 text-[15px]">{displayData.customerName || "UMUM"}</p>
+                <div className="w-[35%] text-right text-xs flex flex-col items-end">
+                  <p className="mb-1 text-slate-500">Pekalongan, <span className="font-semibold text-slate-900">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
+                  <p className="uppercase tracking-widest font-bold text-indigo-400 text-[10px]">Kepada Yth.</p>
+                  <p className="font-extrabold uppercase text-sm text-slate-900 leading-none mt-0.5">{displayData.customerName || "UMUM"}</p>
                 </div>
               </div>
               
-              <div className="rounded-xl border border-indigo-100 overflow-hidden mb-8 relative z-10 w-full min-w-[700px]">
-                <table className="w-full text-left border-collapse">
+              {/* Table */}
+              <div className="w-full border border-indigo-100 rounded-lg overflow-hidden mb-2 relative z-10">
+                <table className="w-full text-left border-collapse text-[13px]">
                   <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
                     <tr>
-                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest w-10 text-center">No</th>
-                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest">Nama Barang</th>
-                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Kuantitas</th>
-                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Harga</th>
-                      <th className="py-2 px-3 font-bold text-indigo-800 text-[10px] uppercase tracking-widest text-right">Total</th>
-                      {saleId && <th className="no-print w-10"></th>}
+                      <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest w-8 text-center text-[10px]">No</th>
+                      <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest text-[10px]">Nama Barang</th>
+                      <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest text-right text-[10px]">Jumlah</th>
+                      <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest text-right text-[10px]">Harga</th>
+                      <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest text-right text-[10px]">Total</th>
+                      {saleId && <th className="no-print w-8"></th>}
                     </tr>
                   </thead>
                 <tbody>
@@ -428,92 +424,89 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     
                     return (
                       <React.Fragment key={index}>
-                      <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                        <td className="py-1.5 px-3 text-center text-slate-500 text-xs font-medium align-top">{index + 1}</td>
-                        <td className="py-1.5 px-3 align-top">
-                          <div className="flex flex-col items-start gap-1">
-                            {item.categoryName && <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest leading-none">{item.categoryName}</span>}
-                            <span className={`font-bold text-slate-800 text-xs ${item.hasReturned ? 'text-slate-600' : ''}`}>{productName}</span>
-                            
-                            <div className="flex flex-wrap gap-1 mt-0.5 max-w-[280px]">
+                      <tr className="align-top border-b border-slate-100 hover:bg-slate-50/50 transition-colors last:border-0">
+                        <td className="py-0.5 px-2 text-center text-slate-500 font-medium">{index + 1}</td>
+                        <td className="py-0.5 px-2">
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`font-bold uppercase text-slate-800 ${item.hasReturned ? 'text-slate-500' : ''}`}>
+                              {item.categoryName ? <span className="text-[10px] text-indigo-400 font-bold mr-1">{item.categoryName} /</span> : ''}{productName}
+                            </span>
+                            <div className="flex flex-wrap gap-1 mt-0 text-[11px] font-mono leading-none">
                               {item.groupedRolls.map((gr: any, gIdx: number) => (
-                                 <div key={gIdx} className="flex items-center">
-                                   <span className={`text-[9px] px-1 py-0.5 bg-slate-100 rounded text-slate-500 font-mono ${gr.isReturned ? 'line-through opacity-50' : ''}`}>
-                                     [{gr.meters.toFixed(2)}]
-                                   </span>
-                                   {!gr.isReturned && saleId && (
-                                     <Button 
-                                       variant="ghost" size="icon" className="h-4 w-4 ml-0.5 text-orange-400 hover:text-orange-600 no-print" 
-                                       onClick={() => {
-                                         openExchangeWithPinCheck(gr.originalItem);
-                                       }}
-                                       title="Tukar Roll Ini"
-                                     >
-                                       <RefreshCcw className="h-2.5 w-2.5" />
-                                     </Button>
-                                   )}
-                                 </div>
+                                 <span key={gIdx} className={`px-1 bg-slate-100 rounded text-slate-600 ${gr.isReturned ? 'line-through text-slate-400 opacity-60' : ''}`}>
+                                   [{gr.meters.toFixed(2)}]
+                                 </span>
                               ))}
+                              {!item.hasReturned && saleId && item.groupedRolls.some((gr:any) => !gr.isReturned) && (
+                                <Button 
+                                  variant="ghost" size="sm" className="h-4 w-4 ml-1 p-0 text-orange-400 hover:text-orange-600 no-print" 
+                                  onClick={() => {
+                                    openExchangeWithPinCheck(item.groupedRolls.find((gr:any) => !gr.isReturned)?.originalItem);
+                                  }}
+                                  title="Tukar Barang"
+                                >
+                                  <RefreshCcw className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-1.5 px-3 text-right whitespace-nowrap align-top">
-                          <span className="font-semibold text-slate-800 text-xs">{item.totalMeters.toFixed(2)} {(item as any).primaryUnit || 'M'}</span>
-                          <span className="text-slate-400 ml-1 text-[10px]">/ {item.totalRolls} {(item as any).secondaryUnit || 'Roll'}</span>
+                        <td className="py-0.5 px-2 text-right whitespace-nowrap">
+                          <span className="font-semibold text-slate-800">{item.totalMeters.toFixed(2)} {(item as any).primaryUnit || 'M'}</span>
+                          <span className="text-slate-400 ml-1 text-[11px]">/ {item.totalRolls} {(item as any).secondaryUnit || 'Roll'}</span>
                         </td>
-                        <td className="py-1.5 px-3 text-right font-semibold text-slate-600 text-xs align-top">
+                        <td className="py-0.5 px-2 text-right font-semibold text-slate-600">
                           {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
                         </td>
-                        <td className="py-1.5 px-3 text-right font-black text-slate-900 text-xs align-top">
+                        <td className="py-0.5 px-2 text-right font-black text-slate-900">
                           {new Intl.NumberFormat('id-ID').format(item.totalSubtotal)}
                         </td>
-                        {saleId && (
-                          <td className="no-print text-center px-2"></td>
-                        )}
+                        {saleId && <td className="no-print text-center px-1"></td>}
                       </tr>
                       {item.allReturns && item.allReturns.length > 0 && item.allReturns.map((ret: any, retIdx: number) => {
                         const diff = parseFloat(ret.differenceAmount || "0");
                         const pStatus = ret.paymentStatus === 'lunas' ? 'LUNAS' : ret.paymentStatus === 'tempo' ? 'MASUK PIUTANG' : '';
                         const statusTxt = pStatus ? ` [${pStatus}]` : '';
                         let diffText = "TIDAK ADA PENAMBAHAN HARGA";
-                        let diffClass = "text-slate-500";
+                        let diffSign = "";
+                        let diffColor = "text-slate-500";
                         if (diff > 0) {
                           diffText = `KURANG PEMBAYARAN${statusTxt}: RP ${new Intl.NumberFormat('id-ID').format(diff)}`;
-                          diffClass = "text-rose-600";
+                          diffSign = "+";
+                          diffColor = "text-rose-600";
                         } else if (diff < 0) {
                           diffText = `KEMBALIAN / REFUND${statusTxt}: RP ${new Intl.NumberFormat('id-ID').format(Math.abs(diff))}`;
-                          diffClass = "text-emerald-600";
+                          diffSign = "-";
+                          diffColor = "text-emerald-600";
                         }
 
                         return (
                           <React.Fragment key={`ret_${index}_${retIdx}`}>
                             {ret.exchangedItems && ret.exchangedItems.length > 0 ? ret.exchangedItems.map((exc: any, excIdx: number) => (
-                              <tr key={`exc_${index}_${retIdx}_${excIdx}`} className="bg-green-50/30 border-b border-slate-100 last:border-0">
-                                <td className="py-1 px-3"></td>
+                              <tr key={`exc_${index}_${retIdx}_${excIdx}`} className="align-top border-b border-slate-100 last:border-0 bg-green-50/30">
+                                <td className="py-1 px-2"></td>
                                 <td className="py-1 px-3">
-                                  <div className="flex flex-col items-start gap-1">
-                                    <div className="flex items-center gap-1.5">
-                                      <CornerDownRight className="w-3 h-3 text-green-500" />
-                                      <Badge variant="outline" className="text-[8px] py-0 px-1 h-3 border-green-200 text-green-700 bg-green-50 uppercase">TUKAR</Badge>
-                                    </div>
-                                    <span className="font-bold text-slate-700 text-xs ml-4">{exc.productName?.toUpperCase()}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <CornerDownRight className="w-3 h-3 text-green-500" />
+                                    <Badge variant="outline" className="text-[8px] py-0 px-1 h-3 border-green-200 text-green-700 bg-green-50 uppercase mr-1">TUKAR</Badge>
+                                    <span className="font-bold uppercase text-xs text-slate-700">{exc.productName?.toUpperCase()}</span>
                                   </div>
                                 </td>
                                 <td className="py-1 px-3 text-right whitespace-nowrap">
-                                  <span className="font-semibold text-slate-700 text-xs">{parseFloat(exc.meters || "0").toFixed(2)} {(exc as any).primaryUnit || 'M'}</span>
-                                  <span className="text-slate-400 ml-1 text-[10px]">/ {exc.rolls} {(exc as any).secondaryUnit || 'Roll'}</span>
+                                  <span className="font-semibold text-slate-700">{parseFloat(exc.meters || "0").toFixed(2)} {(exc as any).primaryUnit || 'M'}</span>
+                                  <span className="text-slate-400 ml-1 text-[11px]">/ {exc.rolls} {(exc as any).secondaryUnit || 'Roll'}</span>
                                 </td>
-                                <td className="py-1 px-3 text-right font-semibold text-slate-600 text-xs">
+                                <td className="py-1 px-3 text-right font-semibold text-slate-600">
                                   {new Intl.NumberFormat('id-ID').format(parseFloat(exc.pricePerMeter as string || "0"))}
                                 </td>
-                                <td className="py-1 px-3 text-right font-black text-slate-800 text-xs">
+                                <td className="py-1 px-3 text-right font-black text-slate-800">
                                   {new Intl.NumberFormat('id-ID').format(parseFloat(exc.subtotal as string || "0"))}
                                 </td>
                                 {saleId && <td className="no-print"></td>}
                               </tr>
                             )) : (
-                              <tr key={`exc_none_${index}_${retIdx}`} className="bg-amber-50/30 border-b border-slate-100 last:border-0">
-                                <td className="py-1 px-3"></td>
+                              <tr key={`exc_none_${index}_${retIdx}`} className="align-top border-b border-slate-100 last:border-0 bg-amber-50/30">
+                                <td className="py-1 px-2"></td>
                                 <td colSpan={saleId ? 5 : 4} className="py-1 px-3">
                                   <div className="flex items-center gap-1.5">
                                     <CornerDownRight className="w-3 h-3 text-amber-500" />
@@ -522,15 +515,15 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 </td>
                               </tr>
                             )}
-                            <tr className="bg-slate-50/50 border-b border-slate-200">
-                              <td></td>
-                              <td colSpan={saleId ? 5 : 4} className="py-1 px-3 border-l-2 border-indigo-200">
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Selisih Tukar:</span>
-                                  <span className={`text-[10px] uppercase font-black tracking-wider ${diffClass}`}>{diffText}</span>
-                                </div>
-                              </td>
-                            </tr>
+                            {diff !== 0 && (
+                              <tr className="align-top bg-slate-50/80 border-b border-slate-100">
+                                <td></td>
+                                <td colSpan={saleId ? 5 : 4} className="py-1.5 px-3 text-right">
+                                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mr-2">Selisih Tukar:</span>
+                                  <span className={`font-black uppercase text-xs ${diffColor}`}>{diffSign} {diffText}</span>
+                                </td>
+                              </tr>
+                            )}
                           </React.Fragment>
                         );
                       })}
@@ -541,90 +534,99 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 </table>
               </div>
 
-              <div className="flex justify-between items-start relative z-10 min-w-[700px]">
-                <div className="w-[45%]">
-                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-xl p-5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-6 h-6 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[10px]">Rp</div>
-                      <p className="text-indigo-900 font-bold text-xs uppercase tracking-wider">Informasi Transfer</p>
+              {/* Footer */}
+              <div className="flex justify-between items-start w-full text-[13px] mt-2 relative z-10">
+                <div className="w-[50%] flex flex-col justify-between">
+                  <div className="bg-linear-to-br from-indigo-50 to-indigo-100/50 border border-indigo-100 rounded-lg p-2 w-11/12 mb-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="w-5 h-5 rounded bg-indigo-200 flex items-center justify-center text-indigo-700 font-bold text-[9px]">Rp</div>
+                      <p className="text-indigo-900 font-bold text-[10px] uppercase tracking-wider">Informasi Transfer</p>
                     </div>
-                    <p className="text-indigo-800 text-[14px] font-bold font-mono tracking-wider mt-2">{invoiceBankAccount}</p>
-                    <p className="text-indigo-600 text-xs mt-1 font-medium">{invoiceBankName}</p>
-                  </div>
-                  {invoiceNotes && (
-                    <div className="mt-4 p-4 border border-slate-200 rounded-xl bg-slate-50/50">
-                      <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Catatan</p>
-                      <p className="text-slate-700 text-xs italic">{invoiceNotes}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="w-[45%] bg-white rounded-xl border border-slate-200 p-0 overflow-hidden">
-                  <div className="p-4 bg-slate-50 border-b border-slate-200">
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span className="text-xs font-semibold uppercase tracking-wider">Total Kuantitas Awal</span>
-                      <span className="font-bold text-slate-800">{totalYds.toFixed(2)} {(displayData.items?.[0] as any)?.primaryUnit || 'M'} / {totalRolls} {(displayData.items?.[0] as any)?.secondaryUnit || 'Roll'}</span>
-                    </div>
-                    {uniqueReturns.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-200/60">
-                        {uniqueReturns.map((ret: any) => {
-                          const diff = parseFloat(ret.differenceAmount || "0");
-                          if (diff === 0) return null;
-                          const isOwed = diff > 0;
-                          const pStatus = ret.paymentStatus === 'lunas' ? '(Lunas)' : ret.paymentStatus === 'tempo' ? '(Masuk Piutang)' : '';
-                          return (
-                            <div key={`ret_sum_${ret.id}`} className="flex justify-between items-center mt-1">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase">
-                                {isOwed ? `Kurang Bayar (Tukar) ${pStatus}` : `Kembalian (Retur) ${pStatus}`}
-                              </span>
-                              <span className={`text-[10px] font-bold ${isOwed ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                {isOwed ? '+' : '-'} Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diff))}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <p className="text-indigo-800 font-bold font-mono tracking-wider mt-0.5 text-xs">{invoiceBankAccount}</p>
+                    <p className="text-indigo-600 text-[10px] font-medium leading-none mt-1">{invoiceBankName}</p>
+                    {invoiceNotes && (
+                      <p className="text-slate-600 text-[9px] mt-1 italic pt-1 border-t border-indigo-200/50">Catatan: {invoiceNotes}</p>
                     )}
                   </div>
-                  
-                  {uniqueReturns.length > 0 ? (
-                    <>
-                      <div className="p-4 bg-slate-100 text-slate-500 flex justify-between items-center border-b border-slate-200">
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Grand Total Awal</span>
-                        <span className="font-bold text-sm">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
-                      </div>
-                      <div className="p-4 bg-indigo-600 text-white flex justify-between items-center">
-                        <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">Grand Total Akhir</span>
-                        <span className="font-black text-xl tracking-tight">
-                          Rp {new Intl.NumberFormat('id-ID').format(
-                            parseFloat(displayData.totalAmount as string || "0") + 
-                            uniqueReturns.reduce((sum, ret) => sum + parseFloat(ret.differenceAmount || "0"), 0)
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-4 bg-indigo-600 text-white flex justify-between items-center">
-                      <span className="text-xs font-bold uppercase tracking-widest text-indigo-100">Grand Total Awal</span>
-                      <span className="font-black text-xl tracking-tight">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</span>
+
+                  <div className="flex text-center w-full justify-between font-medium">
+                    <div className="w-[45%] flex flex-col items-center">
+                      <p className="mb-8 text-slate-500 text-[10px]">Tanda Terima,</p>
+                      <div className="border-b border-slate-400 w-full mb-0.5"></div>
+                      <p className="text-[9px] text-slate-400 uppercase tracking-widest">Pelanggan</p>
                     </div>
-                  )}
-                  
-                  <div className="p-4 bg-white">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-slate-500 font-medium text-xs">Di Bayar Awal</span>
-                      <span className="font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</span>
+                    <div className="w-[45%] flex flex-col items-center">
+                      <p className="mb-8 text-slate-500 text-[10px]">Hormat Kami,</p>
+                      <div className="border-b border-slate-400 w-full mb-0.5"></div>
+                      <p className="text-[10px] font-bold text-slate-800 uppercase tracking-tight">{appName}</p>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-500 font-medium text-xs">Sisa Bayar Awal</span>
-                      <span className="font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</span>
-                    </div>
-                    
-                    {uniqueReturns.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-slate-200/60">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Penyesuaian</span>
-                          <span className="font-bold text-xs">
+                  </div>
+                </div>
+
+                <div className="w-[45%] border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                  <table className="w-full text-right text-[13px] border-collapse">
+                    <tbody>
+                      <tr className="bg-slate-50 border-b border-slate-200">
+                        <td className="py-1 px-2 font-semibold text-slate-600 text-[10px] uppercase tracking-wider w-1/2">Total Kuantitas</td>
+                        <td className="py-1 px-2 font-bold text-slate-800 text-left">
+                          {totalYds.toFixed(2)} {(displayData.items?.[0] as any)?.primaryUnit || 'M'} / {totalRolls} Roll
+                        </td>
+                      </tr>
+                      
+                      {uniqueReturns.length > 0 && (
+                        <>
+                          {uniqueReturns.map((ret: any) => {
+                            const diff = parseFloat(ret.differenceAmount || "0");
+                            if (diff === 0) return null;
+                            const isOwed = diff > 0;
+                            const pStatus = ret.paymentStatus === 'lunas' ? '(Lunas)' : ret.paymentStatus === 'tempo' ? '(Piutang)' : '';
+                            return (
+                              <tr key={`ret_sum_${ret.id}`} className="border-b border-slate-100">
+                                <td className="py-1 px-2 text-[10px] font-bold text-slate-500 uppercase">{isOwed ? `Kurang Bayar ${pStatus}` : `Kembalian ${pStatus}`}</td>
+                                <td className={`py-1 px-2 font-bold ${isOwed ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                  {isOwed ? '+' : '-'} Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diff))}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          <tr className="bg-slate-100/50">
+                            <td className="py-1 px-2 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Grand Total Awal</td>
+                            <td className="py-1 px-2 font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}</td>
+                          </tr>
+                          <tr className="bg-indigo-600 text-white">
+                            <td className="py-1 px-2 font-bold text-[10px] uppercase tracking-widest text-indigo-100">Grand Total Akhir</td>
+                            <td className="py-1 px-2 font-black text-sm tracking-tight">
+                              Rp {new Intl.NumberFormat('id-ID').format(
+                                parseFloat(displayData.totalAmount as string || "0") + 
+                                uniqueReturns.reduce((sum, ret) => sum + parseFloat(ret.differenceAmount || "0"), 0)
+                              )}
+                            </td>
+                          </tr>
+                        </>
+                      )}
+                      
+                      {uniqueReturns.length === 0 && (
+                        <tr className="bg-indigo-600 text-white">
+                          <td className="py-1 px-2 font-bold text-[10px] uppercase tracking-widest text-indigo-100">Grand Total</td>
+                          <td className="py-1 px-2 font-black text-sm tracking-tight">
+                            Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}
+                          </td>
+                        </tr>
+                      )}
+                      
+                      <tr>
+                        <td className="py-1 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
+                        <td className="py-1 px-2 font-bold text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}</td>
+                      </tr>
+                      <tr className="border-b border-slate-100">
+                        <td className="py-1 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
+                        <td className="py-1 px-2 font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}</td>
+                      </tr>
+                      
+                      {uniqueReturns.length > 0 && (
+                        <tr className="bg-slate-50/50">
+                          <td className="py-1 px-2 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Penyesuaian</td>
+                          <td className="py-1 px-2 font-bold text-slate-800">
                             {(() => {
                               const totalAdjust = uniqueReturns.reduce((sum, ret) => {
                                 const diff = parseFloat(ret.differenceAmount || "0");
@@ -637,25 +639,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                   ? `- Rp ${new Intl.NumberFormat('id-ID').format(Math.abs(totalAdjust))}`
                                   : 'Rp 0';
                             })()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-16 mt-12 pr-4 min-w-[700px]">
-                <div className="text-center w-48 flex flex-col items-center">
-                  <p className="text-slate-500 text-xs mb-16 font-medium">Tanda Terima,</p>
-                  <div className="border-b border-slate-400 w-full"></div>
-                  <p className="text-slate-500 text-[11px] mt-2 uppercase">Pelanggan</p>
-                </div>
-                <div className="text-center w-48 flex flex-col items-center">
-                  <p className="text-slate-500 text-xs mb-16 font-medium">Hormat Kami,</p>
-                  <div className="border-b border-slate-400 w-full"></div>
-                  <p className="text-slate-900 font-bold text-xs mt-2 uppercase">{appName}</p>
-                  <p className="text-slate-600 font-semibold text-[7px] mt-0.5 uppercase tracking-tight">PT. Spectra Jaya Fashion</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>

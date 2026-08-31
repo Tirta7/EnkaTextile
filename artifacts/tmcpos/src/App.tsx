@@ -109,13 +109,21 @@ function GlobalAppEffects() {
 
     const appLogo = settings?.["app_logo"];
     if (appLogo && appLogo !== "/favicon.svg") {
-      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'icon';
-        document.head.appendChild(link);
-      }
+      // Remove all existing icon links to force browser to pick up the new one
+      const existingLinks = document.querySelectorAll("link[rel~='icon']");
+      existingLinks.forEach(link => link.remove());
+
+      // Create new standard favicon
+      const link = document.createElement('link');
+      link.rel = 'icon';
       link.href = appLogo;
+      document.head.appendChild(link);
+
+      // Create new apple-touch-icon
+      const appleLink = document.createElement('link');
+      appleLink.rel = 'apple-touch-icon';
+      appleLink.href = appLogo;
+      document.head.appendChild(appleLink);
     }
   }, [settings]);
 

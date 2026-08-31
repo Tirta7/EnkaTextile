@@ -55,13 +55,15 @@ router.get("/returns", async (req, res) => {
 router.get("/returns/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   
-  const returnDoc = await db.query.returnsTable.findFirst({
-    where: eq(returnsTable.id, parseInt(id)),
-    with: {
-      customer: true,
-      supplier: true,
-    }
-  });
+  const [returnDoc] = await db.select({
+    returnInfo: returnsTable,
+    customer: customersTable,
+    supplier: suppliersTable,
+  })
+  .from(returnsTable)
+  .leftJoin(customersTable, eq(returnsTable.customerId, customersTable.id))
+  .leftJoin(suppliersTable, eq(returnsTable.supplierId, suppliersTable.id))
+  .where(eq(returnsTable.id, parseInt(id)));
 
   if (!returnDoc) {
     res.status(404).json({ error: "Return not found" });
@@ -101,8 +103,10 @@ router.get("/returns/:id", async (req, res): Promise<void> => {
     .where(eq(returnExchangedItemsTable.returnId, parseInt(id)));
 
   res.json({
-    ...returnDoc,
-    createdAt: returnDoc.createdAt.toISOString(),
+    ...returnDoc.returnInfo,
+    customer: returnDoc.customer,
+    supplier: returnDoc.supplier,
+    createdAt: returnDoc.returnInfo.createdAt.toISOString(),
     returnedItems,
     exchangedItems,
   });

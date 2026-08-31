@@ -493,7 +493,7 @@ export default function Penjualan() {
           if (i.selectedRolls && i.selectedRolls.length > 0) {
             return i.selectedRolls.map(r => {
               const metersNum = typeof r.currentLength === "string" ? parseFloat(r.currentLength) : (r.currentLength || 0);
-              const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0;
+              const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
               return {
                 productId: i.productId,
                 rollId: r.id,
@@ -507,14 +507,15 @@ export default function Penjualan() {
           // Normal fallback
           const metersNum = typeof i.meters === "number" ? i.meters : (typeof i.meters === "string" ? parseFloat(i.meters) : 0);
           const rollsNum = typeof i.rolls === "number" ? i.rolls : (typeof i.rolls === "string" ? parseFloat(i.rolls) : 0);
-          const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : 0;
+          const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
+          const fallbackSubtotal = (typeof i.subtotal === "number" ? i.subtotal : (metersNum * priceNum));
           return [{ 
             productId: i.productId, 
             rollId: i.rollId || undefined, 
             rolls: rollsNum || 0, 
             meters: metersNum || 0, 
             pricePerMeter: priceNum, 
-            subtotal: i.subtotal || 0 
+            subtotal: fallbackSubtotal 
           }];
         })
       }

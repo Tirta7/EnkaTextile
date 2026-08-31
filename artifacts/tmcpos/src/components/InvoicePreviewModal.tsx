@@ -286,8 +286,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     }
   };
 
-  const totalYds = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
-  const totalRolls = displayData?.items.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
+  const activeItems = displayData?.items?.filter((i: any) => !i.isReturned) || [];
+  const exchangedItemsArr = (displayData as any)?.exchangedItems || [];
+  const allActiveItems = [...activeItems, ...exchangedItemsArr];
+  const totalYds = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
+  const totalRolls = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
   
   const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0;
   const availableRolls = rolls?.filter(r => r.status === 'available') || [];

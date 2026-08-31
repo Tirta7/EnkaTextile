@@ -32,23 +32,28 @@ router.get("/sales", async (req, res) => {
       notes: salesTable.notes,
       createdAt: salesTable.createdAt,
       hasReturns: sql<boolean>`EXISTS(SELECT 1 FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
-      returnDifference: sql<string>`(SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id})`,
+      returnDifference: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id}), 0)`,
+      returnDifferencePaid: sql<string>`COALESCE((SELECT sum(${returnsTable.differenceAmount}) FROM ${returnsTable} WHERE ${returnsTable.saleId} = ${salesTable.id} AND ${returnsTable.paymentStatus} = 'lunas'), 0)`,
     })
     .from(salesTable)
     .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(salesTable.createdAt));
 
-  res.json(sales.map(s => ({
-    ...s,
-    totalAmount: numStr(s.totalAmount),
-    paidAmount: numStr(s.paidAmount),
-    remainingAmount: numStr(s.totalAmount) - numStr(s.paidAmount),
-    dueDate: s.dueDate?.toISOString() ?? null,
-    createdAt: s.createdAt.toISOString(),
-    hasReturns: Boolean(s.hasReturns),
-    returnDifference: numStr(s.returnDifference),
-  })));
+  res.json(sales.map(s => {
+    const saleGross = numStr(s.totalAmount) + numStr(s.returnDifference);
+    const salePaid = numStr(s.paidAmount) + numStr((s as any).returnDifferencePaid);
+    return {
+      ...s,
+      totalAmount: saleGross,
+      paidAmount: salePaid,
+      remainingAmount: saleGross - salePaid,
+      dueDate: s.dueDate?.toISOString() ?? null,
+      createdAt: s.createdAt.toISOString(),
+      hasReturns: Boolean(s.hasReturns),
+      returnDifference: numStr(s.returnDifference),
+    };
+  }));
 });
 
 router.post("/sales", async (req, res): Promise<void> => {

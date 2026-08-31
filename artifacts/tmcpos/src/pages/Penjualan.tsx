@@ -707,8 +707,8 @@ export default function Penjualan() {
                             {((s as any).returnDifference !== undefined && (s as any).returnDifference !== 0) && (
                               <span className={`text-[10px] font-bold ${(s as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                                 {(s as any).returnDifference > 0 
-                                  ? `(Kurang Bayar Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)})` 
-                                  : `(Refund Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))})`}
+                                  ? `(Selisih Tukar: Kurang Pembayaran Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)})` 
+                                  : `(Selisih Tukar: Lebih Bayar Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))})`}
                               </span>
                             )}
                           </div>

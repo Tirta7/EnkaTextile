@@ -591,6 +591,22 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           )}
                         </td>
                       </tr>
+                      {(() => {
+                        const diffTotal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+                        if (diffTotal !== 0) {
+                          return (
+                            <tr className="border-b border-slate-100">
+                              <td className="py-1 px-2 font-medium text-slate-500 text-xs">
+                                {diffTotal > 0 ? "Selisih Tukar (Kurang Bayar)" : "Selisih Tukar (Lebih Bayar)"}
+                              </td>
+                              <td className={`py-1 px-2 font-medium ${diffTotal > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                {diffTotal > 0 ? "+ " : "- "}Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diffTotal))}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return null;
+                      })()}
                       <tr className="border-b border-slate-100">
                         <td className="py-1 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
                         <td className="py-1 px-2 font-medium text-rose-600">

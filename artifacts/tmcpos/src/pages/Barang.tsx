@@ -589,7 +589,7 @@ export default function Barang() {
                   {/* Dynamic inputs for roll lengths */}
                   {(form.watch('rollStock') || 0) > 0 && !editingId && (
                     <div className="md:col-span-3 bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                      <FormLabel className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</FormLabel>
+                      <label className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</label>
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
                           <div key={i} className="space-y-1.5">

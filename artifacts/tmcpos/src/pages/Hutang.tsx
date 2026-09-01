@@ -54,8 +54,21 @@ export default function Hutang() {
   const selectedPay = payables?.find(p => p.id === selectedId);
 
   const handlePay = () => {
-    if (!selectedId || !payAmount) return;
-    payMutation.mutate({ id: selectedId, data: { amount: parseFloat(payAmount), paymentMethod: payMethod as any, notes: payNotes || undefined } });
+    if (!selectedId || !selectedPay) return;
+    const amount = parseFloat(payAmount) || 0;
+    const remaining = (selectedPay as any).remainingAmount || 0;
+    
+    if (amount <= 0) {
+      toast({ title: "Jumlah tidak valid", description: "Jumlah bayar harus lebih dari 0", variant: "destructive" });
+      return;
+    }
+    
+    if (amount > remaining) {
+      toast({ title: "Jumlah terlalu besar", description: `Maksimal pembayaran adalah ${formatRupiah(remaining)}`, variant: "destructive" });
+      return;
+    }
+    
+    payMutation.mutate({ id: selectedId, data: { amount, paymentMethod: payMethod as any, notes: payNotes || undefined } });
   };
 
   const filtered = filterByDateRange(
@@ -292,7 +305,22 @@ export default function Hutang() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Jumlah Bayar (Rp)</label>
-                <Input type="number" min={0} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+                <Input type="number" min={0} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} className={parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) ? "border-red-500 focus-visible:ring-red-500" : ""} />
+                
+                {/* Real-time Validation and Formatting Preview */}
+                {payAmount && (
+                  <div className="mt-1.5 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-violet-600 block bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
+                      Preview: {formatRupiah(parseFloat(payAmount) || 0)}
+                    </span>
+                    {parseFloat(payAmount) <= 0 && (
+                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Harus lebih dari 0</span>
+                    )}
+                    {parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) && (
+                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Melebihi sisa hutang ({formatRupiah((selectedPay as any).remainingAmount)})</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>

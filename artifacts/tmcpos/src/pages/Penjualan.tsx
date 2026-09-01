@@ -537,27 +537,33 @@ export default function Penjualan() {
   }, [baseFiltered, activeTab]);
 
   const summaryData = useMemo(() => {
-    if (!filtered) return { subTotal: 0, diBayar: 0, sisaBayar: 0 };
+    if (!filtered) return { subTotal: 0, diBayar: 0, sisaBayar: 0, kembalian: 0, totalRefund: 0 };
     return filtered.reduce((acc, s: any) => {
       const baseTotal = parseFloat(s.totalAmount || "0");
-      const diffTotal = (s.returns || []).reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+      const diffTotal = s.returnDifference ? parseFloat(s.returnDifference) : 0;
       const grandTotal = baseTotal + diffTotal;
       
       const basePaid = parseFloat(s.paidAmount || "0");
-      const diffPaid = (s.returns || []).reduce((sum: number, ret: any) => {
-        const diff = parseFloat(ret.differenceAmount || "0");
-        if (ret.paymentStatus === 'lunas') return sum + diff;
-        return sum;
-      }, 0);
+      const diffPaid = (s as any).returnDifferencePaid ? parseFloat((s as any).returnDifferencePaid) : 0;
       const actualPaid = basePaid + diffPaid;
       
       const rem = grandTotal - actualPaid;
       
       acc.subTotal += grandTotal;
       acc.diBayar += actualPaid;
-      acc.sisaBayar += (rem > 0 ? rem : 0);
+      
+      if (rem > 0) {
+        acc.sisaBayar += rem;
+      } else if (rem < 0) {
+        acc.kembalian += Math.abs(rem);
+      }
+      const refundAmt = s.returnDifference ? parseFloat(s.returnDifference) : 0;
+      if (refundAmt < 0) {
+        acc.totalRefund += Math.abs(refundAmt);
+      }
+      
       return acc;
-    }, { subTotal: 0, diBayar: 0, sisaBayar: 0 });
+    }, { subTotal: 0, diBayar: 0, sisaBayar: 0, kembalian: 0, totalRefund: 0 });
   }, [filtered]);
 
   return (
@@ -629,6 +635,18 @@ export default function Penjualan() {
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
               <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
             </div>
+            {summaryData.totalRefund > 0 && (
+              <div className="flex flex-col border-l border-slate-200 pl-4 sm:pl-8 ml-0 sm:ml-0">
+                <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund Kas</span>
+                <span className="font-bold text-emerald-600">{formatRupiah(summaryData.totalRefund)}</span>
+              </div>
+            )}
+            {summaryData.kembalian > 0 && (
+              <div className="flex flex-col border-l border-slate-200 pl-4 sm:pl-8 ml-0 sm:ml-0">
+                <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
+                <span className="font-bold text-emerald-600">{formatRupiah(summaryData.kembalian)}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

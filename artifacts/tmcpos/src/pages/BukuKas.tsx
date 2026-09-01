@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
-import { useListCashEntries, useGetCashBalance, useCreateCashEntry, getListCashEntriesQueryKey, getGetCashBalanceQueryKey } from "@workspace/api-client-react";
+import { useListCashEntries, useGetCashBalance, useCreateCashEntry, getListCashEntriesQueryKey, getGetCashBalanceQueryKey, useListReturns, getListReturnsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,6 +18,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
+import { ReturnInvoiceModal } from "@/components/ReturnInvoiceModal";
 
 const schema = z.object({
   type: z.enum(["income", "expense"]),
@@ -35,6 +36,9 @@ export default function BukuKas() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [previewReturnId, setPreviewReturnId] = useState<number | null>(null);
+
+  const { data: returns } = useListReturns();
 
   const { data: entries, isLoading } = useListCashEntries({}, { query: { queryKey: getListCashEntriesQueryKey({}) } });
   const { data: balance } = useGetCashBalance({ query: { queryKey: getGetCashBalanceQueryKey() } });
@@ -62,13 +66,15 @@ export default function BukuKas() {
 
   const filteredBase = entries?.filter(e => {
     const matchSearch = e.description.toLowerCase().includes(search.toLowerCase());
-    const matchType = activeTab === "semua" || e.type === activeTab;
+    const matchType = activeTab === "semua" || 
+      (activeTab === "income" && (e.type === "income" || e.type === "masuk")) || 
+      (activeTab === "expense" && (e.type === "expense" || e.type === "keluar"));
     return matchSearch && matchType;
   });
   const filtered = filterByDateRange(filteredBase ?? [], dateFrom, dateTo);
 
-  const totalIn = entries?.filter(e => e.type === "income").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
-  const totalOut = entries?.filter(e => e.type === "expense").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
+  const totalIn = entries?.filter(e => e.type === "income" || e.type === "masuk").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
+  const totalOut = entries?.filter(e => e.type === "expense" || e.type === "keluar").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
@@ -167,25 +173,34 @@ export default function BukuKas() {
         ) : (
           <>
             {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e) => {
-              const isIncome = e.type === "income";
-              
-              // Decorative Badge Class
-              let badgeClass = "bg-red-100 text-red-700";
-              let iconClass = "text-red-500";
-              let iconBgClass = "bg-red-50 border-red-100";
-              let StatusIcon = ArrowUpFromLine;
-              
-              if (isIncome) {
-                badgeClass = "bg-green-100 text-green-700";
-                iconClass = "text-green-500";
-                iconBgClass = "bg-green-50 border-green-100";
-                StatusIcon = ArrowDownToLine;
-              }
+              const isIncome = e.type === "income" || e.type === "masuk";
+              const Icon = isIncome ? ArrowUpFromLine : ArrowDownToLine;
+              const iconClass = isIncome ? "text-emerald-500" : "text-rose-500";
+              const iconBgClass = isIncome ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100";
+              const badgeClass = isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
+              const StatusIcon = e.type === "masuk" || e.type === "keluar" ? BookOpen : Icon;
+
+              const isRetur = (e as any).reference?.startsWith("RET-");
 
               return (
-                <div key={e.id} className={`bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md`}>
-                  
-                  {/* Decorative side accent */}
+                <div 
+                  key={e.id} 
+                  onClick={() => {
+                    if (isRetur) {
+                      const foundReturn = returns?.find(r => r.returnNumber === (e as any).reference);
+                      if (foundReturn) setPreviewReturnId(foundReturn.id);
+                    }
+                  }}
+                  className={`bg-white rounded-3xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4 relative overflow-hidden transition-all duration-300 ${isRetur ? 'cursor-pointer hover:shadow-md hover:border-violet-200 group' : ''}`}
+                >
+                  {isRetur && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="sm" className="h-8 rounded-full text-violet-600 bg-violet-50 hover:bg-violet-100">
+                        Lihat Retur
+                      </Button>
+                    </div>
+                  )}
+                  {/* Decorative corner accent */}
                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${badgeClass.split(' ')[0]}`} />
 
                   {/* Header: Waktu */}
@@ -285,6 +300,12 @@ export default function BukuKas() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      <ReturnInvoiceModal 
+        open={!!previewReturnId} 
+        onOpenChange={(open) => !open && setPreviewReturnId(null)} 
+        returnId={previewReturnId ?? undefined} 
+      />
     </div>
   );
 }

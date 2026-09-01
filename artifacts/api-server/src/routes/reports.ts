@@ -318,4 +318,66 @@ router.get("/reports/stock-summary", async (req, res) => {
   });
 });
 
+// ─── 6. REFUND / TRANSFER BALIK ─────────────────────────────────────────────
+router.get("/reports/refunds", async (req, res) => {
+  const { startDate, endDate } = req.query;
+  const conditions: any[] = [
+    sql`${returnsTable.differenceAmount} < 0`
+  ];
+  if (startDate) {
+    const start = new Date(`${startDate}T00:00:00`);
+    conditions.push(gte(returnsTable.createdAt, start));
+  }
+  if (endDate) {
+    const end = new Date(`${endDate}T23:59:59.999`);
+    conditions.push(lte(returnsTable.createdAt, end));
+  }
+
+  const refunds = await db
+    .select({
+      id: returnsTable.id,
+      returnNumber: returnsTable.returnNumber,
+      type: returnsTable.type,
+      paymentStatus: returnsTable.paymentStatus,
+      differenceAmount: returnsTable.differenceAmount,
+      cashRefunded: returnsTable.cashRefunded,
+      createdAt: returnsTable.createdAt,
+      customerName: customersTable.name,
+      invoiceNumber: salesTable.invoiceNumber,
+    })
+    .from(returnsTable)
+    .leftJoin(salesTable, eq(returnsTable.saleId, salesTable.id))
+    .leftJoin(customersTable, eq(returnsTable.customerId, customersTable.id))
+    .where(and(...conditions))
+    .orderBy(desc(returnsTable.createdAt));
+
+  const formattedRefunds = refunds.map((r, idx) => {
+    const diff = Math.abs(numStr(r.differenceAmount));
+    const cash = numStr(r.cashRefunded);
+    return {
+      no: idx + 1,
+      id: r.id,
+      returnNumber: r.returnNumber,
+      invoiceNumber: r.invoiceNumber ?? "-",
+      tanggal: r.createdAt.toISOString(),
+      customerName: r.customerName ?? "Pelanggan Umum",
+      type: r.type,
+      paymentStatus: r.paymentStatus,
+      totalRefund: diff,
+      cashRefunded: cash,
+      statusRefund: cash > 0 ? "SELESAI (DITRANSFER/TUNAI)" : "MASUK SALDO KREDIT / PIUTANG",
+    };
+  });
+
+  res.json({
+    summary: {
+      totalTransactions: formattedRefunds.length,
+      totalRefund: formattedRefunds.reduce((s, r) => s + r.totalRefund, 0),
+      totalCashRefunded: formattedRefunds.reduce((s, r) => s + r.cashRefunded, 0),
+    },
+    rows: formattedRefunds,
+  });
+});
+
+
 export default router;

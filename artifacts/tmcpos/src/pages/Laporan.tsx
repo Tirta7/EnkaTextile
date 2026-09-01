@@ -12,7 +12,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area, ComposedChart, Line
 } from "recharts";
-import { TrendingUp, Package, Download, FileText, Receipt, BarChart2, Search, Printer } from "lucide-react";
+import { TrendingUp, Package, Download, FileText, Receipt, BarChart2, Search, Printer, ArrowDownToLine } from "lucide-react";
 import { formatRupiah, formatNumber } from "@/lib/utils";
 import { PaginationControl } from "../components/PaginationControl";
 
@@ -38,6 +38,13 @@ async function fetchSalesTrend(startDate: string, endDate: string) {
   const params = new URLSearchParams({ startDate, endDate });
   const res = await fetch(`${BASE_URL}/reports/sales-trend?${params}`);
   if (!res.ok) throw new Error("Failed to fetch trend");
+  return res.json();
+}
+
+async function fetchRefunds(startDate: string, endDate: string) {
+  const params = new URLSearchParams({ startDate, endDate });
+  const res = await fetch(`${BASE_URL}/reports/refunds?${params}`);
+  if (!res.ok) throw new Error("Failed to fetch refunds report");
   return res.json();
 }
 
@@ -131,6 +138,7 @@ export default function Laporan() {
   const [search, setSearch] = useState("");
   const [currentSalesPage, setCurrentSalesPage] = useState(1);
   const [currentStockPage, setCurrentStockPage] = useState(1);
+  const [currentRefundPage, setCurrentRefundPage] = useState(1);
   const [currentDetailPage, setCurrentDetailPage] = useState(1);
   const [currentTaxPage, setCurrentTaxPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -152,8 +160,13 @@ export default function Laporan() {
     queryFn: () => fetchSalesTax(startDate, endDate),
   });
   const { data: trendData, isLoading: loadingTrend } = useQuery({
-    queryKey: ["reports/sales-trend", startDate, endDate],
+    queryKey: ['salesTrend', startDate, endDate],
     queryFn: () => fetchSalesTrend(startDate, endDate),
+  });
+
+  const { data: refundsData, isLoading: isRefundsLoading } = useQuery({
+    queryKey: ['refundsReport', startDate, endDate],
+    queryFn: () => fetchRefunds(startDate, endDate),
   });
 
   // — Filtered detail rows —
@@ -244,6 +257,10 @@ export default function Laporan() {
             <TabsTrigger value="stok"
               className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
               <Package className="h-4 w-4" /> Stok
+            </TabsTrigger>
+            <TabsTrigger value="refunds"
+              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
+              <ArrowDownToLine className="h-4 w-4" /> Refund (Transfer)
             </TabsTrigger>
           </TabsList>
         </div>
@@ -732,6 +749,96 @@ export default function Laporan() {
               <p className="text-slate-400">Tidak ada data stok</p>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="refunds" className="mt-0 outline-none">
+          {isRefundsLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
+          ) : refundsData ? (
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <ArrowDownToLine className="w-5 h-5 text-emerald-600" /> Refund / Transfer Balik
+                  </h2>
+                  <p className="text-sm text-slate-500">Daftar retur dengan pengembalian dana ke pelanggan</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => exportCSV(refundsData?.rows, "laporan_refund", { no: "No", returnNumber: "No. Retur", invoiceNumber: "No. Invoice", tanggal: "Tanggal", customerName: "Pelanggan", totalRefund: "Total Refund", cashRefunded: "Ditransfer/Tunai", statusRefund: "Status" })}
+                  className="rounded-xl h-8 text-xs font-semibold gap-1.5 self-start sm:self-center">
+                  <Download className="h-3.5 w-3.5" /> Export CSV
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-0 border-b border-slate-100">
+                <div className="p-4 sm:p-6 border-b sm:border-b-0 sm:border-r border-slate-100">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Total Transaksi</span>
+                  <p className="text-2xl font-black text-slate-800 mt-1">{refundsData?.summary?.totalTransactions || 0}</p>
+                </div>
+                <div className="p-4 sm:p-6 border-b sm:border-b-0 sm:border-r border-slate-100">
+                  <span className="text-xs font-semibold text-slate-500 uppercase">Total Tagihan Refund</span>
+                  <p className="text-2xl font-black text-rose-600 mt-1">{formatRupiah(refundsData?.summary?.totalRefund || 0)}</p>
+                </div>
+                <div className="p-4 sm:p-6 bg-emerald-50/50">
+                  <span className="text-xs font-semibold text-emerald-700 uppercase">Sudah Ditransfer/Tunai</span>
+                  <p className="text-2xl font-black text-emerald-700 mt-1">{formatRupiah(refundsData?.summary?.totalCashRefunded || 0)}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow className="border-slate-100">
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">No. Retur</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">Tanggal</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">Pelanggan</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Nilai Refund</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Ditransfer/Tunai</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {refundsData?.rows?.slice((currentRefundPage - 1) * PAGE_SIZE, currentRefundPage * PAGE_SIZE).map((r: any) => (
+                      <TableRow key={r.id} className="border-slate-50 hover:bg-emerald-50/20">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-mono text-xs text-emerald-700 font-bold">{r.returnNumber}</span>
+                            <span className="text-[10px] text-slate-400">Inv: {r.invoiceNumber}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500">
+                          {new Date(r.tanggal).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-slate-800">{r.customerName}</TableCell>
+                        <TableCell className="text-right font-semibold text-rose-600 text-sm">{formatRupiah(r.totalRefund)}</TableCell>
+                        <TableCell className="text-right text-sm text-emerald-700 font-bold">{formatRupiah(r.cashRefunded)}</TableCell>
+                        <TableCell className="text-center">
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${r.cashRefunded > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                            {r.statusRefund}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {refundsData?.rows?.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10 text-slate-400">
+                          Tidak ada data refund/transfer balik.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {(refundsData?.rows?.length || 0) > PAGE_SIZE && (
+                <div className="flex justify-center py-4 border-t border-slate-100">
+                  <PaginationControl currentPage={currentRefundPage} totalPages={Math.ceil((refundsData?.rows?.length || 0) / PAGE_SIZE)} onPageChange={setCurrentRefundPage} />
+                </div>
+              )}
+            </div>
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>

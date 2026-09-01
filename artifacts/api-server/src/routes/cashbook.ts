@@ -46,8 +46,8 @@ router.post("/cashbook", async (req, res): Promise<void> => {
 router.get("/cashbook/balance", async (req, res) => {
   const [result] = await db
     .select({
-      totalIn: sql<string>`coalesce(sum(case when type = 'income' then amount else 0 end), 0)`,
-      totalOut: sql<string>`coalesce(sum(case when type = 'expense' then amount else 0 end), 0)`,
+      totalIn: sql<string>`coalesce(sum(case when type in ('income', 'masuk') then amount else 0 end), 0)`,
+      totalOut: sql<string>`coalesce(sum(case when type in ('expense', 'keluar') then amount else 0 end), 0)`,
     })
     .from(cashEntriesTable);
 

@@ -41,28 +41,28 @@ export default function Home() {
   const recentSales = salesList?.slice(0, 5) || [];
 
   const summaryData = useMemo(() => {
-    if (!salesList) return { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0 };
+    if (!salesList) return { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0, totalRefund: 0 };
     return salesList.reduce((acc, s: any) => {
       const baseTotal = parseFloat(s.totalAmount || "0");
-      const diffTotal = (s.returns || []).reduce((sum: number, ret: any) => sum + parseFloat(ret.differenceAmount || "0"), 0);
+      const diffTotal = s.returnDifference ? parseFloat(s.returnDifference) : 0;
       const grandTotal = baseTotal + diffTotal;
       
       const basePaid = parseFloat(s.paidAmount || "0");
-      const diffPaid = (s.returns || []).reduce((sum: number, ret: any) => {
-        const diff = parseFloat(ret.differenceAmount || "0");
-        if (ret.paymentStatus === 'lunas') return sum + diff;
-        return sum;
-      }, 0);
+      const diffPaid = (s as any).returnDifferencePaid ? parseFloat((s as any).returnDifferencePaid) : 0;
       const actualPaid = basePaid + diffPaid;
       
       const rem = grandTotal - actualPaid;
+
+      const refundAmount = s.returnDifference ? parseFloat(s.returnDifference) : 0;
+      const refundVal = refundAmount < 0 ? Math.abs(refundAmount) : 0;
       
       acc.subTotal += grandTotal;
       acc.diBayar += actualPaid;
       acc.sisaBayar += (rem > 0 ? rem : 0);
+      acc.totalRefund += refundVal;
       acc.count += 1;
       return acc;
-    }, { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0 });
+    }, { subTotal: 0, diBayar: 0, sisaBayar: 0, count: 0, totalRefund: 0 });
   }, [salesList]);
 
   const allMenuItems = [
@@ -270,7 +270,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 sm:gap-8 justify-end">
+          <div className="w-full md:w-auto flex flex-wrap sm:flex-nowrap gap-4 sm:gap-8 justify-end">
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Omset</span>
               <span className="font-bold text-slate-800">{formatRupiah(summaryData.subTotal)}</span>
@@ -278,6 +278,10 @@ export default function Home() {
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Kas Diterima</span>
               <span className="font-bold text-slate-800">{formatRupiah(summaryData.diBayar)}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Refund Kas</span>
+              <span className="font-bold text-amber-600">{formatRupiah(summaryData.totalRefund)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Piutang</span>

@@ -511,6 +511,17 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                 </td>
                               </tr>
                             )}
+                            
+                            {diffText !== "TIDAK ADA PENAMBAHAN HARGA" && (
+                              <tr className="align-top border-0 bg-slate-50/50">
+                                <td className="py-1 px-2"></td>
+                                <td colSpan={saleId ? 5 : 4} className="py-1 px-3">
+                                  <div className="flex items-center gap-1.5 justify-end border-t border-slate-200/60 pt-1 mt-0.5">
+                                    <span className={`text-[11px] font-bold uppercase tracking-wider ${diffColor}`}>{diffText}</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
 
                           </React.Fragment>
                         );
@@ -582,6 +593,19 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                               <td className="py-1 px-2 font-medium text-emerald-600 text-xs">Pengganti (Tukar)</td>
                               <td className="py-1 px-2 font-medium text-emerald-600">+ Rp {new Intl.NumberFormat('id-ID').format(totalExcVal)}</td>
                             </tr>
+                            
+                            {diffTotal < 0 && (
+                              <tr className="border-b border-slate-100 bg-emerald-50/60">
+                                <td className="py-1 px-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">Kembalian / Refund</td>
+                                <td className="py-1 px-2 font-bold text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diffTotal))}</td>
+                              </tr>
+                            )}
+                            {diffTotal > 0 && (
+                              <tr className="border-b border-slate-100 bg-rose-50/60">
+                                <td className="py-1 px-2 font-bold text-rose-700 text-xs uppercase tracking-wider">Kurang Bayar</td>
+                                <td className="py-1 px-2 font-bold text-rose-700">Rp {new Intl.NumberFormat('id-ID').format(diffTotal)}</td>
+                              </tr>
+                            )}
                           </>
                         );
                       })()}

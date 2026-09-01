@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
@@ -449,7 +449,9 @@ export default function Barang() {
                       <Select onValueChange={(v: string) => field.onChange(parseInt(v))} value={field.value?.toString()}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}
+                          <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()} className="border shadow-sm hover:border-primary/50 text-center justify-center break-words h-auto py-3">{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                       <FormMessage />

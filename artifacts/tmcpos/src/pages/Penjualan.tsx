@@ -116,7 +116,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
           <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Semua" /></SelectTrigger>
           <SelectContent>
-            <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+            <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               <SelectItem value="all" className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center font-semibold">
                 Semua Kategori
               </SelectItem>
@@ -137,7 +137,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
         <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => { updateItem(index, "productId", parseInt(v)); }}>
           <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
           <SelectContent>
-            <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+            <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {filteredProducts?.map((p: any) => (
                 <SelectItem key={p.id} value={p.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center">
                    <span className="font-semibold truncate w-full" title={p.name}>{p.name}</span>

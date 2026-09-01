@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PurchaseDetailModal } from "@/components/PurchaseDetailModal";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
@@ -32,6 +33,7 @@ export default function Pembelian() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [supplierId, setSupplierId] = useState<string>("");
   const [paymentType, setPaymentType] = useState<string>("tunai");
@@ -270,7 +272,7 @@ export default function Pembelian() {
                       </div>
                     </div>
                     
-                    <Button variant="ghost" size="sm" className="h-8 rounded-full text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-semibold text-xs px-3">
+                    <Button variant="ghost" size="sm" className="h-8 rounded-full text-violet-600 hover:text-violet-700 hover:bg-violet-50 font-semibold text-xs px-3" onClick={() => setViewDetailId(p.id)}>
                       Detail <ArrowRightCircle className="ml-1 h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -440,6 +442,12 @@ export default function Pembelian() {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <PurchaseDetailModal 
+        purchaseId={viewDetailId} 
+        isOpen={!!viewDetailId} 
+        onClose={() => setViewDetailId(null)} 
+      />
     </div>
   );
 }

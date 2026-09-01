@@ -38,7 +38,7 @@ export default function Login() {
     const result = await login(username, password);
     setLoading(false);
     if (result.ok) {
-      window.location.href = "/";
+      window.location.href = "/pos";
     } else {
       setError(result.error ?? "Login gagal");
     }

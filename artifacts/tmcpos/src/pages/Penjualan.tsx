@@ -35,9 +35,11 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
   const [rollPage, setRollPage] = useState(1);
   const itemsPerPage = 100; // Increased to 100 for grid layout
   
-  const { data: rolls } = useGetProductRolls(item.productId, {
+  const { data: rollsData } = useGetProductRolls(item.productId, {
     query: { queryKey: getGetProductRollsQueryKey(item.productId), enabled: !!item.productId }
   });
+  
+  const rolls = Array.isArray(rollsData) ? rollsData : (rollsData as any)?.rolls ?? [];
   
   const drawerContainer = typeof document !== 'undefined' ? document.getElementById("drawer-portal-target") : null;
 

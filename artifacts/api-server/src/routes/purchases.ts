@@ -92,13 +92,13 @@ router.post("/purchases", async (req, res): Promise<void> => {
     });
     await db.execute(sql`
       UPDATE ${productsTable} 
-      SET roll_stock = roll_stock + ${item.rolls}, meter_stock = meter_stock + ${item.meters}, updated_at = NOW()
+      SET meter_stock = meter_stock + ${item.meters}, updated_at = NOW()
       WHERE id = ${item.productId}
     `);
     await db.insert(stockMutationsTable).values({
       productId: item.productId,
       type: "masuk",
-      rolls: item.rolls.toString(),
+      rolls: "0", // actual roll count tracked via productRollsTable
       meters: item.meters.toString(),
       description: `Pembelian ${invoiceNumber}`,
       reference: invoiceNumber,

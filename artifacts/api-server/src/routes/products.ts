@@ -43,10 +43,15 @@ router.get("/products", async (req, res): Promise<void> => {
       costPricePerRoll: productsTable.costPricePerRoll,
       pricePerMeter: productsTable.pricePerMeter,
       pricePerRoll: productsTable.pricePerRoll,
-      rollStock: productsTable.rollStock,
       meterStock: productsTable.meterStock,
       minStock: productsTable.minStock,
       createdAt: productsTable.createdAt,
+      // Count actual registered available rolls from productRollsTable
+      actualRollCount: sql<number>`(
+        SELECT COUNT(*) FROM product_rolls 
+        WHERE product_rolls.product_id = ${productsTable.id} 
+        AND product_rolls.status = 'available'
+      )`,
     })
     .from(productsTable)
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
@@ -59,7 +64,7 @@ router.get("/products", async (req, res): Promise<void> => {
     costPricePerRoll: p.costPricePerRoll ? parseFloat(p.costPricePerRoll) : null,
     pricePerMeter: parseFloat(p.pricePerMeter ?? "0"),
     pricePerRoll: p.pricePerRoll ? parseFloat(p.pricePerRoll) : null,
-    rollStock: parseFloat(p.rollStock ?? "0"),
+    rollStock: Number(p.actualRollCount ?? 0), // Use actual registered rolls, not stale roll_stock
     meterStock: parseFloat(p.meterStock ?? "0"),
     minStock: parseFloat(p.minStock ?? "0"),
     isLowStock: parseFloat(p.meterStock ?? "0") <= parseFloat(p.minStock ?? "0"),

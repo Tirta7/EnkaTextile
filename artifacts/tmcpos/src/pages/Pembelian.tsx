@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
-import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey } from "@workspace/api-client-react";
+import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, useListCategories, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
-type PurchaseItem = { productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; };
+type PurchaseItem = { categoryId?: number; productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -41,6 +41,7 @@ export default function Pembelian() {
   const { data: purchases, isLoading } = useListPurchases({}, { query: { queryKey: getListPurchasesQueryKey({}) } });
   const { data: suppliers } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey() } });
+  const { data: categories } = useListCategories();
   const { data: paymentMethods = [] } = useListPaymentMethods({ query: { queryKey: getListPaymentMethodsQueryKey() } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -57,7 +58,7 @@ export default function Pembelian() {
 
   const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); };
 
-  const addItem = () => setItems(prev => [...prev, { productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "" }]);
+  const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "" }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
   const updateItem = (index: number, field: keyof PurchaseItem, value: any) => {
@@ -332,32 +333,47 @@ export default function Pembelian() {
               )}
               {items.map((item, index) => (
                 <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
-                  <div className="md:col-span-3">
-                    <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
-                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
-                      <SelectContent>{products?.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
+                  <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
+                    <Select value={item.categoryId ? item.categoryId.toString() : ""} onValueChange={(v: string) => updateItem(index, "categoryId", parseInt(v))}>
+                      <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">Semua</SelectItem>
+                        {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-2">
+                    <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
+                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
+                      <SelectTrigger className="h-8"><SelectValue placeholder="Pilih" /></SelectTrigger>
+                      <SelectContent>
+                        {products
+                          ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
+                          .map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
                     <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>
-                    <Input className="h-8" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
+                    <Input className="h-8 px-2" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
                   </div>
                   <div className="md:col-span-1">
                     <label className="text-xs text-muted-foreground mb-1 block truncate">Roll</label>
-                    <Input className="h-8" type="number" step="any" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Meter"})</label>
-                    <Input className="h-8" type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Yard"})</label>
+                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Mtr"}</label>
-                    <Input className="h-8" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                    <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Yard"}</label>
+                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                   </div>
                   <div className="md:col-span-1">
                     <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
-                    <div className="h-8 flex items-center text-sm font-medium">{formatRupiah(item.subtotal)}</div>
+                    <div className="h-8 flex items-center text-xs font-medium px-1">{formatRupiah(item.subtotal)}</div>
                   </div>
                   <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>

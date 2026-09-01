@@ -34,12 +34,17 @@ type Roll = {
 
 export function ProductRollsModal({ productId, productName, isOpen, onClose }: ProductRollsModalProps) {
   const queryClient = useQueryClient();
-  const { data: rolls, isLoading } = useGetProductRolls(productId ?? 0, {
+  const { data: rollsData, isLoading } = useGetProductRolls(productId ?? 0, {
     query: {
       queryKey: getGetProductRollsQueryKey(productId ?? 0),
       enabled: !!productId && isOpen,
     }
   });
+
+  // API now returns { rolls: [...], unallocatedMeters: number }
+  // Handle both old format (array) and new format (object)
+  const rolls: Roll[] = Array.isArray(rollsData) ? rollsData : (rollsData as any)?.rolls ?? [];
+  const unallocatedMeters: number = Array.isArray(rollsData) ? 0 : (rollsData as any)?.unallocatedMeters ?? 0;
 
   const createMutation = useCreateProductRoll({
     mutation: {
@@ -144,6 +149,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
   // Total & summary
   const totalYds = rolls?.reduce((acc: number, r: Roll) => acc + (r.currentLength || 0), 0) ?? 0;
   const totalRolls = rolls?.length ?? 0;
+  const totalStock = totalYds + unallocatedMeters; // total = individual rolls + bulk stock
 
   // Filtered + sorted rolls
   const sortedRolls: Roll[] = (() => {
@@ -177,15 +183,39 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
             <span>Total Roll: <span className="font-semibold text-foreground">{totalRolls}</span></span>
             <span>|</span>
             <span>Total Sisa: <span className="font-semibold text-foreground">{formatNumber(totalYds)}</span> yds</span>
+            {unallocatedMeters > 0 && (
+              <>
+                <span>|</span>
+                <span className="text-amber-600 font-semibold">
+                  Curah: {formatNumber(unallocatedMeters)} yds
+                </span>
+              </>
+            )}
             <Button
               size="sm"
               onClick={() => { setIsAdding(true); setEditingRollId(null); }}
               className="ml-auto h-7 text-xs px-3"
-              disabled={isAdding}
+              disabled={isAdding || unallocatedMeters <= 0}
+              title={unallocatedMeters <= 0 ? "Tidak ada stok curah untuk dibagi" : "Tambah roll dari stok curah"}
             >
               <Plus className="h-3 w-3 mr-1" /> Tambah Roll
             </Button>
           </div>
+          {/* Unallocated stock info banner */}
+          {unallocatedMeters > 0 && (
+            <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+              <p className="text-xs text-amber-700">
+                <span className="font-bold">{formatNumber(unallocatedMeters)} yard</span> stok curah belum dibagi ke roll. 
+                Klik &quot;Tambah Roll&quot; untuk mendaftarkan setiap gulungan.
+              </p>
+            </div>
+          )}
+          {totalRolls === 0 && unallocatedMeters === 0 && (
+            <div className="mt-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg">
+              <p className="text-xs text-slate-500">Stok kosong. Lakukan pembelian dari supplier untuk menambah stok.</p>
+            </div>
+          )}
 
           {/* Sort & Filter toolbar */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">

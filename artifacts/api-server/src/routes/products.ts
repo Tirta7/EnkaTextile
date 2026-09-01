@@ -7,14 +7,17 @@ import { pushService } from "../lib/push";
 
 const router = Router();
 
-async function syncProductStockFromRolls(productId: number) {
-  const existingRolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")));
-  const rollStock = existingRolls.length;
-  const meterStock = existingRolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
-  await db.update(productsTable).set({
-    rollStock: String(rollStock),
-    meterStock: String(meterStock)
-  }).where(eq(productsTable.id, productId));
+// Calculates unallocated (bulk) stock = total meter_stock - sum of all roll currentLengths
+async function getUnallocatedStock(productId: number): Promise<{ unallocatedMeters: number; totalRolls: number; totalRollMeters: number }> {
+  const rolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")));
+  const totalRollMeters = rolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
+  const [prod] = await db.select({ meterStock: productsTable.meterStock }).from(productsTable).where(eq(productsTable.id, productId));
+  const totalMeterStock = parseFloat(prod?.meterStock ?? "0");
+  return {
+    totalRolls: rolls.length,
+    totalRollMeters,
+    unallocatedMeters: Math.max(0, totalMeterStock - totalRollMeters)
+  };
 }
 
 router.get("/products", async (req, res): Promise<void> => {
@@ -162,12 +165,17 @@ router.get("/products/:id/rolls", async (req, res): Promise<void> => {
     .where(and(eq(productRollsTable.productId, id), eq(productRollsTable.status, "available")))
     .orderBy(productRollsTable.createdAt);
   
-  res.json(rolls.map(r => ({
-    ...r,
-    originalLength: parseFloat(r.originalLength),
-    currentLength: parseFloat(r.currentLength),
-    createdAt: r.createdAt.toISOString()
-  })));
+  const { unallocatedMeters } = await getUnallocatedStock(id);
+
+  res.json({
+    rolls: rolls.map(r => ({
+      ...r,
+      originalLength: parseFloat(r.originalLength),
+      currentLength: parseFloat(r.currentLength),
+      createdAt: r.createdAt.toISOString()
+    })),
+    unallocatedMeters
+  });
 });
 
 router.patch("/products/:id", async (req, res): Promise<void> => {
@@ -268,16 +276,26 @@ router.post("/products/:id/rolls", async (req, res): Promise<void> => {
   const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, id));
   if (!prod) { res.status(404).json({ error: "Product not found" }); return; }
 
+  // Check if there's enough unallocated stock
+  const { unallocatedMeters } = await getUnallocatedStock(id);
+  const rollLength = d.currentLength ?? d.originalLength;
+  if (rollLength > unallocatedMeters + 0.001) {
+    res.status(400).json({ error: `Stok curah tidak cukup. Sisa belum dibagi: ${unallocatedMeters.toFixed(2)} yard` });
+    return;
+  }
+
   const barcodeToSave = d.barcode ? d.barcode : `${prod.barcode || `PRD-${prod.id}`}-R${Date.now()}`;
   const [newRoll] = await db.insert(productRollsTable).values({
     productId: id,
     barcode: barcodeToSave,
     originalLength: String(d.originalLength),
-    currentLength: String(d.currentLength),
+    currentLength: String(d.currentLength ?? d.originalLength),
     status: "available",
   }).returning();
   
-  await syncProductStockFromRolls(id);
+  // Deduct from meter_stock (the roll is now allocated from bulk stock)
+  // roll_stock stays the same since total meters don't change - only allocation changes
+  // We do NOT call syncProductStockFromRolls because meter_stock tracks TOTAL (bulk + rolls)
   
   res.status(201).json({
     ...newRoll,
@@ -294,6 +312,21 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const d = parsed.data;
 
+  // If changing currentLength, validate against available unallocated stock
+  if (d.currentLength != null) {
+    const [oldRoll] = await db.select().from(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
+    if (!oldRoll) { res.status(404).json({ error: "Roll not found" }); return; }
+    const oldLength = parseFloat(oldRoll.currentLength);
+    const diff = d.currentLength - oldLength; // positive = needs more stock, negative = returns stock
+    if (diff > 0) {
+      const { unallocatedMeters } = await getUnallocatedStock(id);
+      if (diff > unallocatedMeters + 0.001) {
+        res.status(400).json({ error: `Stok curah tidak cukup. Sisa belum dibagi: ${unallocatedMeters.toFixed(2)} yard` });
+        return;
+      }
+    }
+  }
+
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (d.barcode != null) updateData.barcode = d.barcode;
   if (d.originalLength != null) updateData.originalLength = String(d.originalLength);
@@ -302,7 +335,7 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   const [updatedRoll] = await db.update(productRollsTable).set(updateData as any).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id))).returning();
   if (!updatedRoll) { res.status(404).json({ error: "Roll not found" }); return; }
 
-  await syncProductStockFromRolls(id);
+  // Do NOT sync from rolls - meter_stock represents total (bulk + rolls)
 
   res.json({
     ...updatedRoll,
@@ -315,9 +348,12 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
 router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const rollId = parseInt(req.params.rollId);
-  await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
   
-  await syncProductStockFromRolls(id);
+  // Return the roll's length back to unallocated (bulk) stock
+  // meter_stock stays the same since total yards don't change - roll just becomes unallocated again
+  // roll_stock stays the same for same reason
+  
+  await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
   
   res.status(204).send();
 });

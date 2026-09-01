@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShieldCheck, Bell, Loader2 } from "lucide-react";
@@ -100,6 +100,8 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+        <DialogTitle className="sr-only">Otorisasi Retur</DialogTitle>
+        <DialogDescription className="sr-only">Masukkan kode OTP dari owner</DialogDescription>
         <div className="bg-gradient-to-br from-violet-600 to-indigo-700 px-6 pt-6 pb-5 text-white">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">

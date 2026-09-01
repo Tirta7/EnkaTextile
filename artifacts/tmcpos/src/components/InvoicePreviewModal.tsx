@@ -11,6 +11,7 @@ import * as htmlToImage from "html-to-image";
 import { Printer, Loader2, QrCode, Download, RefreshCcw, CornerDownRight, ShieldCheck, Clock, Bell } from "lucide-react";
 import React from "react";
 import { useGetSale, getGetSaleQueryKey, useListProducts, getListProductsQueryKey, useGetProductRolls, getGetProductRollsQueryKey, useListCategories, getListCategoriesQueryKey, useCreateReturn, getListSalesQueryKey } from "@workspace/api-client-react";
+import { OtpDialog } from "./OtpDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -72,14 +73,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
   // OTP Dialog State
   const [otpDialogOpen, setOtpDialogOpen] = useState(false);
-  const [otpStep, setOtpStep] = useState<"requesting" | "entering">("requesting");
-  const [otpInput, setOtpInput] = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [otpLoading, setOtpLoading] = useState(false);
   const [returnOtpToken, setReturnOtpToken] = useState("");
-  const [otpCountdown, setOtpCountdown] = useState(0); // seconds remaining
   const [pendingExchangeItem, setPendingExchangeItem] = useState<any>(null);
-  const otpTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [replacementProductId, setReplacementProductId] = useState<string>("");
   const [replacementRollId, setReplacementRollId] = useState<string>("none");
@@ -257,96 +252,22 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     });
   };
 
-  // Start countdown timer for OTP
-  const startOtpCountdown = useCallback((minutes: number) => {
-    if (otpTimerRef.current) clearInterval(otpTimerRef.current);
-    setOtpCountdown(minutes * 60);
-    otpTimerRef.current = setInterval(() => {
-      setOtpCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(otpTimerRef.current!);
-          otpTimerRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    return () => { if (otpTimerRef.current) clearInterval(otpTimerRef.current); };
-  }, []);
-
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
-  const requestOtp = async () => {
-    setOtpLoading(true);
-    setOtpError("");
-    try {
-      const res = await fetch("/api/notifications/request-return-otp", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setOtpError(data.error || "Gagal mengirim OTP");
-        setOtpLoading(false);
-        return;
-      }
-      startOtpCountdown(data.expiresInMinutes);
-      setOtpStep("entering");
-    } catch {
-      setOtpError("Gagal terhubung ke server");
+  const handleOtpSuccess = (token: string) => {
+    setReturnOtpToken(token);
+    if (pendingExchangeItem) {
+      setItemToExchange(pendingExchangeItem);
+      setReplacementProductId("");
+      setReplacementRollId("none");
+      setReplacementMeters("");
+      setReplacementRolls(1);
+      setReplacementPrice("");
+      setExchangeOpen(true);
+      setPendingExchangeItem(null);
     }
-    setOtpLoading(false);
-  };
-
-  const handleOtpSubmit = async () => {
-    if (!otpInput || otpInput.length !== 6) {
-      setOtpError("Masukkan 6 digit kode OTP");
-      return;
-    }
-    setOtpLoading(true);
-    setOtpError("");
-    try {
-      const res = await fetch("/api/notifications/verify-return-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp: otpInput }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.valid) {
-        setOtpError(data.error || "Kode OTP tidak valid");
-        setOtpLoading(false);
-        return;
-      }
-      // OTP valid – buka dialog tukar barang
-      setOtpDialogOpen(false);
-      setOtpInput("");
-      setOtpError("");
-      setReturnOtpToken(data.token);
-      if (pendingExchangeItem) {
-        setItemToExchange(pendingExchangeItem);
-        setReplacementProductId("");
-        setReplacementRollId("none");
-        setReplacementMeters("");
-        setReplacementRolls(1);
-        setReplacementPrice("");
-        setExchangeOpen(true);
-        setPendingExchangeItem(null);
-      }
-    } catch {
-      setOtpError("Gagal terhubung ke server");
-    }
-    setOtpLoading(false);
   };
 
   const openExchangeWithOtpCheck = (item: any) => {
     setPendingExchangeItem(item);
-    setOtpInput("");
-    setOtpError("");
-    setOtpStep("requesting");
     setOtpDialogOpen(true);
   };
 
@@ -809,107 +730,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
       </Dialog>
 
       {/* OTP Authorization Dialog */}
-      <Dialog open={otpDialogOpen} onOpenChange={(open) => {
-        if (!open) { if (otpTimerRef.current) clearInterval(otpTimerRef.current); }
-        setOtpDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-[420px] p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
-          <div className="bg-gradient-to-br from-violet-600 to-indigo-700 px-6 pt-6 pb-5 text-white">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h2 className="font-bold text-base leading-tight">Otorisasi Retur Barang</h2>
-                <p className="text-violet-200 text-xs">Diperlukan persetujuan owner</p>
-              </div>
-            </div>
-          </div>
-
-          {otpStep === "requesting" ? (
-            <div className="px-6 py-6 space-y-4">
-              <div className="text-center space-y-2">
-                <Bell className="w-10 h-10 mx-auto text-violet-400" />
-                <p className="text-sm font-medium text-slate-700">Kirim permintaan otorisasi ke owner</p>
-                <p className="text-xs text-slate-500">
-                  Sistem akan mengirim <strong>kode OTP 6 digit</strong> ke HP/browser owner melalui notifikasi.
-                  Owner akan memberikan kode tersebut kepada Anda.
-                </p>
-              </div>
-              {otpError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-                  {otpError}
-                </div>
-              )}
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" className="flex-1" onClick={() => setOtpDialogOpen(false)}>Batal</Button>
-                <Button className="flex-1 bg-violet-600 hover:bg-violet-700" onClick={requestOtp} disabled={otpLoading}>
-                  {otpLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Mengirim...</> : <><Bell className="w-4 h-4 mr-2" />Kirim OTP ke Owner</>}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="px-6 py-6 space-y-4">
-              <div className="text-center space-y-1">
-                <p className="text-sm font-medium text-slate-700">Masukkan kode OTP dari owner</p>
-                <p className="text-xs text-slate-500">Kode 6 digit telah dikirim ke notifikasi owner</p>
-              </div>
-
-              {/* Countdown */}
-              {otpCountdown > 0 && (
-                <div className="flex items-center justify-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-violet-500" />
-                  <span className={`font-mono font-bold ${otpCountdown < 60 ? 'text-red-500' : 'text-violet-600'}`}>
-                    {formatCountdown(otpCountdown)}
-                  </span>
-                  <span className="text-slate-400 text-xs">tersisa</span>
-                </div>
-              )}
-              {otpCountdown === 0 && (
-                <p className="text-center text-xs text-red-500 font-medium">OTP kedaluwarsa. Silakan kirim ulang.</p>
-              )}
-
-              {/* OTP Input */}
-              <Input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="_ _ _ _ _ _"
-                value={otpInput}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "");
-                  setOtpInput(val);
-                  setOtpError("");
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleOtpSubmit(); }}
-                className="text-center tracking-[0.6em] text-2xl font-bold h-14 border-2 focus:border-violet-500"
-                autoFocus
-                disabled={otpCountdown === 0}
-              />
-
-              {otpError && (
-                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 text-center">
-                  {otpError}
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => { setOtpStep("requesting"); setOtpInput(""); setOtpError(""); }}>
-                  ← Kirim Ulang
-                </Button>
-                <Button
-                  className="flex-1 bg-violet-600 hover:bg-violet-700"
-                  onClick={handleOtpSubmit}
-                  disabled={otpLoading || otpInput.length !== 6 || otpCountdown === 0}
-                >
-                  {otpLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Memverifikasi...</> : "Verifikasi & Lanjutkan"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <OtpDialog 
+        open={otpDialogOpen} 
+        onOpenChange={setOtpDialogOpen} 
+        onSuccess={handleOtpSuccess} 
+      />
     </>
   );
 }

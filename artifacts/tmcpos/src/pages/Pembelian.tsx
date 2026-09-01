@@ -137,6 +137,7 @@ export default function Pembelian() {
 
   const tabFiltered = filtered.filter(p => {
     if (activeTab === "semua") return true;
+    if (activeTab === "kredit") return p.status === "unpaid";
     return p.status === activeTab;
   });
 

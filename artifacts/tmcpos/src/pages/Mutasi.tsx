@@ -32,13 +32,13 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  in: { label: "Masuk", color: "bg-green-100 text-green-700 border-green-200", icon: ArrowDownToLine },
-  out: { label: "Keluar", color: "bg-red-100 text-red-700 border-red-200", icon: ArrowUpFromLine },
-  adjustment: { label: "Penyesuaian", color: "bg-blue-100 text-blue-700 border-blue-200", icon: ArrowLeftRight },
+  masuk: { label: "Masuk", color: "bg-green-100 text-green-700 border-green-200", icon: ArrowDownToLine },
+  keluar: { label: "Keluar", color: "bg-red-100 text-red-700 border-red-200", icon: ArrowUpFromLine },
+  penyesuaian: { label: "Penyesuaian", color: "bg-blue-100 text-blue-700 border-blue-200", icon: ArrowLeftRight },
 };
 
 export default function Mutasi() {
-  const [activeTab, setActiveTab] = useState<"semua" | "in" | "out" | "adjustment">("semua");
+  const [activeTab, setActiveTab] = useState<"semua" | "masuk" | "keluar" | "penyesuaian">("semua");
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -52,7 +52,7 @@ export default function Mutasi() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { type: "in", rolls: 0, meters: 0, description: "", reference: "" },
+    defaultValues: { type: "masuk", rolls: 0, meters: 0, description: "", reference: "" },
   });
 
   const selectedProductId = form.watch("productId");
@@ -66,7 +66,7 @@ export default function Mutasi() {
         queryClient.invalidateQueries({ queryKey: getListMutationsQueryKey({}) });
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
         setIsOpen(false);
-        form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" });
+        form.reset({ type: "masuk", rolls: 0, meters: 0, description: "", reference: "" });
         toast({ title: "Mutasi stok berhasil dicatat" });
       }
     }
@@ -97,18 +97,18 @@ export default function Mutasi() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Mutasi Stok</h1>
             <p className="text-sm text-slate-500">Riwayat barang masuk & keluar</p>
           </div>
-          <Button onClick={() => { form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Button onClick={() => { form.reset({ type: "masuk", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>
 
         {/* Scrollable Tabs */}
         <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-          {(['semua', 'in', 'out', 'adjustment'] as const).map((tab) => {
+          {(['semua', 'masuk', 'keluar', 'penyesuaian'] as const).map((tab) => {
             let label = "Semua";
-            if (tab === "in") label = "Masuk";
-            if (tab === "out") label = "Keluar";
-            if (tab === "adjustment") label = "Penyesuaian";
+            if (tab === "masuk") label = "Masuk";
+            if (tab === "keluar") label = "Keluar";
+            if (tab === "penyesuaian") label = "Penyesuaian";
             return (
               <button
                 key={tab}
@@ -167,7 +167,7 @@ export default function Mutasi() {
         ) : (
           <>
             {tabFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((m) => {
-              const cfg = TYPE_CONFIG[m.type ?? "in"];
+              const cfg = TYPE_CONFIG[m.type ?? "masuk"];
               const Icon = cfg?.icon ?? ArrowLeftRight;
               
               // Decorative Badge Class
@@ -175,11 +175,11 @@ export default function Mutasi() {
               let iconClass = "text-slate-500";
               let iconBgClass = "bg-slate-50 border-slate-100";
               
-              if (m.type === 'in') {
+              if (m.type === 'masuk') {
                 badgeClass = "bg-green-100 text-green-700";
                 iconClass = "text-green-500";
                 iconBgClass = "bg-green-50 border-green-100";
-              } else if (m.type === 'out') {
+              } else if (m.type === 'keluar') {
                 badgeClass = "bg-red-100 text-red-700";
                 iconClass = "text-red-500";
                 iconBgClass = "bg-red-50 border-red-100";
@@ -231,11 +231,11 @@ export default function Mutasi() {
                     <div className="text-right">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-900 leading-none">
-                          {m.type === 'out' ? '-' : '+'}{formatNumber(m.meters)} <span className="text-[10px] font-normal text-slate-500">Mtr/Yd</span>
+                          {m.type === 'keluar' ? '-' : '+'}{formatNumber(m.meters)} <span className="text-[10px] font-normal text-slate-500">Mtr/Yd</span>
                         </span>
                         {m.rolls > 0 && (
                           <span className="text-xs font-medium text-slate-500 mt-1">
-                            {m.type === 'out' ? '-' : '+'}{formatNumber(m.rolls)} <span className="text-[10px]">Roll</span>
+                            {m.type === 'keluar' ? '-' : '+'}{formatNumber(m.rolls)} <span className="text-[10px]">Roll</span>
                           </span>
                         )}
                       </div>
@@ -282,9 +282,9 @@ export default function Mutasi() {
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
-                      <SelectItem value="in">Stok Masuk</SelectItem>
-                      <SelectItem value="out">Stok Keluar</SelectItem>
-                      <SelectItem value="adjustment">Penyesuaian</SelectItem>
+                      <SelectItem value="masuk">Masuk</SelectItem>
+                      <SelectItem value="keluar">Keluar</SelectItem>
+                      <SelectItem value="penyesuaian">Penyesuaian</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

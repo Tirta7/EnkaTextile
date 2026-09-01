@@ -535,6 +535,7 @@ export default function Penjualan() {
 
   const filtered = useMemo(() => {
     if (activeTab === "Semua") return baseFiltered;
+    if (activeTab === "Kredit") return baseFiltered.filter(s => s.status?.toLowerCase() === "unpaid");
     return baseFiltered.filter(s => s.status?.toLowerCase() === activeTab.toLowerCase());
   }, [baseFiltered, activeTab]);
 

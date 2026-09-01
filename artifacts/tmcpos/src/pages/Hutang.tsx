@@ -227,33 +227,45 @@ export default function Hutang() {
                   <AccordionTrigger className="p-4 hover:no-underline hover:bg-slate-50/50 transition-colors [&[data-state=open]]:border-b border-slate-100 relative">
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${hasOverdue ? 'bg-red-500' : groupBadgeClass.split(' ')[0]}`} />
                     
-                    <div className="flex w-full gap-3 items-center pl-2 pr-2">
-                      <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${groupIconBgClass}`}>
-                        <GroupStatusIcon className={`w-6 h-6 ${groupIconClass}`} strokeWidth={2} />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0 text-left flex flex-col justify-center">
-                        <h3 className="font-bold text-slate-800 text-[15px] truncate">
-                          {supplierName}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${groupBadgeClass}`}>
-                        {hasDebt ? `${group.filter((p: any) => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
-                          </span>
-                          {hasOverdue && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-red-100 text-red-700">
-                              Jatuh Tempo
+                    <div className="flex flex-col w-full pl-2 pr-2 gap-2">
+                      <div className="flex w-full gap-3 items-center">
+                        <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${groupIconBgClass}`}>
+                          <GroupStatusIcon className={`w-6 h-6 ${groupIconClass}`} strokeWidth={2} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 text-left flex flex-col justify-center">
+                          <h3 className="font-bold text-slate-800 text-[15px] truncate">
+                            {supplierName}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${groupBadgeClass}`}>
+                              {hasDebt ? `${group.filter((p: any) => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
                             </span>
-                          )}
+                            {hasOverdue && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-red-100 text-red-700">
+                                Jatuh Tempo
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="text-right flex flex-col items-end justify-center mr-2">
+                          <span className="text-sm font-bold text-slate-900 block leading-tight mb-0.5">
+                            {formatRupiah(totalGroupRemaining)}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-medium">Sisa Hutang</span>
                         </div>
                       </div>
-                      
-                      <div className="text-right flex flex-col items-end justify-center mr-2">
-                        <span className="text-sm font-bold text-slate-900 block leading-tight mb-0.5">
-                          {formatRupiah(totalGroupRemaining)}
-                        </span>
-                        <span className="text-[10px] text-slate-500 font-medium">Sisa Hutang</span>
-                      </div>
+
+                      {pct > 0 && hasDebt && (
+                        <div className="w-full mt-1 border-t border-slate-100 pt-2 pb-1 pr-6">
+                           <div className="flex justify-between text-[10px] mb-1">
+                             <span className="font-medium text-slate-500">Progress Pembayaran Total</span>
+                             <span className="font-bold text-slate-700">{pct}%</span>
+                           </div>
+                           <Progress value={pct} className="h-1.5 bg-slate-100" />
+                        </div>
+                      )}
                     </div>
                   </AccordionTrigger>
                   

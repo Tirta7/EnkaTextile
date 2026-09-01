@@ -45,6 +45,7 @@ type FormData = z.infer<typeof schema>;
 export default function Barang() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [categoryAlphabetFilter, setCategoryAlphabetFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -185,30 +186,69 @@ export default function Barang() {
         </div>
       )}
 
+      {/* Alphabet Filter */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-3 pt-1 w-full hide-scrollbar">
+        <button
+          onClick={() => setCategoryAlphabetFilter(null)}
+          className={`shrink-0 flex items-center justify-center h-8 px-3 rounded-lg text-xs font-bold transition-colors border ${
+            categoryAlphabetFilter === null
+              ? "bg-slate-800 text-white border-slate-800 shadow-sm"
+              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800"
+          }`}
+        >
+          Semua
+        </button>
+        {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
+          const hasCategoriesWithLetter = categories?.some(c => c.name.toUpperCase().startsWith(letter));
+          const isActive = categoryAlphabetFilter === letter;
+          
+          if (!hasCategoriesWithLetter && !isActive) return null; // Sembunyikan huruf yang tidak ada kategorinya untuk menghemat ruang
+          
+          return (
+            <button
+              key={letter}
+              onClick={() => setCategoryAlphabetFilter(isActive ? null : letter)}
+              className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold transition-all border ${
+                isActive
+                  ? "bg-violet-600 text-white border-violet-600 shadow-sm ring-2 ring-violet-600/20 ring-offset-1"
+                  : "bg-white text-slate-500 border-slate-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200"
+              }`}
+            >
+              {letter}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Premium Category Grid */}
-      <div className="flex flex-wrap gap-2 pb-4 pt-2 mb-4 w-full">
-        {categories?.map(c => {
+      <div className="flex flex-wrap gap-2 pb-4 pt-1 mb-4 w-full">
+        {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
           const count = products?.filter(p => p.categoryId === c.id).length || 0;
           const isActive = selectedCategoryId === c.id;
           return (
             <button 
               key={c.id}
-              onClick={() => { setSelectedCategoryId(c.id); setCurrentPage(1); }}
+              onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
               className={`group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
                 isActive 
                   ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
-                  : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
+                  : "bg-white text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
               }`}
             >
               <span className="text-left leading-snug whitespace-normal">{c.name}</span>
               <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
-                isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary"
               }`}>
                 {count}
               </span>
             </button>
           );
         })}
+        {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).length === 0 && (
+          <div className="w-full text-center py-6 text-slate-400 text-sm italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            Kategori dengan awalan huruf tersebut tidak ditemukan
+          </div>
+        )}
       </div>
 
       {/* Filter & Search */}

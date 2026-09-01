@@ -137,15 +137,22 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Switch>
-            {/* Public shop route — no auth required */}
-            <Route path="/shop" component={Shop} />
+            {/* Public shop route at root */}
+            <Route path="/" component={Shop} />
             
-            {/* Protected routes */}
-            <Route>
-              <AuthGate>
-                <Router />
-              </AuthGate>
+            {/* Redirect old /shop to root */}
+            <Route path="/shop"><Redirect to="/" /></Route>
+            
+            {/* Protected POS routes under /pos */}
+            <Route path="/pos/*?">
+              <WouterRouter base="/pos">
+                <AuthGate>
+                  <Router />
+                </AuthGate>
+              </WouterRouter>
             </Route>
+            
+            <Route component={NotFound} />
           </Switch>
         </WouterRouter>
         <Toaster />

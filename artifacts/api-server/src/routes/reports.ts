@@ -92,6 +92,7 @@ router.get("/reports/sales-summary", async (req, res) => {
   const totalReturnExchanged = numStr(returnSummary?.totalReturnExchanged);
   const netReturnImpact = numStr(returnSummary?.netReturnImpact);
   const netRevenue = totalRev + netReturnImpact;
+  const averageTransaction = totalTx > 0 ? netRevenue / totalTx : 0;
 
   res.json({
     totalRevenue: totalRev,

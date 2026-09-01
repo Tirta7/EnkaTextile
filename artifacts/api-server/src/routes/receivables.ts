@@ -132,8 +132,11 @@ router.post("/receivables/:id/payments", async (req, res): Promise<void> => {
 
   // Trigger push notification for payment
   try {
-    const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, rec.customerId));
-    const customerName = customer?.name ?? "Umum";
+    let customerName = "Umum";
+    if (rec.customerId) {
+      const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, rec.customerId));
+      if (customer) customerName = customer.name;
+    }
     const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(parsed.data.amount);
     
     // Import pushService at the top is needed! Wait, let's just require it if we didn't import it, but I'll import it at the top later.

@@ -10,6 +10,7 @@ import type { CreateReturnInputType } from './createReturnInputType';
 import type { CreateReturnItemInput } from './createReturnItemInput';
 
 export interface CreateReturnInput {
+  otp_token: string;
   type: CreateReturnInputType;
   saleId?: number | null;
   purchaseId?: number | null;

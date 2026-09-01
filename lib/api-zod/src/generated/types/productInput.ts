@@ -14,6 +14,8 @@ export interface ProductInput {
   secondaryUnit?: string;
   lotNumber?: string;
   rackLocation?: string;
+  imageUrl?: string | null;
+  description?: string | null;
   costPricePerMeter?: number;
   costPricePerRoll?: number;
   pricePerMeter?: number;

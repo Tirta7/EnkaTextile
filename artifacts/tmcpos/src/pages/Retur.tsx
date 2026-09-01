@@ -11,6 +11,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, RefreshCcw, Trash2, Search, Printer } from "lucide-react";
+import { OtpDialog } from "../components/OtpDialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -95,6 +96,8 @@ export default function Retur() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
   const [returnedItems, setReturnedItems] = useState<ReturnItemForm[]>([]);
   const [exchangedItems, setExchangedItems] = useState<ReturnItemForm[]>([]);
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
+  const [returnOtpToken, setReturnOtpToken] = useState("");
   
   const saleQuery = useGetSale(parseInt(selectedInvoiceId || "0"), {
     query: { 
@@ -112,7 +115,7 @@ export default function Retur() {
 
   useEffect(() => {
     if (type === 'penjualan' && saleQuery.data && saleQuery.data.id.toString() === selectedInvoiceId) {
-      if (returnedItems.length === 0) { // Only auto-fill if empty to prevent overriding manual edits
+      if (returnedItems.length === 0) { 
         setReturnedItems(saleQuery.data.items.map((i: any) => ({
           productId: i.productId,
           productName: i.productName || "",
@@ -127,7 +130,7 @@ export default function Retur() {
 
   useEffect(() => {
     if (type === 'pembelian' && purchaseQuery.data && purchaseQuery.data.id.toString() === selectedInvoiceId) {
-      if (returnedItems.length === 0) { // Only auto-fill if empty
+      if (returnedItems.length === 0) {
         setReturnedItems(purchaseQuery.data.items.map((i: any) => ({
           productId: i.productId,
           productName: i.productName || "",
@@ -147,7 +150,7 @@ export default function Retur() {
     const newList = [...list];
     newList[index] = { ...newList[index], ...changes };
     const it = newList[index];
-    it.subtotal = (Number(it.meters) || 0) * (Number(it.pricePerMeter) || 0); // Simple meter-based subtotal
+    it.subtotal = (Number(it.meters) || 0) * (Number(it.pricePerMeter) || 0); 
     setList(newList);
   };
   const removeItem = (list: any[], setList: any) => (index: number) => {
@@ -158,48 +161,12 @@ export default function Retur() {
   const totalExchanged = exchangedItems.reduce((sum, item) => sum + item.subtotal, 0);
   const difference = totalExchanged - totalReturned;
 
-  const handleSubmit = () => {
+  const handleOpenOtp = () => {
     if (returnedItems.length === 0 && exchangedItems.length === 0) {
       toast({ title: "Error", description: "Tambahkan setidaknya 1 barang retur/tukar", variant: "destructive" });
       return;
     }
-    
-    createReturn.mutate({
-      data: {
-        type,
-        paymentStatus,
-        saleId: type === 'penjualan' && selectedInvoiceId ? parseInt(selectedInvoiceId) : undefined,
-        purchaseId: type === 'pembelian' && selectedInvoiceId ? parseInt(selectedInvoiceId) : undefined,
-        customerId: type === 'penjualan' && selectedInvoiceId ? sales?.find(s => s.id === parseInt(selectedInvoiceId))?.customerId : undefined,
-        supplierId: type === 'pembelian' && selectedInvoiceId ? purchases?.find(p => p.id === parseInt(selectedInvoiceId))?.supplierId : undefined,
-        returnedItems: returnedItems.filter(i => i.productId).map(i => ({
-          productId: i.productId,
-          rolls: Number(i.rolls) || 0,
-          meters: Number(i.meters) || 0,
-          pricePerMeter: Number(i.pricePerMeter) || 0,
-          subtotal: i.subtotal
-        })),
-        exchangedItems: exchangedItems.filter(i => i.productId).map(i => ({
-          productId: i.productId,
-          rolls: Number(i.rolls) || 0,
-          meters: Number(i.meters) || 0,
-          pricePerMeter: Number(i.pricePerMeter) || 0,
-          subtotal: i.subtotal
-        }))
-      }
-    }, {
-      onSuccess: () => {
-        toast({ title: "Sukses", description: "Retur/Tukar berhasil dicatat" });
-        setIsDrawerOpen(false);
-        setReturnedItems([]);
-        setExchangedItems([]);
-        setSelectedInvoiceId("");
-        queryClient.invalidateQueries({ queryKey: getListReturnsQueryKey() });
-      },
-      onError: (err: any) => {
-        toast({ title: "Gagal", description: err.response?.data?.error || "Gagal mencatat retur", variant: "destructive" });
-      }
-    });
+    setOtpDialogOpen(true);
   };
 
   const filteredReturns = useMemo(() => {
@@ -380,7 +347,7 @@ export default function Retur() {
                   {difference > 0 ? '+' : ''}{formatRupiah(difference)}
                 </div>
               </div>
-              <Button size="lg" className="h-14 px-8 text-lg font-bold rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all" onClick={handleSubmit} disabled={createReturn.isPending}>
+              <Button size="lg" className="h-14 px-8 text-lg font-bold rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all" onClick={handleOpenOtp} disabled={createReturn.isPending}>
                 Simpan Retur
               </Button>
             </div>

@@ -97,6 +97,10 @@ export interface Product {
   secondaryUnit: string;
   lotNumber: string;
   rackLocation: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  description?: string | null;
   pricePerMeter: number;
   /** @nullable */
   pricePerRoll: number | null;
@@ -115,6 +119,8 @@ export interface ProductInput {
   secondaryUnit?: string;
   lotNumber?: string;
   rackLocation?: string;
+  imageUrl?: string | null;
+  description?: string | null;
   costPricePerMeter?: number;
   costPricePerRoll?: number;
   pricePerMeter?: number;
@@ -154,6 +160,8 @@ export interface ProductUpdate {
   secondaryUnit?: string;
   lotNumber?: string;
   rackLocation?: string;
+  imageUrl?: string | null;
+  description?: string | null;
   costPricePerMeter?: number;
   costPricePerRoll?: number;
   pricePerMeter?: number;
@@ -484,6 +492,7 @@ export interface CashBalance {
 export interface SalesSummaryReport {
   totalRevenue: number;
   netRevenue: number;
+  averageTransaction: number;
   totalReturnDeposit: number;
   totalReturnExchanged: number;
   netReturnImpact: number;
@@ -622,6 +631,7 @@ export interface CreateReturnItemInput {
 }
 
 export interface CreateReturnInput {
+  otp_token: string;
   type: CreateReturnInputType;
   saleId?: number | null;
   purchaseId?: number | null;

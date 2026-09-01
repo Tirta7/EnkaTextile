@@ -1479,6 +1479,10 @@ components:
           type: string
         rackLocation:
           type: string
+        imageUrl:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
         pricePerMeter:
           type: number
         pricePerRoll:
@@ -1512,6 +1516,12 @@ components:
           type: string
         rackLocation:
           type: string
+        imageUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
         costPricePerMeter:
           type: number
         costPricePerRoll:
@@ -1585,6 +1595,12 @@ components:
           type: string
         rackLocation:
           type: string
+        imageUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
         costPricePerMeter:
           type: number
         costPricePerRoll:
@@ -2147,11 +2163,13 @@ components:
 
     SalesSummaryReport:
       type: object
-      required: [totalRevenue, netRevenue, totalReturnDeposit, totalReturnExchanged, netReturnImpact, totalTransactions, totalRolls, totalMeters, cashRevenue, tempoRevenue]
+      required: [totalRevenue, netRevenue, averageTransaction, totalReturnDeposit, totalReturnExchanged, netReturnImpact, totalTransactions, totalRolls, totalMeters, cashRevenue, tempoRevenue]
       properties:
         totalRevenue:
           type: number
         netRevenue:
+          type: number
+        averageTransaction:
           type: number
         totalReturnDeposit:
           type: number
@@ -2374,8 +2392,10 @@ components:
 
     CreateReturnInput:
       type: object
-      required: [type, paymentStatus]
+      required: [type, paymentStatus, otp_token]
       properties:
+        otp_token:
+          type: string
         type:
           type: string
           enum: [penjualan, pembelian]

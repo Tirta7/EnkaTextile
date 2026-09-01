@@ -17,6 +17,10 @@ export interface Product {
   secondaryUnit: string;
   lotNumber: string;
   rackLocation: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /** @nullable */
+  description?: string | null;
   pricePerMeter: number;
   /** @nullable */
   pricePerRoll: number | null;

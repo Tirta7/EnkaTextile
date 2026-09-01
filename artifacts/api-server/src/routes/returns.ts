@@ -112,6 +112,8 @@ router.get("/returns/:id", async (req, res): Promise<void> => {
   });
 });
 
+import { verifiedReturnTokens } from "./notifications";
+
 router.post("/returns", async (req, res): Promise<void> => {
   try {
     const parsed = CreateReturnBody.safeParse(req.body);
@@ -120,8 +122,18 @@ router.post("/returns", async (req, res): Promise<void> => {
       return;
     }
 
-    const data = parsed.data;
-    
+    const { otp_token, ...data } = parsed.data;
+
+    if (!otp_token || !verifiedReturnTokens.has(otp_token)) {
+      res.status(403).json({ error: "Otorisasi ditolak. OTP Token tidak valid atau sudah kadaluarsa." });
+      return;
+    }
+    const tokenExpiry = verifiedReturnTokens.get(otp_token)!;
+    if (Date.now() > tokenExpiry) {
+      verifiedReturnTokens.delete(otp_token);
+      res.status(403).json({ error: "OTP Token sudah kadaluarsa. Silakan request ulang." });
+      return;
+    }
     // Check lengths
     const returnedItems = data.returnedItems || [];
     const exchangedItems = data.exchangedItems || [];
@@ -290,12 +302,13 @@ router.post("/returns", async (req, res): Promise<void> => {
     if (data.type === 'penjualan') {
       if (differenceAmount > 0) {
          if (data.paymentStatus === 'tempo' && data.saleId) {
-            await db.insert(receivablesTable).values({
-               saleId: data.saleId,
-               customerId: data.customerId ?? null,
+            const insertData: any = {
+               saleId: data.saleId as number,
                totalAmount: differenceAmount.toString(),
                paidAmount: "0"
-            });
+            };
+            if (data.customerId) insertData.customerId = data.customerId;
+            await db.insert(receivablesTable).values(insertData);
          } else if (data.paymentStatus === 'lunas') {
             await db.insert(cashEntriesTable).values({
                type: 'masuk',
@@ -325,12 +338,13 @@ router.post("/returns", async (req, res): Promise<void> => {
     } else if (data.type === 'pembelian') {
       if (differenceAmount > 0) {
          if (data.paymentStatus === 'tempo' && data.supplierId && data.purchaseId) {
-            await db.insert(payablesTable).values({
-               purchaseId: data.purchaseId,
-               supplierId: data.supplierId,
+            const insertData: any = {
+               purchaseId: data.purchaseId as number,
                totalAmount: differenceAmount.toString(),
                paidAmount: "0"
-            });
+            };
+            if (data.supplierId) insertData.supplierId = data.supplierId;
+            await db.insert(payablesTable).values(insertData);
          } else if (data.paymentStatus === 'lunas') {
             await db.insert(cashEntriesTable).values({
                type: 'keluar',

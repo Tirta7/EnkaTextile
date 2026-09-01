@@ -9,6 +9,7 @@
 export interface SalesSummaryReport {
   totalRevenue: number;
   netRevenue: number;
+  averageTransaction: number;
   totalReturnDeposit: number;
   totalReturnExchanged: number;
   netReturnImpact: number;

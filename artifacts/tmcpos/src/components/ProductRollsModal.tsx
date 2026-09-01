@@ -79,7 +79,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   const [isAdding, setIsAdding] = useState(false);
   const [newBarcode, setNewBarcode] = useState("");
-  const [newLength, setNewLength] = useState("");
+  const [newLengths, setNewLengths] = useState<string[]>([]);
   const [newQty, setNewQty] = useState("1");
   const [isCreatingMultiple, setIsCreatingMultiple] = useState(false);
 
@@ -111,7 +111,6 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   const saveNew = async () => {
     if (!productId) return;
-    const len = parseFloat(newLength) || 0;
     const qty = parseInt(newQty) || 1;
     
     setIsCreatingMultiple(true);
@@ -119,6 +118,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
     try {
       // Loop to create multiple rolls if qty > 1
       for (let i = 0; i < qty; i++) {
+        const len = parseFloat(newLengths[i]) || 0;
         await createMutation.mutateAsync({
           id: productId,
           data: {
@@ -129,7 +129,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         });
       }
       setNewBarcode("");
-      setNewLength("");
+      setNewLengths([]);
       setNewQty("1");
       setIsAdding(false);
     } catch (error) {
@@ -236,39 +236,65 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
         {/* Add new roll form */}
         {isAdding && (
-          <div className="flex items-center gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
-            <Input
-              placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
-              value={newBarcode}
-              onChange={e => setNewBarcode(e.target.value)}
-              className="h-8 text-xs flex-1 min-w-[80px]"
-              disabled={parseInt(newQty) > 1 || isCreatingMultiple}
-            />
-            <div className="flex items-center gap-1 shrink-0">
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Qty</span>
+          <div className="flex flex-col gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+            <div className="flex items-center gap-2">
               <Input
-                type="number"
-                min="1"
-                value={newQty}
-                onChange={e => setNewQty(e.target.value)}
-                className="h-8 text-xs w-16 text-center bg-white"
-                disabled={isCreatingMultiple}
+                placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
+                value={newBarcode}
+                onChange={e => setNewBarcode(e.target.value)}
+                className="h-8 text-xs flex-1 min-w-[80px]"
+                disabled={parseInt(newQty) > 1 || isCreatingMultiple}
               />
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Qty</span>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newQty}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewQty(val);
+                    const parsed = parseInt(val) || 0;
+                    const newArr = Array.from({ length: parsed }, (_, i) => newLengths[i] || "");
+                    setNewLengths(newArr);
+                  }}
+                  className="h-8 text-xs w-16 text-center bg-white"
+                  disabled={isCreatingMultiple}
+                />
+              </div>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={saveNew} disabled={isCreatingMultiple || (parseInt(newQty) > 0 && newLengths.length === 0)}>
+                {isCreatingMultiple ? <span className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" /> : <Check className="h-4 w-4" />}
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground shrink-0" onClick={() => setIsAdding(false)} disabled={isCreatingMultiple}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Input
-              type="number"
-              placeholder="Pjg (yds)"
-              value={newLength}
-              onChange={e => setNewLength(e.target.value)}
-              className="h-8 text-xs w-24 text-right"
-              disabled={isCreatingMultiple}
-            />
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={saveNew} disabled={isCreatingMultiple}>
-              {isCreatingMultiple ? <span className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" /> : <Check className="h-4 w-4" />}
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground shrink-0" onClick={() => setIsAdding(false)} disabled={isCreatingMultiple}>
-              <X className="h-4 w-4" />
-            </Button>
+            
+            {parseInt(newQty) > 0 && (
+              <div className="bg-white p-3 rounded-lg border border-slate-200 mt-1">
+                <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll (yds)</label>
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                  {Array.from({ length: parseInt(newQty) || 0 }).map((_, i) => (
+                    <div key={i} className="space-y-1">
+                      <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
+                      <Input
+                        type="number" step="any" min={0}
+                        placeholder="Pjg (yds)"
+                        className="h-7 text-xs px-2"
+                        value={newLengths[i] || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const newArr = [...newLengths];
+                          newArr[i] = val;
+                          setNewLengths(newArr);
+                        }}
+                        disabled={isCreatingMultiple}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

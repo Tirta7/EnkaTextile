@@ -52,7 +52,7 @@ export default function Mutasi() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { type: "masuk", rolls: 0, meters: 0, description: "", reference: "" },
+    defaultValues: { type: "in", rolls: 0, meters: 0, description: "", reference: "" },
   });
 
   const selectedProductId = form.watch("productId");
@@ -66,7 +66,7 @@ export default function Mutasi() {
         queryClient.invalidateQueries({ queryKey: getListMutationsQueryKey({}) });
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
         setIsOpen(false);
-        form.reset({ type: "masuk", rolls: 0, meters: 0, description: "", reference: "" });
+        form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" });
         toast({ title: "Mutasi stok berhasil dicatat" });
       }
     }
@@ -89,7 +89,7 @@ export default function Mutasi() {
   });
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+    <div className="space-y-4 md:space-y-6 max-w-200 mx-auto pb-4">
       {/* Mobile-optimized Header */}
       <div className="flex flex-col pt-2 pb-2">
         <div className="flex items-center justify-between mb-4">
@@ -97,7 +97,7 @@ export default function Mutasi() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Mutasi Stok</h1>
             <p className="text-sm text-slate-500">Riwayat barang masuk & keluar</p>
           </div>
-          <Button onClick={() => { form.reset({ type: "masuk", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Button onClick={() => { form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>

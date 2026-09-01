@@ -77,10 +77,11 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
   const [editOriginalLength, setEditOriginalLength] = useState<string>("");
   const [editCurrentLength, setEditCurrentLength] = useState<string>("");
 
-  // State for adding new
   const [isAdding, setIsAdding] = useState(false);
   const [newBarcode, setNewBarcode] = useState("");
   const [newLength, setNewLength] = useState("");
+  const [newQty, setNewQty] = useState("1");
+  const [isCreatingMultiple, setIsCreatingMultiple] = useState(false);
 
   // State for sort & filter
   type SortOrder = "default" | "asc" | "desc";
@@ -108,17 +109,34 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
     });
   };
 
-  const saveNew = () => {
+  const saveNew = async () => {
     if (!productId) return;
     const len = parseFloat(newLength) || 0;
-    createMutation.mutate({
-      id: productId,
-      data: {
-        barcode: newBarcode || undefined,
-        originalLength: len,
-        currentLength: len
+    const qty = parseInt(newQty) || 1;
+    
+    setIsCreatingMultiple(true);
+    
+    try {
+      // Loop to create multiple rolls if qty > 1
+      for (let i = 0; i < qty; i++) {
+        await createMutation.mutateAsync({
+          id: productId,
+          data: {
+            barcode: qty === 1 ? (newBarcode || undefined) : undefined, // If multiple, ignore manual barcode to auto-generate
+            originalLength: len,
+            currentLength: len
+          }
+        });
       }
-    });
+      setNewBarcode("");
+      setNewLength("");
+      setNewQty("1");
+      setIsAdding(false);
+    } catch (error) {
+      console.error("Failed to create rolls:", error);
+    } finally {
+      setIsCreatingMultiple(false);
+    }
   };
 
   const editingRoll = rolls?.find((r: Roll) => r.id === editingRollId);
@@ -220,22 +238,35 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         {isAdding && (
           <div className="flex items-center gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
             <Input
-              placeholder="Barcode (Auto)"
+              placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
               value={newBarcode}
               onChange={e => setNewBarcode(e.target.value)}
-              className="h-8 text-xs flex-1"
+              className="h-8 text-xs flex-1 min-w-[80px]"
+              disabled={parseInt(newQty) > 1 || isCreatingMultiple}
             />
+            <div className="flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Qty</span>
+              <Input
+                type="number"
+                min="1"
+                value={newQty}
+                onChange={e => setNewQty(e.target.value)}
+                className="h-8 text-xs w-16 text-center bg-white"
+                disabled={isCreatingMultiple}
+              />
+            </div>
             <Input
               type="number"
-              placeholder="Panjang (yds)"
+              placeholder="Pjg (yds)"
               value={newLength}
               onChange={e => setNewLength(e.target.value)}
-              className="h-8 text-xs w-36 text-right"
+              className="h-8 text-xs w-24 text-right"
+              disabled={isCreatingMultiple}
             />
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={saveNew} disabled={createMutation.isPending}>
-              <Check className="h-4 w-4" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={saveNew} disabled={isCreatingMultiple}>
+              {isCreatingMultiple ? <span className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" /> : <Check className="h-4 w-4" />}
             </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground shrink-0" onClick={() => setIsAdding(false)}>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground shrink-0" onClick={() => setIsAdding(false)} disabled={isCreatingMultiple}>
               <X className="h-4 w-4" />
             </Button>
           </div>

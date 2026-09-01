@@ -68,37 +68,58 @@ router.post("/purchases", async (req, res): Promise<void> => {
   }).returning();
 
   for (const item of items) {
-    // Create product roll if barcode is provided
+    const rollCount = parseInt(item.rolls) || 0;
+    const totalMeters = parseFloat(item.meters) || 0;
+    
+    // Auto-generate rolls if roll count > 0
     let insertedRollId: number | null = null;
-    if (item.barcode) {
-      const [roll] = await db.insert(productRollsTable).values({
-        productId: item.productId,
-        barcode: item.barcode,
-        originalLength: item.meters.toString(),
-        currentLength: item.meters.toString(),
-        status: "available",
-      }).returning();
-      insertedRollId = roll.id;
+    
+    if (rollCount > 0) {
+      const avgLength = totalMeters / rollCount;
+      const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
+      const baseBarcode = prod?.barcode || `PRD-${item.productId}`;
+      
+      for (let i = 0; i < rollCount; i++) {
+        // Only use the user-provided barcode for the first roll if specified, otherwise generate
+        const barcodeToSave = (item.barcode && i === 0) ? item.barcode : `${baseBarcode}-R${Date.now()}-${i}`;
+        
+        const [roll] = await db.insert(productRollsTable).values({
+          productId: item.productId,
+          barcode: barcodeToSave,
+          originalLength: avgLength.toString(),
+          currentLength: avgLength.toString(),
+          status: "available",
+        }).returning();
+        
+        if (i === 0) insertedRollId = roll.id;
+      }
     }
 
     await db.insert(purchaseItemsTable).values({
       purchaseId: purchase.id,
       productId: item.productId,
-      rollId: insertedRollId,
+      rollId: insertedRollId, // arbitrarily store the first roll ID if they added multiple
       rolls: item.rolls.toString(),
       meters: item.meters.toString(),
       pricePerMeter: item.pricePerMeter.toString(),
       subtotal: item.subtotal.toString(),
     });
+    
+    // Sync the product's meter_stock and roll_stock based on the productRollsTable
+    const rolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, item.productId), eq(productRollsTable.status, "available")));
+    const calculatedRollStock = rolls.length;
+    const calculatedMeterStock = rolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
+
     await db.execute(sql`
       UPDATE ${productsTable} 
-      SET meter_stock = meter_stock + ${item.meters}, updated_at = NOW()
+      SET roll_stock = ${calculatedRollStock}, meter_stock = ${calculatedMeterStock}, updated_at = NOW()
       WHERE id = ${item.productId}
     `);
+    
     await db.insert(stockMutationsTable).values({
       productId: item.productId,
       type: "masuk",
-      rolls: "0", // actual roll count tracked via productRollsTable
+      rolls: item.rolls.toString(),
       meters: item.meters.toString(),
       description: `Pembelian ${invoiceNumber}`,
       reference: invoiceNumber,

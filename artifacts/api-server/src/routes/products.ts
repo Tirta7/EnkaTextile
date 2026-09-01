@@ -7,17 +7,14 @@ import { pushService } from "../lib/push";
 
 const router = Router();
 
-// Calculates unallocated (bulk) stock = total meter_stock - sum of all roll currentLengths
-async function getUnallocatedStock(productId: number): Promise<{ unallocatedMeters: number; totalRolls: number; totalRollMeters: number }> {
-  const rolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")));
-  const totalRollMeters = rolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
-  const [prod] = await db.select({ meterStock: productsTable.meterStock }).from(productsTable).where(eq(productsTable.id, productId));
-  const totalMeterStock = parseFloat(prod?.meterStock ?? "0");
-  return {
-    totalRolls: rolls.length,
-    totalRollMeters,
-    unallocatedMeters: Math.max(0, totalMeterStock - totalRollMeters)
-  };
+async function syncProductStockFromRolls(productId: number) {
+  const existingRolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")));
+  const rollStock = existingRolls.length;
+  const meterStock = existingRolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
+  await db.update(productsTable).set({
+    rollStock: String(rollStock),
+    meterStock: String(meterStock)
+  }).where(eq(productsTable.id, productId));
 }
 
 router.get("/products", async (req, res): Promise<void> => {
@@ -43,15 +40,10 @@ router.get("/products", async (req, res): Promise<void> => {
       costPricePerRoll: productsTable.costPricePerRoll,
       pricePerMeter: productsTable.pricePerMeter,
       pricePerRoll: productsTable.pricePerRoll,
+      rollStock: productsTable.rollStock,
       meterStock: productsTable.meterStock,
       minStock: productsTable.minStock,
       createdAt: productsTable.createdAt,
-      // Count actual registered available rolls from productRollsTable
-      actualRollCount: sql<number>`(
-        SELECT COUNT(*) FROM product_rolls 
-        WHERE product_rolls.product_id = ${productsTable.id} 
-        AND product_rolls.status = 'available'
-      )`,
     })
     .from(productsTable)
     .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
@@ -64,7 +56,7 @@ router.get("/products", async (req, res): Promise<void> => {
     costPricePerRoll: p.costPricePerRoll ? parseFloat(p.costPricePerRoll) : null,
     pricePerMeter: parseFloat(p.pricePerMeter ?? "0"),
     pricePerRoll: p.pricePerRoll ? parseFloat(p.pricePerRoll) : null,
-    rollStock: Number(p.actualRollCount ?? 0), // Use actual registered rolls, not stale roll_stock
+    rollStock: parseFloat(p.rollStock ?? "0"),
     meterStock: parseFloat(p.meterStock ?? "0"),
     minStock: parseFloat(p.minStock ?? "0"),
     isLowStock: parseFloat(p.meterStock ?? "0") <= parseFloat(p.minStock ?? "0"),
@@ -170,17 +162,12 @@ router.get("/products/:id/rolls", async (req, res): Promise<void> => {
     .where(and(eq(productRollsTable.productId, id), eq(productRollsTable.status, "available")))
     .orderBy(productRollsTable.createdAt);
   
-  const { unallocatedMeters } = await getUnallocatedStock(id);
-
-  res.json({
-    rolls: rolls.map(r => ({
-      ...r,
-      originalLength: parseFloat(r.originalLength),
-      currentLength: parseFloat(r.currentLength),
-      createdAt: r.createdAt.toISOString()
-    })),
-    unallocatedMeters
-  });
+  res.json(rolls.map(r => ({
+    ...r,
+    originalLength: parseFloat(r.originalLength),
+    currentLength: parseFloat(r.currentLength),
+    createdAt: r.createdAt.toISOString()
+  })));
 });
 
 router.patch("/products/:id", async (req, res): Promise<void> => {
@@ -281,26 +268,16 @@ router.post("/products/:id/rolls", async (req, res): Promise<void> => {
   const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, id));
   if (!prod) { res.status(404).json({ error: "Product not found" }); return; }
 
-  // Check if there's enough unallocated stock
-  const { unallocatedMeters } = await getUnallocatedStock(id);
-  const rollLength = d.currentLength ?? d.originalLength;
-  if (rollLength > unallocatedMeters + 0.001) {
-    res.status(400).json({ error: `Stok curah tidak cukup. Sisa belum dibagi: ${unallocatedMeters.toFixed(2)} yard` });
-    return;
-  }
-
   const barcodeToSave = d.barcode ? d.barcode : `${prod.barcode || `PRD-${prod.id}`}-R${Date.now()}`;
   const [newRoll] = await db.insert(productRollsTable).values({
     productId: id,
     barcode: barcodeToSave,
     originalLength: String(d.originalLength),
-    currentLength: String(d.currentLength ?? d.originalLength),
+    currentLength: String(d.currentLength),
     status: "available",
   }).returning();
   
-  // Deduct from meter_stock (the roll is now allocated from bulk stock)
-  // roll_stock stays the same since total meters don't change - only allocation changes
-  // We do NOT call syncProductStockFromRolls because meter_stock tracks TOTAL (bulk + rolls)
+  await syncProductStockFromRolls(id);
   
   res.status(201).json({
     ...newRoll,
@@ -317,21 +294,6 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const d = parsed.data;
 
-  // If changing currentLength, validate against available unallocated stock
-  if (d.currentLength != null) {
-    const [oldRoll] = await db.select().from(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
-    if (!oldRoll) { res.status(404).json({ error: "Roll not found" }); return; }
-    const oldLength = parseFloat(oldRoll.currentLength);
-    const diff = d.currentLength - oldLength; // positive = needs more stock, negative = returns stock
-    if (diff > 0) {
-      const { unallocatedMeters } = await getUnallocatedStock(id);
-      if (diff > unallocatedMeters + 0.001) {
-        res.status(400).json({ error: `Stok curah tidak cukup. Sisa belum dibagi: ${unallocatedMeters.toFixed(2)} yard` });
-        return;
-      }
-    }
-  }
-
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (d.barcode != null) updateData.barcode = d.barcode;
   if (d.originalLength != null) updateData.originalLength = String(d.originalLength);
@@ -340,7 +302,7 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   const [updatedRoll] = await db.update(productRollsTable).set(updateData as any).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id))).returning();
   if (!updatedRoll) { res.status(404).json({ error: "Roll not found" }); return; }
 
-  // Do NOT sync from rolls - meter_stock represents total (bulk + rolls)
+  await syncProductStockFromRolls(id);
 
   res.json({
     ...updatedRoll,
@@ -353,12 +315,9 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
 router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const rollId = parseInt(req.params.rollId);
-  
-  // Return the roll's length back to unallocated (bulk) stock
-  // meter_stock stays the same since total yards don't change - roll just becomes unallocated again
-  // roll_stock stays the same for same reason
-  
   await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
+  
+  await syncProductStockFromRolls(id);
   
   res.status(204).send();
 });

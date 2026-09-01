@@ -453,8 +453,8 @@ export default function Shop() {
         <div className="flex-1 flex flex-col min-w-0 h-full">
           
           {/* Header & Search */}
-          <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 px-3 lg:px-8 py-3 lg:py-4">
-             <div className="flex items-center justify-between gap-2.5 lg:gap-4">
+          <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 pt-[env(safe-area-inset-top,0px)]">
+             <div className="flex items-center justify-between gap-2.5 lg:gap-4 px-3 lg:px-8 py-3 lg:py-4">
                 {/* Mobile menu button */}
                 <button 
                   onClick={() => setMobileMenuOpen(true)}

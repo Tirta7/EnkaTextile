@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPayables, useAddPayablePayment, getListPayablesQueryKey } from "@workspace/api-client-react";
@@ -191,12 +191,12 @@ export default function Hutang() {
           </div>
         ) : (
           <Accordion type="multiple" className="w-full space-y-4">
-            {groupedFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((group, groupIdx) => {
+            {groupedFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((group: any[], groupIdx: number) => {
               const supplierName = group[0].supplierName || "Umum";
-              const totalGroupAmount = group.reduce((sum, p) => sum + (p.totalAmount ?? 0), 0);
-              const totalGroupPaid = group.reduce((sum, p) => sum + (p.paidAmount ?? 0), 0);
-              const totalGroupRemaining = group.reduce((sum, p) => sum + (p.remainingAmount ?? 0), 0);
-              const hasOverdue = group.some(p => p.isOverdue && p.status !== "lunas");
+              const totalGroupAmount = group.reduce((sum: number, p: any) => sum + (p.totalAmount ?? 0), 0);
+              const totalGroupPaid = group.reduce((sum: number, p: any) => sum + (p.paidAmount ?? 0), 0);
+              const totalGroupRemaining = group.reduce((sum: number, p: any) => sum + (p.remainingAmount ?? 0), 0);
+              const hasOverdue = group.some((p: any) => p.isOverdue && p.status !== "lunas");
               const pct = totalGroupAmount > 0 ? Math.round((totalGroupPaid / totalGroupAmount) * 100) : 0;
               const hasDebt = totalGroupRemaining > 0;
 
@@ -238,7 +238,7 @@ export default function Hutang() {
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${groupBadgeClass}`}>
-                            {hasDebt ? `${group.filter(p => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
+                        {hasDebt ? `${group.filter((p: any) => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
                           </span>
                           {hasOverdue && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-red-100 text-red-700">
@@ -259,7 +259,7 @@ export default function Hutang() {
                   
                   <AccordionContent className="p-4 pt-4 bg-slate-50/50 border-t border-slate-100">
                     <div className="space-y-3">
-                      {group.map(p => {
+                      {group.map((p: any) => {
                         const total = (p as any).totalAmount ?? 0;
                         const paid = (p as any).paidAmount ?? 0;
                         const itemPct = total > 0 ? Math.round((paid / total) * 100) : 0;

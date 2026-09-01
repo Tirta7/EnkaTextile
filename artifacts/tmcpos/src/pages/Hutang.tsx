@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
@@ -81,6 +83,16 @@ export default function Hutang() {
     dateFrom,
     dateTo,
   );
+
+  const groupedFiltered = useMemo(() => {
+    const groups: Record<number, any[]> = {};
+    filtered.forEach(p => {
+      const sid = p.supplierId || 0;
+      if (!groups[sid]) groups[sid] = [];
+      groups[sid].push(p);
+    });
+    return Object.values(groups);
+  }, [filtered]);
 
   const totalHutang = payables?.filter(p => p.status !== "lunas").reduce((sum, p) => sum + ((p as any).remainingAmount ?? 0), 0) ?? 0;
   const overdueCount = payables?.filter(p => (p as any).isOverdue).length ?? 0;
@@ -178,108 +190,144 @@ export default function Hutang() {
             <p className="text-sm text-slate-500 mt-1">Belum ada tagihan dari supplier.</p>
           </div>
         ) : (
-          <>
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => {
-              const total = (p as any).totalAmount ?? 0;
-              const paid = (p as any).paidAmount ?? 0;
-              const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
-              const isOverdue = (p as any).isOverdue && p.status !== "lunas";
-              
-              // Decorative Badge Class
-              let badgeClass = "bg-slate-100 text-slate-700";
-              let iconClass = "text-slate-500";
-              let iconBgClass = "bg-slate-50 border-slate-100";
-              let StatusIcon = AlertCircle;
-              
-              if (p.status === 'lunas') {
-                badgeClass = "bg-green-100 text-green-700";
-                iconClass = "text-green-500";
-                iconBgClass = "bg-green-50 border-green-100";
-                StatusIcon = CheckCircle2;
-              } else if (p.status === 'partial') {
-                badgeClass = "bg-blue-100 text-blue-700";
-                iconClass = "text-blue-500";
-                iconBgClass = "bg-blue-50 border-blue-100";
-                StatusIcon = DollarSign;
+          <Accordion type="multiple" className="w-full space-y-4">
+            {groupedFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((group, groupIdx) => {
+              const supplierName = group[0].supplierName || "Umum";
+              const totalGroupAmount = group.reduce((sum, p) => sum + (p.totalAmount ?? 0), 0);
+              const totalGroupPaid = group.reduce((sum, p) => sum + (p.paidAmount ?? 0), 0);
+              const totalGroupRemaining = group.reduce((sum, p) => sum + (p.remainingAmount ?? 0), 0);
+              const hasOverdue = group.some(p => p.isOverdue && p.status !== "lunas");
+              const pct = totalGroupAmount > 0 ? Math.round((totalGroupPaid / totalGroupAmount) * 100) : 0;
+              const hasDebt = totalGroupRemaining > 0;
+
+              let groupBadgeClass = "bg-slate-100 text-slate-700";
+              let groupIconClass = "text-slate-500";
+              let groupIconBgClass = "bg-slate-50 border-slate-100";
+              let GroupStatusIcon = AlertCircle;
+
+              if (!hasDebt) {
+                groupBadgeClass = "bg-green-100 text-green-700";
+                groupIconClass = "text-green-500";
+                groupIconBgClass = "bg-green-50 border-green-100";
+                GroupStatusIcon = CheckCircle2;
+              } else if (totalGroupPaid > 0) {
+                groupBadgeClass = "bg-blue-100 text-blue-700";
+                groupIconClass = "text-blue-500";
+                groupIconBgClass = "bg-blue-50 border-blue-100";
+                GroupStatusIcon = DollarSign;
               } else {
-                badgeClass = "bg-red-100 text-red-700";
-                iconClass = "text-red-500";
-                iconBgClass = "bg-red-50 border-red-100";
-                StatusIcon = AlertTriangle;
+                groupBadgeClass = "bg-red-100 text-red-700";
+                groupIconClass = "text-red-500";
+                groupIconBgClass = "bg-red-50 border-red-100";
+                GroupStatusIcon = AlertTriangle;
               }
 
               return (
-                <div key={p.id} className={`bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border ${isOverdue ? 'border-red-200 bg-red-50/10' : 'border-slate-100'} flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md`}>
-                  
-                  {/* Decorative side accent */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${isOverdue ? 'bg-red-500' : badgeClass.split(' ')[0]}`} />
-
-                  {/* Header: Waktu & Invoice */}
-                  <div className="flex justify-between items-start pl-2">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                        {formatDate((p as any).createdAt)}
-                      </span>
-                      <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded-full inline-block mt-1">
-                        {(p as any).invoiceNumber || `#${p.id}`}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-slate-900 block">
-                        {formatRupiah(total)}
-                      </span>
-                      <span className={`text-[10px] font-medium block mt-0.5 ${isOverdue ? 'text-red-600' : 'text-slate-400'}`}>
-                        Jatuh Tempo: {formatDate((p as any).dueDate)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body: Info Supplier */}
-                  <div className="flex gap-3 items-center pl-2">
-                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${iconBgClass}`}>
-                      <StatusIcon className={`w-6 h-6 ${iconClass}`} strokeWidth={2} />
-                    </div>
+                <AccordionItem value={`supplier-${group[0].supplierId || groupIdx}`} key={`supplier-${group[0].supplierId || groupIdx}`} className={`bg-white rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border ${hasOverdue ? 'border-red-200 bg-red-50/5' : 'border-slate-100'} overflow-hidden`}>
+                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-slate-50/50 transition-colors [&[data-state=open]]:border-b border-slate-100 relative">
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${hasOverdue ? 'bg-red-500' : groupBadgeClass.split(' ')[0]}`} />
                     
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
-                        {(p as any).supplierName || "-"}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
-                          {p.status?.replace("_", " ")}
+                    <div className="flex w-full gap-3 items-center pl-2 pr-2">
+                      <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${groupIconBgClass}`}>
+                        <GroupStatusIcon className={`w-6 h-6 ${groupIconClass}`} strokeWidth={2} />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0 text-left flex flex-col justify-center">
+                        <h3 className="font-bold text-slate-800 text-[15px] truncate">
+                          {supplierName}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${groupBadgeClass}`}>
+                            {hasDebt ? `${group.filter(p => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
+                          </span>
+                          {hasOverdue && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-red-100 text-red-700">
+                              Jatuh Tempo
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-right flex flex-col items-end justify-center mr-2">
+                        <span className="text-sm font-bold text-slate-900 block leading-tight mb-0.5">
+                          {formatRupiah(totalGroupRemaining)}
                         </span>
+                        <span className="text-[10px] text-slate-500 font-medium">Sisa Hutang</span>
                       </div>
                     </div>
-                    
-                    {p.status !== "lunas" && (
-                      <Button size="sm" className="h-8 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs px-4 shadow-sm" onClick={() => openPayment(p.id)}>
-                        <Plus className="mr-1 h-3.5 w-3.5" /> Bayar
-                      </Button>
-                    )}
-                  </div>
+                  </AccordionTrigger>
+                  
+                  <AccordionContent className="p-4 pt-4 bg-slate-50/50 border-t border-slate-100">
+                    <div className="space-y-3">
+                      {group.map(p => {
+                        const total = (p as any).totalAmount ?? 0;
+                        const paid = (p as any).paidAmount ?? 0;
+                        const itemPct = total > 0 ? Math.round((paid / total) * 100) : 0;
+                        const isOverdue = (p as any).isOverdue && p.status !== "lunas";
+                        
+                        let badgeClass = "bg-slate-100 text-slate-700";
+                        if (p.status === 'lunas') badgeClass = "bg-green-100 text-green-700";
+                        else if (p.status === 'partial') badgeClass = "bg-blue-100 text-blue-700";
+                        else badgeClass = "bg-red-100 text-red-700";
 
-                  {/* Footer: Progress Pembayaran */}
-                  <div className="mt-2 pl-2 border-t border-slate-100 pt-3">
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="font-medium text-slate-500">Progress Pembayaran</span>
-                      <span className="font-bold text-slate-700">{pct}%</span>
+                        return (
+                          <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-sm border ${isOverdue ? 'border-red-200' : 'border-slate-200'} flex flex-col gap-3 relative overflow-hidden`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                                  {formatDate((p as any).createdAt)}
+                                </span>
+                                <span className="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded-md inline-block">
+                                  {(p as any).invoiceNumber || `#${p.id}`}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-sm font-bold text-slate-900 block mb-1">
+                                  {formatRupiah(total)}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
+                                  {p.status?.replace("_", " ")}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center mt-1">
+                              <span className={`text-xs font-medium ${isOverdue ? 'text-red-600' : 'text-slate-500'}`}>
+                                Tempo: {formatDate((p as any).dueDate)}
+                              </span>
+                              {p.status !== "lunas" && (
+                                <Button size="sm" className="h-7 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold text-[11px] px-4 shadow-sm" onClick={() => openPayment(p.id)}>
+                                  <Plus className="mr-1 h-3 w-3" /> Bayar
+                                </Button>
+                              )}
+                            </div>
+                            
+                            <div className="mt-1 border-t border-slate-100 pt-3">
+                              <div className="flex justify-between text-[11px] mb-1.5">
+                                <span className="font-medium text-slate-500">Progress Pembayaran</span>
+                                <span className="font-bold text-slate-700">{itemPct}%</span>
+                              </div>
+                              <Progress value={itemPct} className="h-1.5 bg-slate-100" />
+                              <div className="flex justify-between text-[11px] mt-1.5">
+                                <span className="text-slate-400">Terbayar: <span className="font-medium text-slate-600">{formatRupiah(paid)}</span></span>
+                                {(p as any).remainingAmount > 0 && (
+                                  <span className="text-red-600 font-medium">Sisa: {formatRupiah((p as any).remainingAmount)}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <Progress value={pct} className="h-1.5 bg-slate-100" />
-                    <div className="flex justify-between text-[11px] mt-1.5">
-                      <span className="text-slate-400">Terbayar: <span className="font-medium text-slate-600">{formatRupiah(paid)}</span></span>
-                      {(p as any).remainingAmount > 0 && (
-                        <span className="text-red-600 font-medium">Sisa: {formatRupiah((p as any).remainingAmount)}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
               );
             })}
-          </>
+          </Accordion>
         )}
-        {filtered && filtered.length > 20 && (
+        {groupedFiltered && groupedFiltered.length > 20 && (
           <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(groupedFiltered.length / 20)} onPageChange={setCurrentPage} />
           </div>
         )}
       </div>

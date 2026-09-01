@@ -87,7 +87,7 @@ router.get("/manifest.json", async (req, res) => {
       "name": appName,
       "short_name": appName,
       "description": "Virtual Operational Control - Sistem POS/ERP",
-      "start_url": "/",
+      "start_url": "/pos/",
       "display": "standalone",
       "background_color": "#ffffff",
       "theme_color": "#0f172a",

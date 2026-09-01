@@ -75,7 +75,7 @@ export default function Hutang() {
     payables?.filter(p => {
       const q = search.toLowerCase();
       const matchSearch = (p as any).supplierName?.toLowerCase().includes(q) || (p as any).invoiceNumber?.toLowerCase().includes(q);
-      const matchStatus = activeTab === "semua" || p.status === activeTab;
+      const matchStatus = activeTab === "semua" || p.status === activeTab || (activeTab === "belum_bayar" && p.status === "unpaid");
       return matchSearch && matchStatus;
     }) ?? [],
     dateFrom,

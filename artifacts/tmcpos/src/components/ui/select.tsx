@@ -75,10 +75,55 @@ export const SelectTrigger = React.forwardRef(({ className, children, ...props }
 SelectTrigger.displayName = "SelectTrigger"
 
 export const SelectContent = React.forwardRef(({ className, children, ...props }: any, ref: any) => {
+  const { open } = useSelect();
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    let searchString = "";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore modifier keys
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      
+      // We only care about single characters
+      if (e.key.length === 1) {
+        searchString += e.key.toLowerCase();
+        
+        if (containerRef.current) {
+          const elements = containerRef.current.querySelectorAll('[data-select-item]');
+          const target = Array.from(elements).find(el => 
+            el.textContent?.trim().toLowerCase().startsWith(searchString)
+          );
+          
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+
+        // Reset the search string after a small delay
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          searchString = "";
+        }, 500);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(timeout);
+    };
+  }, [open]);
+
   return (
     <DrawerContent className={cn("max-h-[85vh] px-4 pb-8", className)} ref={ref} {...props}>
       <div className="sr-only"><DrawerTitle>Select Option</DrawerTitle></div>
-      <div className="overflow-y-auto max-h-[calc(85vh-3rem)] w-full py-2 flex flex-col gap-1">
+      <div 
+        ref={containerRef}
+        className="overflow-y-auto max-h-[calc(85vh-3rem)] w-full py-2 flex flex-col gap-1"
+      >
         {children}
       </div>
     </DrawerContent>
@@ -113,6 +158,7 @@ export const SelectItem = React.forwardRef(({ className, children, value, disabl
         if (onValueChange) onValueChange(value);
         setOpen(false); // iOS style auto close
       }}
+      data-select-item="true"
       {...props}
     >
       {children}

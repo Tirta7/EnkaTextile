@@ -758,7 +758,8 @@ export const CreatePurchaseBody = zod.object({
   "meters": zod.number(),
   "pricePerMeter": zod.number(),
   "subtotal": zod.number(),
-  "barcode": zod.string().optional()
+  "barcode": zod.string().optional(),
+  "rollLengths": zod.array(zod.number()).optional()
 }))
 })
 

@@ -58,13 +58,23 @@ export default function Pembelian() {
 
   const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); };
 
-  const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "" }]);
+  const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "", rollLengths: [] }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
-  const updateItem = (index: number, field: keyof PurchaseItem, value: any) => {
+  const updateItem = (index: number, field: keyof PurchaseItem | `rollLengths.${number}`, value: any) => {
     setItems(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      
+      if (typeof field === 'string' && field.startsWith('rollLengths.')) {
+        const lengthIndex = parseInt(field.split('.')[1]);
+        if (!updated[index].rollLengths) updated[index].rollLengths = [];
+        updated[index].rollLengths![lengthIndex] = value;
+        // Auto calculate meters from rollLengths
+        updated[index].meters = parseFloat(updated[index].rollLengths!.reduce((a,b)=>a+b, 0).toFixed(3));
+      } else {
+        (updated[index] as any)[field] = value;
+      }
+      
       if (field === "productId") {
         const prod = products?.find(p => p.id === parseInt(value));
         if (prod) { 
@@ -74,6 +84,15 @@ export default function Pembelian() {
           updated[index].secondaryUnit = prod.secondaryUnit;
         }
       }
+      
+      if (field === "rolls") {
+        const val = parseInt(value) || 0;
+        const currentLengths = updated[index].rollLengths || [];
+        const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || 0);
+        updated[index].rollLengths = newLengths;
+        updated[index].meters = parseFloat(newLengths.reduce((a,b)=>a+b, 0).toFixed(3));
+      }
+      
       const item = updated[index];
       updated[index].subtotal = (typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerMeter === "number" ? item.pricePerMeter : 0);
       return updated;
@@ -98,7 +117,8 @@ export default function Pembelian() {
           meters: typeof i.meters === "number" ? i.meters : 0, 
           pricePerMeter: typeof i.pricePerMeter === "number" ? i.pricePerMeter : 0, 
           subtotal: i.subtotal, 
-          barcode: i.barcode || undefined 
+          barcode: i.barcode || undefined,
+          rollLengths: i.rollLengths || undefined
         }))
       }
     });
@@ -332,52 +352,75 @@ export default function Pembelian() {
                 <div className="text-center py-6 border-2 border-dashed rounded-lg text-muted-foreground text-sm">Belum ada item. Klik "Tambah Item" untuk memulai.</div>
               )}
               {items.map((item, index) => (
-                <div key={index} className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
-                    <Select value={item.categoryId ? item.categoryId.toString() : ""} onValueChange={(v: string) => updateItem(index, "categoryId", parseInt(v))}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Semua</SelectItem>
-                        {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                <div key={index} className="flex flex-col gap-2 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end">
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
+                      <Select value={item.categoryId ? item.categoryId.toString() : ""} onValueChange={(v: string) => updateItem(index, "categoryId", parseInt(v))}>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Semua</SelectItem>
+                          {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
+                      <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Pilih" /></SelectTrigger>
+                        <SelectContent>
+                          {products
+                            ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
+                            .map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>
+                      <Input className="h-8 px-2" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Roll</label>
+                      <Input className="h-8 px-2" type="number" step="1" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Yard"})</label>
+                      <Input className={`h-8 px-2 ${(item.rolls && (item.rolls as number) > 0) ? 'bg-slate-100 cursor-not-allowed font-medium' : ''}`} type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} readOnly={!!(item.rolls && (item.rolls as number) > 0)} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Yard"}</label>
+                      <Input className="h-8 px-2" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
+                      <div className="h-8 flex items-center text-xs font-medium px-1">{formatRupiah(item.subtotal)}</div>
+                    </div>
+                    <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
-                    <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Pilih" /></SelectTrigger>
-                      <SelectContent>
-                        {products
-                          ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
-                          .map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)
-                        }
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="md:col-span-1">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>
-                    <Input className="h-8 px-2" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
-                  </div>
-                  <div className="md:col-span-1">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Roll</label>
-                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Yard"})</label>
-                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Yard"}</label>
-                    <Input className="h-8 px-2" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
-                  </div>
-                  <div className="md:col-span-1">
-                    <label className="text-xs text-muted-foreground mb-1 block">Subtotal</label>
-                    <div className="h-8 flex items-center text-xs font-medium px-1">{formatRupiah(item.subtotal)}</div>
-                  </div>
-                  <div className="md:col-span-1 flex justify-end md:justify-center mt-2 md:mt-0">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                  </div>
+
+                  {/* Dynamic inputs for roll lengths */}
+                  {item.rolls && (item.rolls as number) > 0 && (
+                    <div className="mt-2 bg-white p-3 rounded-lg border border-slate-200">
+                      <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll ({item.primaryUnit || "Yard"})</label>
+                      <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                        {Array.from({ length: item.rolls as number }).map((_, i) => (
+                          <div key={i} className="space-y-1">
+                            <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
+                            <Input
+                              type="number" step="any" min={0}
+                              placeholder="Panjang..."
+                              className="h-7 text-xs px-2"
+                              value={item.rollLengths?.[i] || ''}
+                              onChange={e => updateItem(index, `rollLengths.${i}` as any, e.target.value === "" ? "" : parseFloat(e.target.value))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

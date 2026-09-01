@@ -83,11 +83,14 @@ router.post("/purchases", async (req, res): Promise<void> => {
         // Only use the user-provided barcode for the first roll if specified, otherwise generate
         const barcodeToSave = (item.barcode && i === 0) ? item.barcode : `${baseBarcode}-R${Date.now()}-${i}`;
         
+        // @ts-ignore - rollLengths exists on our updated schema
+        const lengthToUse = (item.rollLengths && item.rollLengths[i]) ? item.rollLengths[i] : avgLength;
+        
         const [roll] = await db.insert(productRollsTable).values({
           productId: item.productId,
           barcode: barcodeToSave,
-          originalLength: avgLength.toString(),
-          currentLength: avgLength.toString(),
+          originalLength: lengthToUse.toString(),
+          currentLength: lengthToUse.toString(),
           status: "available",
         }).returning();
         

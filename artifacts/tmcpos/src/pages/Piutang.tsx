@@ -54,15 +54,28 @@ export default function Piutang() {
   const selectedRec = receivables?.find(r => r.id === selectedId);
 
   const handlePay = () => {
-    if (!selectedId || !payAmount) return;
-    payMutation.mutate({ id: selectedId, data: { amount: parseFloat(payAmount), paymentMethod: payMethod as any, notes: payNotes || undefined } });
+    if (!selectedId || !selectedRec) return;
+    const amount = parseFloat(payAmount) || 0;
+    const remaining = (selectedRec as any).remainingAmount || 0;
+    
+    if (amount <= 0) {
+      toast({ title: "Jumlah tidak valid", description: "Jumlah bayar harus lebih dari 0", variant: "destructive" });
+      return;
+    }
+    
+    if (amount > remaining) {
+      toast({ title: "Jumlah terlalu besar", description: `Maksimal pembayaran adalah ${formatRupiah(remaining)}`, variant: "destructive" });
+      return;
+    }
+    
+    payMutation.mutate({ id: selectedId, data: { amount, paymentMethod: payMethod as any, notes: payNotes || undefined } });
   };
 
   const filtered = filterByDateRange(
     receivables?.filter(r => {
       const q = search.toLowerCase();
       const matchSearch = (r as any).customerName?.toLowerCase().includes(q) || (r as any).invoiceNumber?.toLowerCase().includes(q);
-      const matchStatus = activeTab === "semua" || r.status === activeTab;
+      const matchStatus = activeTab === "semua" || r.status === activeTab || (activeTab === "belum_bayar" && r.status === "unpaid");
       return matchSearch && matchStatus;
     }) ?? [],
     dateFrom,
@@ -277,11 +290,35 @@ export default function Piutang() {
             <div className="space-y-4">
               <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-muted-foreground">Pelanggan:</span><span className="font-medium">{(selectedRec as any).customerName}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Sisa Piutang:</span><span className="font-bold text-primary">{formatRupiah((selectedRec as any).remainingAmount)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sisa Piutang:</span>
+                  <span 
+                    className="font-bold text-primary cursor-pointer hover:underline hover:text-violet-700 transition-colors"
+                    onClick={() => setPayAmount(String((selectedRec as any).remainingAmount))}
+                    title="Klik untuk bayar lunas"
+                  >
+                    {formatRupiah((selectedRec as any).remainingAmount)}
+                  </span>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Jumlah Bayar (Rp)</label>
-                <Input type="number" min={0} max={(selectedRec as any).remainingAmount} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+                <Input type="number" min={0} max={(selectedRec as any).remainingAmount} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} className={parseFloat(payAmount) > ((selectedRec as any).remainingAmount || 0) ? "border-red-500 focus-visible:ring-red-500" : ""} />
+                
+                {/* Real-time Validation and Formatting Preview */}
+                {payAmount && (
+                  <div className="mt-1.5 flex flex-col gap-1">
+                    <span className="text-xs font-semibold text-violet-600 block bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
+                      Preview: {formatRupiah(parseFloat(payAmount) || 0)}
+                    </span>
+                    {parseFloat(payAmount) <= 0 && (
+                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Harus lebih dari 0</span>
+                    )}
+                    {parseFloat(payAmount) > ((selectedRec as any).remainingAmount || 0) && (
+                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Melebihi sisa piutang ({formatRupiah((selectedRec as any).remainingAmount)})</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>

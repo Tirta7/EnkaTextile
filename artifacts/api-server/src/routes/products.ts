@@ -88,14 +88,16 @@ router.post("/products", async (req, res): Promise<void> => {
     const rollStockNum = Math.floor(d.rollStock ?? 0);
     const meterStockNum = d.meterStock ?? 0;
     if (rollStockNum > 0) {
-      const avgLength = (meterStockNum / rollStockNum).toFixed(3);
-      const rollsToInsert = Array.from({ length: rollStockNum }).map((_, i) => ({
-        productId: prod.id,
-        barcode: `${prod.barcode}-R${Date.now()}-${i + 1}`,
-        originalLength: String(avgLength),
-        currentLength: String(avgLength),
-        status: "available",
-      }));
+      const rollsToInsert = Array.from({ length: rollStockNum }).map((_, i) => {
+        const lengthToUse = (d.rollLengths && d.rollLengths[i]) ? d.rollLengths[i] : (meterStockNum / rollStockNum);
+        return {
+          productId: prod.id,
+          barcode: `${prod.barcode}-R${Date.now()}-${i + 1}`,
+          originalLength: String(lengthToUse),
+          currentLength: String(lengthToUse),
+          status: "available",
+        };
+      });
       await db.insert(productRollsTable).values(rollsToInsert);
     }
     

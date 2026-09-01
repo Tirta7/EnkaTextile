@@ -38,6 +38,7 @@ const schema = z.object({
   rollStock: z.number().min(0).optional(),
   meterStock: z.number().min(0).optional(),
   minStock: z.number().min(0),
+  rollLengths: z.array(z.number()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -51,8 +52,7 @@ export default function Barang() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [viewRollsId, setViewRollsId] = useState<number | null>(null);
-  const [viewRollsName, setViewRollsName] = useState("");
-  const [calcPerRoll, setCalcPerRoll] = useState<number | ''>('');
+  const [viewRollsName, setViewRollsName] = useState<string>("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
@@ -121,7 +121,7 @@ export default function Barang() {
   };
 
   const openCreate = () => {
-    form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0 });
+    form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0, rollLengths: [] });
     setEditingId(null);
     setImageUrl(null);
     setIsOpen(true);
@@ -561,14 +561,16 @@ export default function Barang() {
                       <FormLabel>Jumlah Roll Fisik</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" step="any" min={0} 
+                          type="number" step="1" min={0} 
                           {...field} 
                           onChange={e => {
-                            const val = parseFloat(e.target.value) || 0;
+                            const val = parseInt(e.target.value) || 0;
                             field.onChange(val);
-                            if (calcPerRoll !== '') {
-                              form.setValue('meterStock', parseFloat((val * calcPerRoll).toFixed(3)));
-                            }
+                            // Adjust rollLengths array size
+                            const currentLengths = form.getValues('rollLengths') || [];
+                            const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || 0);
+                            form.setValue('rollLengths', newLengths);
+                            form.setValue('meterStock', newLengths.reduce((a,b)=>a+b, 0));
                           }} 
                         />
                       </FormControl>
@@ -576,30 +578,40 @@ export default function Barang() {
                     </FormItem>
                   )} />
 
-                  <div className="space-y-2 pt-1">
-                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Isi per Roll (Yard/Meter)</label>
-                    <Input 
-                      type="number" step="any" min={0}
-                      placeholder="Kalkulator..."
-                      value={calcPerRoll}
-                      onChange={e => {
-                        const val = e.target.value === '' ? '' : parseFloat(e.target.value);
-                        setCalcPerRoll(val);
-                        if (val !== '') {
-                          const rolls = form.getValues('rollStock') || 0;
-                          form.setValue('meterStock', parseFloat((rolls * val).toFixed(3)));
-                        }
-                      }}
-                    />
-                  </div>
-
                   <FormField control={form.control} name="meterStock" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Stok Awal Ecer (Yard/Meter)</FormLabel>
-                      <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                      <FormLabel>Total Stok Ecer (Yard/Meter)</FormLabel>
+                      <FormControl><Input type="number" step="any" min={0} {...field} readOnly className="bg-slate-50 cursor-not-allowed font-semibold text-primary" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
+
+                  {/* Dynamic inputs for roll lengths */}
+                  {(form.watch('rollStock') || 0) > 0 && !editingId && (
+                    <div className="md:col-span-3 bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                      <FormLabel className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</FormLabel>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                        {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
+                          <div key={i} className="space-y-1.5">
+                            <label className="text-xs font-medium text-slate-500">Roll #{i + 1}</label>
+                            <Input
+                              type="number" step="any" min={0}
+                              placeholder="Panjang..."
+                              className="h-8 text-sm"
+                              value={form.watch(`rollLengths.${i}`) || ''}
+                              onChange={e => {
+                                const val = parseFloat(e.target.value) || 0;
+                                const newLengths = [...(form.getValues('rollLengths') || [])];
+                                newLengths[i] = val;
+                                form.setValue('rollLengths', newLengths);
+                                form.setValue('meterStock', parseFloat(newLengths.reduce((a,b)=>a+b, 0).toFixed(3)));
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem className="md:col-span-3">

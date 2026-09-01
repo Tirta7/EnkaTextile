@@ -212,7 +212,8 @@ export const CreateProductBody = zod.object({
   "pricePerRoll": zod.number().optional(),
   "rollStock": zod.number().optional(),
   "meterStock": zod.number().optional(),
-  "minStock": zod.number().optional()
+  "minStock": zod.number().optional(),
+  "rollLengths": zod.array(zod.number()).optional()
 })
 
 export const CreateProductResponse = zod.object({

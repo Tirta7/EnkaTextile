@@ -8,7 +8,7 @@ self.addEventListener('push', function (event) {
         badge: data.notification.badge || '/icon-192.png',
         vibrate: data.notification.vibrate || [200, 100, 200],
         data: {
-          url: data.notification.data.url || '/'
+          url: (data.notification.data && data.notification.data.url) ? data.notification.data.url : '/'
         },
       };
 

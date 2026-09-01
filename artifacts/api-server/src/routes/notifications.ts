@@ -70,6 +70,7 @@ router.post("/request-return-otp", async (req: Request, res: Response) => {
       const otp = generateOtp();
       const expiresAt = Date.now() + 15 * 60 * 1000; // 15 menit
       activeOtp = { otp, expiresAt };
+      console.log(`[NOTIF] OTP Retur: ${otp}`);
     }
 
     // Hitung sisa waktu dalam menit

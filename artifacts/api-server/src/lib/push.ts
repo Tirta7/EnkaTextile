@@ -146,8 +146,8 @@ export const pushService = {
         notification: {
           title,
           body,
-          icon: "/api/settings/logo.svg",
-          badge: "/api/settings/logo.svg",
+          icon: "/favicon.svg",
+          badge: "/favicon.svg",
           vibrate: [200, 100, 200],
           requireInteraction: true,
           data: { url: "/retur" },

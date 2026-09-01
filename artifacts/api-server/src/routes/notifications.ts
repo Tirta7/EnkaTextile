@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { pushService } from "../lib/push";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -70,8 +71,11 @@ router.post("/request-return-otp", async (req: Request, res: Response) => {
       const otp = generateOtp();
       const expiresAt = Date.now() + 15 * 60 * 1000; // 15 menit
       activeOtp = { otp, expiresAt };
-      console.log(`[NOTIF] OTP Retur: ${otp}`);
     }
+
+    console.log(`\n========================================`);
+    console.log(`👉 [NOTIF] KODE OTP RETUR: ${activeOtp!.otp} 👈`);
+    console.log(`========================================\n`);
 
     // Hitung sisa waktu dalam menit
     const remainingMs = activeOtp!.expiresAt - Date.now();
@@ -133,7 +137,6 @@ router.post("/verify-return-otp", async (req: Request, res: Response) => {
     const remainingMs = activeOtp.expiresAt - Date.now();
     const remainingMin = Math.ceil(remainingMs / 60000);
 
-    const crypto = require("crypto");
     const token = crypto.randomUUID();
     verifiedReturnTokens.set(token, Date.now() + 15 * 60 * 1000); // 15 menit token expiry
 

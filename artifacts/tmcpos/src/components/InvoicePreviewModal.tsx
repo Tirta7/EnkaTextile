@@ -691,12 +691,14 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 <SelectContent className="z-[400]">
                   <SelectItem value="none" className="border shadow-sm hover:border-primary/50 mb-2 w-full text-base justify-center">Bebas Meteran</SelectItem>
                   {availableRolls.length > 0 && (
-                    <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-12 gap-3 p-2">
+                    <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-2">
                       {availableRolls.map(r => (
-                        <SelectItem key={`r_${r.id}`} value={`r_${r.id}`} className="border shadow-sm hover:border-primary/50 py-2.5 h-auto justify-center text-center">
-                          <div className="flex flex-col items-center gap-0.5">
+                        <SelectItem key={`r_${r.id}`} value={`r_${r.id}`} className="border shadow-sm hover:border-primary/50 py-3 h-auto justify-center text-center">
+                          <div className="flex flex-col items-center gap-1 w-full min-w-0">
                             <span className="font-semibold text-base">{r.currentLength}m</span>
-                            <span className="text-xs text-muted-foreground truncate w-full text-center">{r.barcode}</span>
+                            <span className="text-[10px] text-muted-foreground whitespace-normal break-all text-center leading-tight">
+                              {r.barcode}
+                            </span>
                           </div>
                         </SelectItem>
                       ))}

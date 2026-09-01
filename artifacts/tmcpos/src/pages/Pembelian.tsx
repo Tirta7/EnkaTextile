@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
-type PurchaseItem = { categoryId?: number; productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; };
+type PurchaseItem = { categoryId?: number; productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; rollLengths?: number[]; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -72,7 +72,7 @@ export default function Pembelian() {
         if (!updated[index].rollLengths) updated[index].rollLengths = [];
         updated[index].rollLengths![lengthIndex] = value;
         // Auto calculate meters from rollLengths
-        updated[index].meters = parseFloat(updated[index].rollLengths!.reduce((a,b)=>a+b, 0).toFixed(3));
+        updated[index].meters = parseFloat(updated[index].rollLengths!.reduce((a: number, b: number) => a + b, 0).toFixed(3));
       } else {
         (updated[index] as any)[field] = value;
       }
@@ -92,7 +92,7 @@ export default function Pembelian() {
         const currentLengths = updated[index].rollLengths || [];
         const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || 0);
         updated[index].rollLengths = newLengths;
-        updated[index].meters = parseFloat(newLengths.reduce((a,b)=>a+b, 0).toFixed(3));
+        updated[index].meters = parseFloat(newLengths.reduce((a: number, b: number) => a + b, 0).toFixed(3));
       }
       
       const item = updated[index];

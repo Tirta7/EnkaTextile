@@ -48,7 +48,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
         setIsAdding(false);
         setNewBarcode("");
-        setNewLength("");
+        setNewLengths([]);
       }
     }
   });
@@ -242,7 +242,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                 placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
                 value={newBarcode}
                 onChange={e => setNewBarcode(e.target.value)}
-                className="h-8 text-xs flex-1 min-w-[80px]"
+                className="h-8 text-xs flex-1 min-w-20"
                 disabled={parseInt(newQty) > 1 || isCreatingMultiple}
               />
               <div className="flex items-center gap-1 shrink-0">

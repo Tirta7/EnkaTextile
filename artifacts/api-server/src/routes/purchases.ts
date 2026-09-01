@@ -68,8 +68,8 @@ router.post("/purchases", async (req, res): Promise<void> => {
   }).returning();
 
   for (const item of items) {
-    const rollCount = parseInt(item.rolls) || 0;
-    const totalMeters = parseFloat(item.meters) || 0;
+    const rollCount = Number(item.rolls) || 0;
+    const totalMeters = Number(item.meters) || 0;
     
     // Auto-generate rolls if roll count > 0
     let insertedRollId: number | null = null;

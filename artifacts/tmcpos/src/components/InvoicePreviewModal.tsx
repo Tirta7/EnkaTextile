@@ -86,8 +86,16 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey(), enabled: exchangeOpen } });
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey(), enabled: exchangeOpen } });
   const { data: rolls } = useGetProductRolls(parseInt(replacementProductId) || 0, {
-    query: { queryKey: getGetProductRollsQueryKey(parseInt(replacementProductId) || 0), enabled: !!replacementProductId && exchangeOpen }
+    query: { queryKey: getGetProductRollsQueryKey(parseInt(replacementProductId) || 0), enabled: !!replacementProductId && replacementProductId !== "none" && exchangeOpen }
   });
+
+  const [replacementCategoryId, setReplacementCategoryId] = useState<string>("all");
+  
+  const filteredReplacementProducts = React.useMemo(() => {
+    if (!products) return [];
+    if (replacementCategoryId === "all") return products;
+    return products.filter(p => p.categoryId === parseInt(replacementCategoryId));
+  }, [products, replacementCategoryId]);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -623,25 +631,48 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               </span>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Pilih Barang Pengganti</label>
-              <Select value={replacementProductId} onValueChange={(val: string) => {
-                setReplacementProductId(val);
-                setReplacementRollId("none");
-                const prod = products?.find(p => p.id === parseInt(val));
-                if (prod) setReplacementPrice(parseFloat(String(prod.pricePerMeter)));
-              }}>
-                <SelectTrigger><SelectValue placeholder="Pilih barang..." /></SelectTrigger>
-                <SelectContent className="z-[400]">
-                  <SelectGroup className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 2xl:grid-cols-16 gap-3 p-2">
-                    {products?.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center">
-                        <span className="font-semibold truncate w-full" title={p.name}>{p.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Kategori Pengganti</label>
+                <Select value={replacementCategoryId} onValueChange={(val: string) => {
+                  setReplacementCategoryId(val);
+                  setReplacementProductId("");
+                  setReplacementRollId("none");
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Semua Kategori" /></SelectTrigger>
+                  <SelectContent className="z-[400]">
+                    <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-2">
+                      <SelectItem value="all" className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center font-semibold">Semua Kategori</SelectItem>
+                      {categories?.map(c => (
+                        <SelectItem key={c.id} value={c.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center break-words">
+                          <span className="font-semibold truncate w-full">{c.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Barang Pengganti</label>
+                <Select value={replacementProductId} onValueChange={(val: string) => {
+                  setReplacementProductId(val);
+                  setReplacementRollId("none");
+                  const prod = products?.find(p => p.id === parseInt(val));
+                  if (prod) setReplacementPrice(parseFloat(String(prod.pricePerMeter)));
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Pilih barang..." /></SelectTrigger>
+                  <SelectContent className="z-[400]">
+                    <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-2">
+                      {filteredReplacementProducts?.map(p => (
+                        <SelectItem key={p.id} value={p.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center break-words">
+                          <span className="font-semibold truncate w-full" title={p.name}>{p.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">

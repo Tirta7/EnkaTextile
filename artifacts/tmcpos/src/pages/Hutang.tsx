@@ -279,7 +279,16 @@ export default function Hutang() {
             <div className="space-y-4">
               <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
                 <div className="flex justify-between"><span className="text-muted-foreground">Supplier:</span><span className="font-medium">{(selectedPay as any).supplierName}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Sisa Hutang:</span><span className="font-bold text-destructive">{formatRupiah((selectedPay as any).remainingAmount)}</span></div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Sisa Hutang:</span>
+                  <span 
+                    className="font-bold text-destructive cursor-pointer hover:underline hover:text-red-700 transition-colors"
+                    onClick={() => setPayAmount(String((selectedPay as any).remainingAmount))}
+                    title="Klik untuk bayar lunas"
+                  >
+                    {formatRupiah((selectedPay as any).remainingAmount)}
+                  </span>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Jumlah Bayar (Rp)</label>

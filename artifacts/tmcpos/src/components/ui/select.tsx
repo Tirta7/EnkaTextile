@@ -122,7 +122,7 @@ export const SelectContent = React.forwardRef(({ className, children, ...props }
       <div className="sr-only"><DrawerTitle>Select Option</DrawerTitle></div>
       <div 
         ref={containerRef}
-        className="overflow-y-auto max-h-[calc(85vh-3rem)] w-full py-2 flex flex-col gap-1"
+        className="overflow-y-auto max-h-[calc(85vh-3rem)] w-full py-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2"
       >
         {children}
       </div>
@@ -148,8 +148,8 @@ export const SelectItem = React.forwardRef(({ className, children, value, disabl
     <div
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center justify-center rounded-xl py-3.5 text-lg font-medium outline-none transition-colors hover:bg-accent hover:text-accent-foreground active:scale-[0.98]",
-        isSelected ? "bg-primary/10 text-primary font-semibold" : "",
+        "relative flex w-full cursor-pointer select-none items-center justify-center rounded-xl px-3 py-3 text-sm font-semibold text-center border border-transparent outline-none transition-all hover:bg-accent hover:border-border hover:shadow-sm active:scale-[0.98]",
+        isSelected ? "bg-primary/10 text-primary border-primary/20 shadow-sm" : "bg-slate-50 dark:bg-slate-900",
         disabled ? "pointer-events-none opacity-50" : "",
         className
       )}

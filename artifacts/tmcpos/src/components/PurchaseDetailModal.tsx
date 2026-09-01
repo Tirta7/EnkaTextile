@@ -1,4 +1,4 @@
-import { useGetPurchase } from "@workspace/api-client-react";
+import { useGetPurchase, getGetPurchaseQueryKey } from "@workspace/api-client-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ interface PurchaseDetailModalProps {
 export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDetailModalProps) {
   const { data: purchase, isLoading } = useGetPurchase(purchaseId ?? 0, {
     query: {
+      queryKey: getGetPurchaseQueryKey(purchaseId ?? 0),
       enabled: !!purchaseId && isOpen,
     }
   });
@@ -99,7 +100,7 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                 
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   {/* Table Header */}
-                  <div className="grid grid-cols-12 gap-2 bg-slate-100 p-3 text-xs font-semibold text-slate-600 hidden md:grid">
+                  <div className="hidden md:grid grid-cols-12 gap-2 bg-slate-100 p-3 text-xs font-semibold text-slate-600">
                     <div className="col-span-5">NAMA BARANG</div>
                     <div className="col-span-2 text-center">ROLL</div>
                     <div className="col-span-2 text-right">QTY / YARD</div>

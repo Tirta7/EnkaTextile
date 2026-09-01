@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { SupplierDebtDrawer } from "@/components/SupplierDebtDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Truck, Store, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -31,6 +32,7 @@ export default function Supplier() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [viewDebtSupplierId, setViewDebtSupplierId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const { data: suppliers, isLoading } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
@@ -112,9 +114,13 @@ export default function Supplier() {
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       {s.phone || "Tanpa No. HP"}
                     </span>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-400 block mb-0.5">Total Hutang Ke Supplier</span>
-                      <span className={`text-sm font-bold ${hasDebt ? 'text-red-600' : 'text-slate-800'}`}>
+                    <div 
+                      className="text-right cursor-pointer group" 
+                      onClick={() => { if (hasDebt) setViewDebtSupplierId(s.id); }}
+                      title={hasDebt ? "Klik untuk lihat detail hutang" : ""}
+                    >
+                      <span className="text-xs text-slate-400 block mb-0.5 group-hover:text-slate-500 transition-colors">Total Hutang Ke Supplier</span>
+                      <span className={`text-sm font-bold ${hasDebt ? 'text-red-600 group-hover:text-red-700 group-hover:underline decoration-red-300 underline-offset-4' : 'text-slate-800'}`}>
                         {formatRupiah(currentDebt)}
                       </span>
                     </div>
@@ -215,6 +221,13 @@ export default function Supplier() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      <SupplierDebtDrawer 
+        supplierId={viewDebtSupplierId} 
+        supplierName={suppliers?.find(s => s.id === viewDebtSupplierId)?.name || ""}
+        isOpen={!!viewDebtSupplierId} 
+        onClose={() => setViewDebtSupplierId(null)} 
+      />
     </div>
   );
 }

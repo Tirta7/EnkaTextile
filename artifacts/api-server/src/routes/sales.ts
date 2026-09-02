@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, stockMutationsTable, productRollsTable, returnsTable, returnReturnedItemsTable, returnExchangedItemsTable } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, sql, desc, inArray, ne } from "drizzle-orm";
 import { CreateSaleBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 import { pushService } from "../lib/push";
@@ -10,6 +10,182 @@ const router = Router();
 
 function numStr(v: string | null | undefined) { return parseFloat(v ?? "0"); }
 
+// ─── Helper: Deduct stock for sale items ───────────────────────────────────────
+async function deductStockForItems(items: any[], invoiceNumber: string) {
+  for (const item of items) {
+    // Decrease product stock
+    const [updatedProduct] = await db.update(productsTable)
+      .set({
+        rollStock: sql`${productsTable.rollStock} - ${item.rolls}`,
+        meterStock: sql`${productsTable.meterStock} - ${item.meters}`,
+        updatedAt: sql`NOW()`
+      })
+      .where(eq(productsTable.id, item.productId))
+      .returning();
+
+    // Trigger low stock notification
+    if (updatedProduct) {
+      const meterStock = parseFloat(updatedProduct.meterStock as string || "0");
+      const minStock = parseFloat(updatedProduct.minStock as string || "0");
+      if (meterStock <= minStock) {
+        try {
+          await pushService.sendNotificationToAdmins(
+            "⚠️ Peringatan Stok Rendah",
+            `Bahan: ${updatedProduct.name}\nSisa Stok: ${meterStock} Meter (Min: ${minStock})\nMohon segera lakukan pengadaan ulang.`,
+            `/barang`
+          );
+        } catch (err) {
+          console.error("Gagal mengirim notif stok", err);
+        }
+      }
+    }
+
+    // Deduct rolls logic
+    if (item.rollId) {
+      await db.execute(sql`
+        UPDATE ${productRollsTable}
+        SET current_length = current_length - ${item.meters}, 
+            status = CASE WHEN current_length - ${item.meters} <= 0.01 THEN 'empty' ELSE 'available' END,
+            updated_at = NOW()
+        WHERE id = ${item.rollId}
+      `);
+    } else {
+      if (item.rolls > 0) {
+        const availableRolls = await db.select().from(productRollsTable)
+          .where(and(
+            eq(productRollsTable.productId, item.productId),
+            eq(productRollsTable.status, 'available')
+          ));
+        const targetLength = item.meters / item.rolls;
+        const exactRolls = availableRolls.filter(r => Math.abs(parseFloat(r.currentLength) - targetLength) < 0.01);
+
+        if (exactRolls.length >= item.rolls) {
+          const idsToDeduct = exactRolls.slice(0, item.rolls).map(r => r.id);
+          for (const rId of idsToDeduct) {
+            await db.execute(sql`
+              UPDATE ${productRollsTable}
+              SET current_length = 0, status = 'empty', updated_at = NOW()
+              WHERE id = ${rId}
+            `);
+          }
+        } else {
+          let remainingMeters = item.meters;
+          for (const roll of availableRolls) {
+            if (remainingMeters <= 0.01) break;
+            const rollLen = parseFloat(roll.currentLength);
+            if (rollLen > remainingMeters) {
+              await db.execute(sql`UPDATE ${productRollsTable} SET current_length = current_length - ${remainingMeters}, updated_at = NOW() WHERE id = ${roll.id}`);
+              remainingMeters = 0;
+            } else {
+              await db.execute(sql`UPDATE ${productRollsTable} SET current_length = 0, status = 'empty', updated_at = NOW() WHERE id = ${roll.id}`);
+              remainingMeters -= rollLen;
+            }
+          }
+        }
+      } else if (item.meters > 0) {
+        let remainingMeters = item.meters;
+        const availableRolls = await db.select().from(productRollsTable)
+          .where(and(
+            eq(productRollsTable.productId, item.productId),
+            eq(productRollsTable.status, 'available')
+          ));
+        for (const roll of availableRolls) {
+          if (remainingMeters <= 0.01) break;
+          const rollLen = parseFloat(roll.currentLength);
+          if (rollLen > remainingMeters + 0.01) {
+            await db.execute(sql`UPDATE ${productRollsTable} SET current_length = current_length - ${remainingMeters}, updated_at = NOW() WHERE id = ${roll.id}`);
+            remainingMeters = 0;
+          } else {
+            await db.execute(sql`UPDATE ${productRollsTable} SET current_length = 0, status = 'empty', updated_at = NOW() WHERE id = ${roll.id}`);
+            remainingMeters -= rollLen;
+          }
+        }
+      }
+    }
+
+    // Log stock mutation
+    await db.insert(stockMutationsTable).values({
+      productId: item.productId,
+      type: "keluar",
+      rolls: item.rolls.toString(),
+      meters: item.meters.toString(),
+      description: `Penjualan ${invoiceNumber}`,
+      reference: invoiceNumber,
+    });
+  }
+}
+
+// ─── Helper: Reverse stock for sale items ──────────────────────────────────────
+async function reverseStockForItems(saleId: number, invoiceNumber: string) {
+  const oldItems = await db.select().from(saleItemsTable)
+    .where(eq(saleItemsTable.saleId, saleId));
+
+  for (const item of oldItems) {
+    const rolls = numStr(item.rolls as string);
+    const meters = numStr(item.meters as string);
+
+    // Restore product stock
+    await db.update(productsTable)
+      .set({
+        rollStock: sql`${productsTable.rollStock} + ${rolls}`,
+        meterStock: sql`${productsTable.meterStock} + ${meters}`,
+        updatedAt: sql`NOW()`
+      })
+      .where(eq(productsTable.id, item.productId));
+
+    // Restore roll if specific roll was used
+    if (item.rollId) {
+      await db.execute(sql`
+        UPDATE ${productRollsTable}
+        SET current_length = current_length + ${meters},
+            status = 'available',
+            updated_at = NOW()
+        WHERE id = ${item.rollId}
+      `);
+    }
+
+    // Log reversal mutation
+    await db.insert(stockMutationsTable).values({
+      productId: item.productId,
+      type: "masuk",
+      rolls: rolls.toString(),
+      meters: meters.toString(),
+      description: `Pembatalan ${invoiceNumber}`,
+      reference: invoiceNumber,
+    });
+  }
+}
+
+// ─── Helper: Generate sequential invoice number ─────────────────────────────────
+async function generateNextInvoiceNumber(prefix: string = "INV"): Promise<string> {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}${m}${d}`;
+
+  // Get all invoices for today that are NOT draft (already paid/confirmed)
+  const todaySales = await db.select({ invoiceNumber: salesTable.invoiceNumber })
+    .from(salesTable)
+    .where(and(
+      sql`${salesTable.invoiceNumber} LIKE ${`${prefix}/${dateStr}/%`}`,
+      ne(salesTable.status, 'draft')
+    ));
+
+  let maxSeq = 0;
+  for (const s of todaySales) {
+    const parts = s.invoiceNumber?.split('/');
+    if (parts && parts.length === 3) {
+      const seq = parseInt(parts[2], 10);
+      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+    }
+  }
+
+  const nextSeq = maxSeq + 1;
+  return `${prefix}/${dateStr}/${String(nextSeq).padStart(4, "0")}`;
+}
+
+// ─── GET /sales ────────────────────────────────────────────────────────────────
 router.get("/sales", async (req, res) => {
   const { customerId, status, startDate, endDate } = req.query;
   const conditions: any[] = [];
@@ -43,11 +219,26 @@ router.get("/sales", async (req, res) => {
     .orderBy(desc(salesTable.createdAt));
 
   res.json(sales.map(s => {
+    // For draft/cancelled, return as-is without recalculation
+    if (s.status === 'draft' || s.status === 'cancelled') {
+      return {
+        ...s,
+        totalAmount: numStr(s.totalAmount),
+        paidAmount: numStr(s.paidAmount),
+        remainingAmount: numStr(s.totalAmount),
+        dueDate: s.dueDate?.toISOString() ?? null,
+        createdAt: s.createdAt.toISOString(),
+        hasReturns: false,
+        returnDifference: 0,
+        totalReturnedValue: 0,
+        totalExchangedValue: 0,
+      };
+    }
+
     const saleGross = numStr(s.totalAmount) + numStr(s.returnDifference);
     const salePaid = numStr(s.paidAmount) + numStr((s as any).returnDifferencePaid);
     const remainingAmount = saleGross - salePaid;
-    
-    // Dynamically calculate status because total/paid amounts might have changed due to returns
+
     let finalStatus = s.status;
     if (remainingAmount <= 0) {
       finalStatus = 'lunas';
@@ -71,200 +262,348 @@ router.get("/sales", async (req, res) => {
   }));
 });
 
+// ─── POST /sales ───────────────────────────────────────────────────────────────
 router.post("/sales", async (req, res): Promise<void> => {
   try {
-  const parsed = CreateSaleBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+    const parsed = CreateSaleBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const { customerId, paymentType, dueDate, notes, items } = parsed.data;
-  const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
-  const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
-  const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+    const { customerId, paymentType, dueDate, notes, items } = parsed.data;
+    const isDraft = (req.body as any).isDraft === true;
 
-  const counter = await db.select({ count: sql<number>`count(*)` }).from(salesTable);
-  const invoiceNumber = req.body.invoiceNumber || `INV-${Date.now()}`;
+    const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
-  const [sale] = await db.insert(salesTable).values({
-    invoiceNumber,
-    customerId: customerId ?? null,
-    paymentType,
-    totalAmount: totalAmount.toString(),
-    paidAmount: paidAmount.toString(),
-    status,
-    dueDate: dueDate ? new Date(dueDate) : null,
-    notes: notes ?? null,
-  }).returning();
+    let paidAmount = 0;
+    let status: string;
+    let invoiceNumber: string;
 
-  // Insert items and update stock
-  for (const item of items) {
-    await db.insert(saleItemsTable).values({
-      saleId: sale.id,
-      productId: item.productId,
-      rollId: item.rollId ?? null,
-      rolls: item.rolls.toString(),
-      meters: item.meters.toString(),
-      pricePerMeter: item.pricePerMeter.toString(),
-      subtotal: item.subtotal.toString(),
-    });
-    // Decrease product stock
-    const [updatedProduct] = await db.update(productsTable)
-      .set({
-        rollStock: sql`${productsTable.rollStock} - ${item.rolls}`,
-        meterStock: sql`${productsTable.meterStock} - ${item.meters}`,
-        updatedAt: sql`NOW()`
-      })
-      .where(eq(productsTable.id, item.productId))
-      .returning();
-
-    // Trigger low stock notification
-    if (updatedProduct) {
-      const meterStock = parseFloat(updatedProduct.meterStock as string || "0");
-      const minStock = parseFloat(updatedProduct.minStock as string || "0");
-      if (meterStock <= minStock) {
-        try {
-          await pushService.sendNotificationToAdmins(
-            "⚠️ Peringatan Stok Rendah",
-            `Bahan: ${updatedProduct.name}\nSisa Stok: ${meterStock} Meter (Min: ${minStock})\nMohon segera lakukan pengadaan ulang.`,
-            `/barang`
-          );
-        } catch (err) {
-          console.error("Gagal mengirim notif stok", err);
-        }
-      }
-    }
-    
-    // Deduct rolls logic
-    if (item.rollId) {
-      // 1. Specific Roll Selected
-      await db.execute(sql`
-        UPDATE ${productRollsTable}
-        SET current_length = current_length - ${item.meters}, 
-            status = CASE WHEN current_length - ${item.meters} <= 0.01 THEN 'empty' ELSE 'available' END,
-            updated_at = NOW()
-        WHERE id = ${item.rollId}
-      `);
+    if (isDraft) {
+      // Draft: no invoice number yet, no stock deduction
+      status = 'draft';
+      invoiceNumber = `DRAFT-${Date.now()}`;
     } else {
-      // Auto-deduct rolls if no specific rollId is provided
-      if (item.rolls > 0) {
-        // 2. Qty > 0 (E.g. Grouped Length Selection)
-        // Find rolls that match the exact target length
-        const availableRolls = await db.select().from(productRollsTable)
-          .where(and(
-            eq(productRollsTable.productId, item.productId),
-            eq(productRollsTable.status, 'available')
-          ));
-        
-        // Filter in JS to avoid floating point precision issues in SQL
-        const targetLength = item.meters / item.rolls;
-        const exactRolls = availableRolls.filter(r => Math.abs(parseFloat(r.currentLength) - targetLength) < 0.01);
-        
-        if (exactRolls.length >= item.rolls) {
-          const idsToDeduct = exactRolls.slice(0, item.rolls).map(r => r.id);
-          for (const rId of idsToDeduct) {
-             await db.execute(sql`
-              UPDATE ${productRollsTable}
-              SET current_length = 0, status = 'empty', updated_at = NOW()
-              WHERE id = ${rId}
-            `);
-          }
-        } else {
-           console.warn(`Not enough exact rolls found for product ${item.productId}, target length ${targetLength}`);
-           // Fallback to FIFO if exact match not found
-           let remainingMeters = item.meters;
-           for (const roll of availableRolls) {
-             if (remainingMeters <= 0.01) break;
-             const rollLen = parseFloat(roll.currentLength);
-             if (rollLen > remainingMeters) {
-               await db.execute(sql`UPDATE ${productRollsTable} SET current_length = current_length - ${remainingMeters}, updated_at = NOW() WHERE id = ${roll.id}`);
-               remainingMeters = 0;
-             } else {
-               await db.execute(sql`UPDATE ${productRollsTable} SET current_length = 0, status = 'empty', updated_at = NOW() WHERE id = ${roll.id}`);
-               remainingMeters -= rollLen;
-             }
-           }
-        }
-      } else if (item.meters > 0) {
-        // 3. Bebas Meteran (rolls = 0)
-        // FIFO deduction from oldest available rolls
-        let remainingMeters = item.meters;
-        const availableRolls = await db.select().from(productRollsTable)
-          .where(and(
-            eq(productRollsTable.productId, item.productId),
-            eq(productRollsTable.status, 'available')
-          ));
-          
-        for (const roll of availableRolls) {
-          if (remainingMeters <= 0.01) break;
-          const rollLen = parseFloat(roll.currentLength);
-          if (rollLen > remainingMeters + 0.01) {
-            await db.execute(sql`UPDATE ${productRollsTable} SET current_length = current_length - ${remainingMeters}, updated_at = NOW() WHERE id = ${roll.id}`);
-            remainingMeters = 0;
-          } else {
-            await db.execute(sql`UPDATE ${productRollsTable} SET current_length = 0, status = 'empty', updated_at = NOW() WHERE id = ${roll.id}`);
-            remainingMeters -= rollLen;
-          }
-        }
-      }
+      paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+      status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+      invoiceNumber = req.body.invoiceNumber || await generateNextInvoiceNumber("INV");
     }
 
-    // Log mutation
-    await db.insert(stockMutationsTable).values({
-      productId: item.productId,
-      type: "keluar",
-      rolls: item.rolls.toString(),
-      meters: item.meters.toString(),
-      description: `Penjualan ${invoiceNumber}`,
-      reference: invoiceNumber,
-    });
-  }
-
-  // Create receivable for tempo sales
-  if (status !== "lunas" && customerId) {
-    await db.insert(receivablesTable).values({
-      saleId: sale.id,
-      customerId,
+    const [sale] = await db.insert(salesTable).values({
+      invoiceNumber,
+      customerId: customerId ?? null,
+      paymentType,
       totalAmount: totalAmount.toString(),
       paidAmount: paidAmount.toString(),
-      status: status === "partial" ? "partial" : "unpaid",
+      status,
       dueDate: dueDate ? new Date(dueDate) : null,
-    });
-  }
+      notes: notes ?? null,
+    }).returning();
 
-  broadcastRefresh();
-  
-  // Trigger Push Notification
-  try {
-    let customerName = "Umum";
-    if (customerId) {
-      const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, customerId));
-      if (customer) customerName = customer.name;
+    // Insert line items (always saved, stock deduction only if not draft)
+    for (const item of items) {
+      await db.insert(saleItemsTable).values({
+        saleId: sale.id,
+        productId: item.productId,
+        rollId: item.rollId ?? null,
+        rolls: item.rolls.toString(),
+        meters: item.meters.toString(),
+        pricePerMeter: item.pricePerMeter.toString(),
+        subtotal: item.subtotal.toString(),
+      });
     }
-    const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAmount);
-    await pushService.sendNotificationToAdmins(
-      "Transaksi Penjualan Baru",
-      `Pelanggan: ${customerName}\nInvoice: ${invoiceNumber}\nTotal: ${formattedAmount}\nStatus: ${status.toUpperCase()}\nMetode: ${paymentType.toUpperCase()}`,
-      `/penjualan` // URL to navigate when clicked
-    );
-  } catch (error) {
-    console.error("Gagal mengirim push notif untuk sale", error);
-  }
-  res.status(201).json({
-    ...sale,
-    totalAmount: numStr(sale.totalAmount),
-    paidAmount: numStr(sale.paidAmount),
-    remainingAmount: numStr(sale.totalAmount) - numStr(sale.paidAmount),
-    dueDate: sale.dueDate?.toISOString() ?? null,
-    createdAt: sale.createdAt.toISOString(),
-    customerName: null,
-  });
-  
+
+    if (!isDraft) {
+      // Deduct stock only for non-draft sales
+      await deductStockForItems(items, invoiceNumber);
+
+      // Create receivable for tempo sales
+      if (status !== "lunas" && customerId) {
+        await db.insert(receivablesTable).values({
+          saleId: sale.id,
+          customerId,
+          totalAmount: totalAmount.toString(),
+          paidAmount: paidAmount.toString(),
+          status: status === "partial" ? "partial" : "unpaid",
+          dueDate: dueDate ? new Date(dueDate) : null,
+        });
+      }
+
+      broadcastRefresh();
+
+      // Push notification
+      try {
+        let customerName = "Umum";
+        if (customerId) {
+          const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, customerId));
+          if (customer) customerName = customer.name;
+        }
+        const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAmount);
+        await pushService.sendNotificationToAdmins(
+          "Transaksi Penjualan Baru",
+          `Pelanggan: ${customerName}\nInvoice: ${invoiceNumber}\nTotal: ${formattedAmount}\nStatus: ${status.toUpperCase()}\nMetode: ${paymentType.toUpperCase()}`,
+          `/pos/penjualan`
+        );
+      } catch (error) {
+        console.error("Gagal mengirim push notif untuk sale", error);
+      }
+    } else {
+      broadcastRefresh();
+    }
+
+    res.status(201).json({
+      ...sale,
+      totalAmount: numStr(sale.totalAmount),
+      paidAmount: numStr(sale.paidAmount),
+      remainingAmount: numStr(sale.totalAmount) - numStr(sale.paidAmount),
+      dueDate: sale.dueDate?.toISOString() ?? null,
+      createdAt: sale.createdAt.toISOString(),
+      customerName: null,
+    });
+
   } catch (error: any) {
     require('fs').writeFileSync('error.log', String(error) + '\n' + (error.stack || ''));
     res.status(500).json({ error: "Internal Server Error", detail: String(error) });
-    return;
   }
 });
 
+// ─── POST /sales/:id/pay ──────────────────────────────────────────────────────
+router.post("/sales/:id/pay", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id));
+    if (!sale) { res.status(404).json({ error: "Not found" }); return; }
+    if (sale.status !== 'draft') { res.status(400).json({ error: "Hanya nota dengan status Draft yang bisa dibayar" }); return; }
+
+    const { paymentType, dueDate, notes } = req.body;
+    const items = await db.select().from(saleItemsTable).where(eq(saleItemsTable.saleId, id));
+
+    const totalAmount = numStr(sale.totalAmount);
+    const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+    const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+
+    // Assign real sequential invoice number now
+    const invoiceNumber = await generateNextInvoiceNumber("INV");
+
+    // Update sale header
+    await db.update(salesTable).set({
+      invoiceNumber,
+      paymentType: paymentType || sale.paymentType,
+      paidAmount: paidAmount.toString(),
+      status,
+      dueDate: dueDate ? new Date(dueDate) : (sale.dueDate ?? null),
+      notes: notes ?? sale.notes,
+      updatedAt: sql`NOW()`,
+    }).where(eq(salesTable.id, id));
+
+    // Deduct stock now
+    const itemsForDeduction = items.map(i => ({
+      productId: i.productId,
+      rollId: i.rollId,
+      rolls: numStr(i.rolls as string),
+      meters: numStr(i.meters as string),
+      pricePerMeter: numStr(i.pricePerMeter as string),
+      subtotal: numStr(i.subtotal as string),
+    }));
+    await deductStockForItems(itemsForDeduction, invoiceNumber);
+
+    // Create receivable if tempo
+    const customerId = sale.customerId;
+    if (status !== "lunas" && customerId) {
+      await db.insert(receivablesTable).values({
+        saleId: id,
+        customerId,
+        totalAmount: totalAmount.toString(),
+        paidAmount: paidAmount.toString(),
+        status: status === "partial" ? "partial" : "unpaid",
+        dueDate: dueDate ? new Date(dueDate) : null,
+      });
+    }
+
+    broadcastRefresh();
+
+    // Push notification
+    try {
+      let customerName = "Umum";
+      if (customerId) {
+        const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, customerId));
+        if (customer) customerName = customer.name;
+      }
+      const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalAmount);
+      await pushService.sendNotificationToAdmins(
+        "💳 Pembayaran Diterima",
+        `Pelanggan: ${customerName}\nInvoice: ${invoiceNumber}\nTotal: ${formattedAmount}\nMetode: ${(paymentType || sale.paymentType).toUpperCase()}`,
+        `/pos/penjualan`
+      );
+    } catch (error) {
+      console.error("Gagal mengirim notif pembayaran", error);
+    }
+
+    const [updated] = await db.select().from(salesTable).where(eq(salesTable.id, id));
+    res.json({
+      ...updated,
+      totalAmount: numStr(updated.totalAmount),
+      paidAmount: numStr(updated.paidAmount),
+      remainingAmount: numStr(updated.totalAmount) - numStr(updated.paidAmount),
+      dueDate: updated.dueDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
+  }
+});
+
+// ─── POST /sales/:id/cancel ───────────────────────────────────────────────────
+router.post("/sales/:id/cancel", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id));
+    if (!sale) { res.status(404).json({ error: "Not found" }); return; }
+
+    if (sale.status === 'draft') {
+      // Draft: delete completely so invoice numbers stay continuous
+      await db.delete(saleItemsTable).where(eq(saleItemsTable.saleId, id));
+      await db.delete(salesTable).where(eq(salesTable.id, id));
+    } else if (sale.status === 'cancelled') {
+      res.status(400).json({ error: "Nota sudah dibatalkan" }); return;
+    } else {
+      // Paid sale: reverse stock, mark cancelled
+      await reverseStockForItems(id, sale.invoiceNumber);
+
+      // Remove receivables if any
+      await db.delete(receivablesTable).where(eq(receivablesTable.saleId, id));
+
+      // Mark as cancelled
+      await db.update(salesTable).set({
+        status: 'cancelled',
+        updatedAt: sql`NOW()`,
+      }).where(eq(salesTable.id, id));
+
+      // Push notification
+      try {
+        const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(numStr(sale.totalAmount));
+        await pushService.sendNotificationToAdmins(
+          "⚠️ Transaksi Dibatalkan",
+          `Invoice: ${sale.invoiceNumber} dibatalkan\nTotal: ${formattedAmount}\nStok telah dikembalikan.`,
+          `/pos/penjualan`
+        );
+      } catch (error) {
+        console.error("Gagal mengirim notif pembatalan", error);
+      }
+    }
+
+    broadcastRefresh();
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
+  }
+});
+
+// ─── PUT /sales/:id ───────────────────────────────────────────────────────────
+router.put("/sales/:id", async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(req.params.id);
+    const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id));
+    if (!sale) { res.status(404).json({ error: "Not found" }); return; }
+    if (sale.status === 'cancelled') { res.status(400).json({ error: "Nota dibatalkan tidak bisa diedit" }); return; }
+
+    const parsed = CreateSaleBody.safeParse(req.body);
+    if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+    const { customerId, paymentType, dueDate, notes, items } = parsed.data;
+
+    // If sale was already paid, reverse stock from old items first
+    if (sale.status !== 'draft') {
+      await reverseStockForItems(id, sale.invoiceNumber);
+    }
+
+    // Delete old items
+    await db.delete(saleItemsTable).where(eq(saleItemsTable.saleId, id));
+
+    const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
+
+    let paidAmount = numStr(sale.paidAmount);
+    // If was draft, it's still draft after edit (no payment logic change)
+    // If was paid, recalculate based on old paidAmount vs new total
+    if (sale.status !== 'draft') {
+      const paymentTypeToUse = paymentType || sale.paymentType;
+      paidAmount = (paymentTypeToUse !== "kredit" && paymentTypeToUse !== "tempo") ? totalAmount : Math.min(numStr(sale.paidAmount), totalAmount);
+    }
+
+    const statusAfter = sale.status === 'draft' ? 'draft' :
+      (paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo");
+
+    // Update sale header
+    await db.update(salesTable).set({
+      customerId: customerId ?? null,
+      paymentType: paymentType || sale.paymentType,
+      totalAmount: totalAmount.toString(),
+      paidAmount: paidAmount.toString(),
+      status: statusAfter,
+      dueDate: dueDate ? new Date(dueDate) : (sale.dueDate ?? null),
+      notes: notes ?? sale.notes,
+      updatedAt: sql`NOW()`,
+    }).where(eq(salesTable.id, id));
+
+    // Insert new items
+    for (const item of items) {
+      await db.insert(saleItemsTable).values({
+        saleId: id,
+        productId: item.productId,
+        rollId: item.rollId ?? null,
+        rolls: item.rolls.toString(),
+        meters: item.meters.toString(),
+        pricePerMeter: item.pricePerMeter.toString(),
+        subtotal: item.subtotal.toString(),
+      });
+    }
+
+    // Deduct stock for new items (only if not draft)
+    if (sale.status !== 'draft') {
+      await deductStockForItems(items, sale.invoiceNumber);
+    }
+
+    // Update receivables if exists
+    if (sale.status !== 'draft') {
+      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+      if (statusAfter !== 'lunas' && customerId) {
+        if (existingReceivables.length > 0) {
+          await db.update(receivablesTable).set({
+            totalAmount: totalAmount.toString(),
+            paidAmount: paidAmount.toString(),
+            status: statusAfter === "partial" ? "partial" : "unpaid",
+            updatedAt: sql`NOW()`,
+          }).where(eq(receivablesTable.saleId, id));
+        } else {
+          await db.insert(receivablesTable).values({
+            saleId: id,
+            customerId: customerId ?? sale.customerId ?? 0,
+            totalAmount: totalAmount.toString(),
+            paidAmount: paidAmount.toString(),
+            status: statusAfter === "partial" ? "partial" : "unpaid",
+            dueDate: dueDate ? new Date(dueDate) : null,
+          });
+        }
+      } else if (statusAfter === 'lunas' && existingReceivables.length > 0) {
+        await db.delete(receivablesTable).where(eq(receivablesTable.saleId, id));
+      }
+    }
+
+    broadcastRefresh();
+
+    const [updated] = await db.select().from(salesTable).where(eq(salesTable.id, id));
+    res.json({
+      ...updated,
+      totalAmount: numStr(updated.totalAmount),
+      paidAmount: numStr(updated.paidAmount),
+      remainingAmount: numStr(updated.totalAmount) - numStr(updated.paidAmount),
+      dueDate: updated.dueDate?.toISOString() ?? null,
+      createdAt: updated.createdAt.toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: "Internal Server Error", detail: String(error) });
+  }
+});
+
+// ─── GET /sales/:id ───────────────────────────────────────────────────────────
 router.get("/sales/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const [sale] = await db
@@ -310,9 +649,8 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
   let returnedItems: any[] = [];
   let exchangedItems: any[] = [];
   let returnsHistory: any[] = [];
-  
+
   if (returnIds.length > 0) {
-    // using sql \`in\` because drizzle-orm inArray expects a non-empty array
     returnedItems = await db.select().from(returnReturnedItemsTable).where(sql`${returnReturnedItemsTable.returnId} IN ${returnIds}`);
     exchangedItems = await db.select({
       returnId: returnExchangedItemsTable.returnId,
@@ -356,45 +694,46 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
 
   const returnDiffPaid = returnsHistory.reduce((sum, r) => r.paymentStatus === 'lunas' ? sum + parseFloat(r.differenceAmount as string || "0") : sum, 0);
   const returnDiff = returnsHistory.reduce((sum, r) => sum + parseFloat(r.differenceAmount as string || "0"), 0);
-  
+
   const saleGross = numStr(sale.totalAmount) + returnDiff;
   const salePaid = numStr(sale.paidAmount) + returnDiffPaid;
   const remainingAmount = saleGross - salePaid;
-  
+
   let finalStatus = sale.status;
-  if (remainingAmount <= 0) {
-    finalStatus = 'lunas';
-  } else {
-    finalStatus = salePaid > 0 ? 'partial' : 'tempo';
+  if (sale.status !== 'draft' && sale.status !== 'cancelled') {
+    if (remainingAmount <= 0) {
+      finalStatus = 'lunas';
+    } else {
+      finalStatus = salePaid > 0 ? 'partial' : 'tempo';
+    }
   }
 
   res.json({
     ...sale,
     status: finalStatus,
-    totalAmount: saleGross,
-    paidAmount: salePaid,
-    remainingAmount: remainingAmount > 0 ? remainingAmount : 0,
+    totalAmount: sale.status === 'draft' ? numStr(sale.totalAmount) : saleGross,
+    paidAmount: sale.status === 'draft' ? 0 : salePaid,
+    remainingAmount: sale.status === 'draft' ? numStr(sale.totalAmount) : (remainingAmount > 0 ? remainingAmount : 0),
     dueDate: sale.dueDate?.toISOString() ?? null,
     createdAt: sale.createdAt.toISOString(),
     items: (() => {
       let availableReturnedItems = [...returnedItems];
       return items.map(i => {
-        // Find if this item was returned by matching product, roll, meters, and rolls
-        const matchIndex = availableReturnedItems.findIndex(ri => 
-          ri.productId === i.productId && 
+        const matchIndex = availableReturnedItems.findIndex(ri =>
+          ri.productId === i.productId &&
           (ri.rollId === i.rollId || (!ri.rollId && !i.rollId)) &&
           parseFloat(ri.meters as string || "0") === parseFloat(i.meters as string || "0") &&
           parseFloat(ri.rolls as string || "0") === parseFloat(i.rolls as string || "0")
         );
-        
+
         let isReturned = false;
         let itemReturns: any[] = [];
-        
+
         if (matchIndex !== -1) {
           isReturned = true;
           const matchedReturnId = availableReturnedItems[matchIndex].returnId;
           itemReturns = returnsHistory.filter(rh => rh.id === matchedReturnId);
-          availableReturnedItems.splice(matchIndex, 1); // consume it
+          availableReturnedItems.splice(matchIndex, 1);
         }
 
         return {
@@ -410,21 +749,20 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
       });
     })(),
     exchangedItems: exchangedItems.map(i => ({
-        ...i,
-        rollId: i.rollId,
-        rolls: numStr(i.rolls),
-        meters: numStr(i.meters),
-        pricePerMeter: numStr(i.pricePerMeter),
-        subtotal: numStr(i.subtotal),
-        isExchangedItem: true
+      ...i,
+      rollId: i.rollId,
+      rolls: numStr(i.rolls),
+      meters: numStr(i.meters),
+      pricePerMeter: numStr(i.pricePerMeter),
+      subtotal: numStr(i.subtotal),
+      isExchangedItem: true
     })),
   });
 });
 
+// ─── DELETE /sales/:id (legacy, calls cancel internally) ─────────────────────
 router.delete("/sales/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
-  
-  // Fetch sale details first for notification
   const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id));
   if (!sale) { res.status(404).json({ error: "Not found" }); return; }
 
@@ -432,13 +770,12 @@ router.delete("/sales/:id", async (req, res): Promise<void> => {
   await db.delete(salesTable).where(eq(salesTable.id, id));
   broadcastRefresh();
 
-  // Trigger cancellation notification
   try {
     const formattedAmount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(parseFloat(sale.totalAmount as string || "0"));
     await pushService.sendNotificationToAdmins(
       "⚠️ Pembatalan Transaksi",
       `Invoice: ${sale.invoiceNumber} dibatalkan\nTotal: ${formattedAmount}`,
-      `/penjualan`
+      `/pos/penjualan`
     );
   } catch (error) {
     console.error("Gagal mengirim notif pembatalan", error);

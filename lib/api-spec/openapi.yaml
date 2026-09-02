@@ -688,6 +688,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SaleDetail"
+    put:
+      operationId: updateSale
+      tags: [sales]
+      summary: Edit a sale transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleInput"
+      responses:
+        "200":
+          description: Updated sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
     delete:
       operationId: deleteSale
       tags: [sales]
@@ -701,6 +724,46 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /sales/{id}/pay:
+    post:
+      operationId: paySale
+      tags: [sales]
+      summary: Pay a draft sale (assign invoice number + deduct stock)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaySaleInput"
+      responses:
+        "200":
+          description: Paid sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/{id}/cancel:
+    post:
+      operationId: cancelSale
+      tags: [sales]
+      summary: Cancel a sale (draft=delete, paid=mark cancelled+reverse stock)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Cancelled
 
   # Purchases (Pembelian)
   /purchases:
@@ -1829,6 +1892,8 @@ components:
       properties:
         invoiceNumber:
           type: string
+        isDraft:
+          type: boolean
         customerId:
           type: integer
         paymentType:
@@ -1841,6 +1906,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SaleItemInput"
+
+    PaySaleInput:
+      type: object
+      required: [paymentType]
+      properties:
+        paymentType:
+          type: string
+        dueDate:
+          type: string
+        notes:
+          type: string
 
     Purchase:
       type: object

@@ -642,6 +642,7 @@ export const ListSalesResponse = zod.array(ListSalesResponseItem)
  */
 export const CreateSaleBody = zod.object({
   "invoiceNumber": zod.string().optional(),
+  "isDraft": zod.boolean().optional(),
   "customerId": zod.number().optional(),
   "paymentType": zod.string(),
   "dueDate": zod.string().optional(),
@@ -707,6 +708,46 @@ export const GetSaleResponse = zod.object({
 
 
 /**
+ * @summary Edit a sale transaction
+ */
+export const UpdateSaleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSaleBody = zod.object({
+  "invoiceNumber": zod.string().optional(),
+  "isDraft": zod.boolean().optional(),
+  "customerId": zod.number().optional(),
+  "paymentType": zod.string(),
+  "dueDate": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "productId": zod.number(),
+  "rollId": zod.number().optional(),
+  "rolls": zod.number(),
+  "meters": zod.number(),
+  "pricePerMeter": zod.number(),
+  "subtotal": zod.number()
+}))
+})
+
+export const UpdateSaleResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "customerId": zod.number().nullable(),
+  "customerName": zod.string().nullish(),
+  "paymentType": zod.string(),
+  "totalAmount": zod.number(),
+  "paidAmount": zod.number().optional(),
+  "remainingAmount": zod.number().optional(),
+  "status": zod.string(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Cancel/delete a sale
  */
 export const DeleteSaleParams = zod.object({
@@ -714,6 +755,45 @@ export const DeleteSaleParams = zod.object({
 })
 
 export const DeleteSaleResponse = zod.void()
+
+
+/**
+ * @summary Pay a draft sale (assign invoice number + deduct stock)
+ */
+export const PaySaleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PaySaleBody = zod.object({
+  "paymentType": zod.string(),
+  "dueDate": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const PaySaleResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "customerId": zod.number().nullable(),
+  "customerName": zod.string().nullish(),
+  "paymentType": zod.string(),
+  "totalAmount": zod.number(),
+  "paidAmount": zod.number().optional(),
+  "remainingAmount": zod.number().optional(),
+  "status": zod.string(),
+  "dueDate": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Cancel a sale (draft=delete, paid=mark cancelled+reverse stock)
+ */
+export const CancelSaleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CancelSaleResponse = zod.void()
 
 
 /**

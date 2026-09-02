@@ -22,12 +22,19 @@ router.get("/dashboard/summary", async (req, res) => {
       count: sql<number>`count(*)`,
     })
     .from(salesTable)
-    .where(and(gte(salesTable.createdAt, today), lte(salesTable.createdAt, tomorrow)));
+    .where(and(
+      gte(salesTable.createdAt, today),
+      lte(salesTable.createdAt, tomorrow),
+      sql`${salesTable.status} NOT IN ('draft', 'cancelled')`
+    ));
 
   const [monthSales] = await db
     .select({ revenue: sql<string>`coalesce(sum(${salesTable.totalAmount}), 0)` })
     .from(salesTable)
-    .where(gte(salesTable.createdAt, monthStart));
+    .where(and(
+      gte(salesTable.createdAt, monthStart),
+      sql`${salesTable.status} NOT IN ('draft', 'cancelled')`
+    ));
 
   const [receivables] = await db
     .select({ total: sql<string>`coalesce(sum(${receivablesTable.totalAmount} - ${receivablesTable.paidAmount}), 0)` })

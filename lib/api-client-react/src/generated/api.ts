@@ -46,6 +46,7 @@ import type {
   ListReceivablesParams,
   ListSalesParams,
   ListSuppliersParams,
+  PaySaleInput,
   Payable,
   Payment,
   PaymentInput,
@@ -2649,6 +2650,77 @@ export function useGetSale<TData = Awaited<ReturnType<typeof getSale>>, TError =
 
 
 
+export const getUpdateSaleUrl = (id: number,) => {
+
+
+
+
+  return `/api/sales/${id}`
+}
+
+/**
+ * @summary Edit a sale transaction
+ */
+export const updateSale = async (id: number,
+    saleInput: SaleInput, options?: RequestInit): Promise<Sale> => {
+
+  return customFetch<Sale>(getUpdateSaleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(saleInput)
+  }
+);}
+
+
+
+
+export const getUpdateSaleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSale>>, TError,{id: number;data: BodyType<SaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSale>>, TError,{id: number;data: BodyType<SaleInput>}, TContext> => {
+
+const mutationKey = ['updateSale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSale>>, {id: number;data: BodyType<SaleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSale(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSaleMutationResult = NonNullable<Awaited<ReturnType<typeof updateSale>>>
+    export type UpdateSaleMutationBody = BodyType<SaleInput>
+    export type UpdateSaleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Edit a sale transaction
+ */
+export const useUpdateSale = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSale>>, TError,{id: number;data: BodyType<SaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSale>>,
+        TError,
+        {id: number;data: BodyType<SaleInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateSaleMutationOptions(options));
+    }
+
 export const getDeleteSaleUrl = (id: number,) => {
 
 
@@ -2717,6 +2789,147 @@ export const useDeleteSale = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSaleMutationOptions(options));
+    }
+
+export const getPaySaleUrl = (id: number,) => {
+
+
+
+
+  return `/api/sales/${id}/pay`
+}
+
+/**
+ * @summary Pay a draft sale (assign invoice number + deduct stock)
+ */
+export const paySale = async (id: number,
+    paySaleInput: PaySaleInput, options?: RequestInit): Promise<Sale> => {
+
+  return customFetch<Sale>(getPaySaleUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(paySaleInput)
+  }
+);}
+
+
+
+
+export const getPaySaleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paySale>>, TError,{id: number;data: BodyType<PaySaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paySale>>, TError,{id: number;data: BodyType<PaySaleInput>}, TContext> => {
+
+const mutationKey = ['paySale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paySale>>, {id: number;data: BodyType<PaySaleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  paySale(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaySaleMutationResult = NonNullable<Awaited<ReturnType<typeof paySale>>>
+    export type PaySaleMutationBody = BodyType<PaySaleInput>
+    export type PaySaleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Pay a draft sale (assign invoice number + deduct stock)
+ */
+export const usePaySale = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paySale>>, TError,{id: number;data: BodyType<PaySaleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof paySale>>,
+        TError,
+        {id: number;data: BodyType<PaySaleInput>},
+        TContext
+      > => {
+      return useMutation(getPaySaleMutationOptions(options));
+    }
+
+export const getCancelSaleUrl = (id: number,) => {
+
+
+
+
+  return `/api/sales/${id}/cancel`
+}
+
+/**
+ * @summary Cancel a sale (draft=delete, paid=mark cancelled+reverse stock)
+ */
+export const cancelSale = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCancelSaleUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCancelSaleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelSale>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelSale>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['cancelSale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelSale>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelSale(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelSaleMutationResult = NonNullable<Awaited<ReturnType<typeof cancelSale>>>
+
+    export type CancelSaleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel a sale (draft=delete, paid=mark cancelled+reverse stock)
+ */
+export const useCancelSale = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelSale>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelSale>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCancelSaleMutationOptions(options));
     }
 
 export const getListPurchasesUrl = (params?: ListPurchasesParams,) => {

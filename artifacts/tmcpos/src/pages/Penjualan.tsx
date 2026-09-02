@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
-import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
+import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, useGetSale, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,13 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGr
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
+import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// ─── API Helpers ─────────────────────────────────────────────────────────────
+const API_BASE = window.location.origin;
 
 type SaleItem = { productId: number; productName: string; rollId?: number; selectedRolls?: {id: number, currentLength: number}[]; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
 
@@ -26,6 +29,8 @@ const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
   partial: "bg-amber-100 text-amber-700 border-amber-200",
   kredit: "bg-blue-100 text-blue-700 border-blue-200",
+  draft: "bg-slate-100 text-slate-600 border-slate-200",
+  cancelled: "bg-red-50 text-red-500 border-red-200",
 };
 
 function SaleItemRow({ item, index, products, categories, updateItem, removeItem, allItems }: any) {
@@ -370,12 +375,17 @@ export default function Penjualan() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [paymentType, setPaymentType] = useState<string>("tunai");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [payDialogSaleId, setPayDialogSaleId] = useState<number | null>(null);
+  const [payPaymentType, setPayPaymentType] = useState<string>("tunai");
+  const [payProcessing, setPayProcessing] = useState(false);
+  const [cancelProcessing, setCancelProcessing] = useState<number | null>(null);
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<InvoicePreviewData | null>(null);
@@ -392,11 +402,11 @@ export default function Penjualan() {
 
   const createMutation = useCreateSale({
     mutation: {
-      onSuccess: (data) => {
+      onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
         setIsOpen(false);
         resetForm();
-        toast({ title: "Penjualan berhasil dicatat" });
+        toast({ title: editingSaleId ? "Penjualan berhasil diperbarui" : "Penjualan berhasil dicatat" });
       }
     }
   });
@@ -408,7 +418,76 @@ export default function Penjualan() {
     setPaymentType("tunai");
     setDueDate("");
     setNotes("");
+    setEditingSaleId(null);
   };
+
+  // Open edit mode: fetch sale detail and fill form
+  const openEditMode = async (saleId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/sales/${saleId}`);
+      const data = await res.json();
+      setEditingSaleId(saleId);
+      setInvoiceNumber(data.invoiceNumber || "");
+      setCustomerId(data.customerId ? String(data.customerId) : "");
+      setPaymentType(data.paymentType || "tunai");
+      setDueDate(data.dueDate ? data.dueDate.split("T")[0] : "");
+      setNotes(data.notes || "");
+      // Convert API items back to SaleItem format
+      const saleItems: SaleItem[] = (data.items || []).map((i: any) => ({
+        productId: i.productId,
+        productName: i.productName || "",
+        rollId: i.rollId,
+        unit: i.rolls > 0 ? "roll" as const : "meter" as const,
+        rolls: i.rolls || 0,
+        meters: i.meters || 0,
+        pricePerUnit: i.pricePerMeter || 0,
+        subtotal: i.subtotal || 0,
+        primaryUnit: i.primaryUnit,
+        secondaryUnit: i.secondaryUnit,
+      }));
+      setItems(saleItems);
+      setIsOpen(true);
+    } catch {
+      toast({ title: "Gagal memuat data nota", variant: "destructive" });
+    }
+  };
+
+  // Pay a draft sale
+  const handlePay = async (saleId: number) => {
+    setPayProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/sales/${saleId}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentType: payPaymentType }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
+      setPayDialogSaleId(null);
+      toast({ title: "✅ Pembayaran berhasil diterima!" });
+    } catch (e: any) {
+      toast({ title: "Gagal memproses pembayaran", variant: "destructive" });
+    } finally {
+      setPayProcessing(false);
+    }
+  };
+
+  // Cancel a sale
+  const handleCancel = async (saleId: number) => {
+    if (!confirm("Yakin ingin membatalkan nota ini? Stok akan dikembalikan jika sudah dibayar.")) return;
+    setCancelProcessing(saleId);
+    try {
+      const res = await fetch(`${API_BASE}/api/sales/${saleId}/cancel`, { method: "POST" });
+      if (!res.ok) throw new Error(await res.text());
+      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
+      toast({ title: "Nota berhasil dibatalkan" });
+    } catch {
+      toast({ title: "Gagal membatalkan nota", variant: "destructive" });
+    } finally {
+      setCancelProcessing(null);
+    }
+  };
+
 
   const addItem = () => {
     setItems(prev => [...prev, { productId: 0, productName: "", unit: "meter", rolls: "", meters: "", pricePerUnit: "", subtotal: 0 }]);
@@ -479,50 +558,56 @@ export default function Penjualan() {
     setPreviewOpen(true);
   };
 
-  const handleSubmit = () => {
+  const buildItemsPayload = () => items.flatMap(i => {
+    if (i.selectedRolls && i.selectedRolls.length > 0) {
+      return i.selectedRolls.map(r => {
+        const metersNum = typeof r.currentLength === "string" ? parseFloat(r.currentLength) : (r.currentLength || 0);
+        const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
+        return { productId: i.productId, rollId: r.id, rolls: 1, meters: metersNum || 0, pricePerMeter: priceNum, subtotal: (metersNum || 0) * priceNum };
+      });
+    }
+    const metersNum = typeof i.meters === "number" ? i.meters : (typeof i.meters === "string" ? parseFloat(i.meters) : 0);
+    const rollsNum = typeof i.rolls === "number" ? i.rolls : (typeof i.rolls === "string" ? parseFloat(i.rolls) : 0);
+    const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
+    const fallbackSubtotal = (typeof i.subtotal === "number" ? i.subtotal : (metersNum * priceNum));
+    return [{ productId: i.productId, rollId: i.rollId || undefined, rolls: rollsNum || 0, meters: metersNum || 0, pricePerMeter: priceNum, subtotal: fallbackSubtotal }];
+  });
+
+  const handleSubmit = async (isDraft = false) => {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
     if (items.some(i => !i.productId || (typeof i.meters === "number" ? i.meters : 0) <= 0)) { toast({ title: "Mohon lengkapi data barang", variant: "destructive" }); return; }
-    
-    createMutation.mutate({
-      data: {
-        invoiceNumber,
-        customerId: customerId ? parseInt(customerId) : undefined,
-        paymentType: paymentType as any,
-        dueDate: dueDate || undefined,
-        notes: notes || undefined,
-        items: items.flatMap(i => {
-          // Explode multi-select rolls into individual items for the backend
-          if (i.selectedRolls && i.selectedRolls.length > 0) {
-            return i.selectedRolls.map(r => {
-              const metersNum = typeof r.currentLength === "string" ? parseFloat(r.currentLength) : (r.currentLength || 0);
-              const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
-              return {
-                productId: i.productId,
-                rollId: r.id,
-                rolls: 1,
-                meters: metersNum || 0,
-                pricePerMeter: priceNum,
-                subtotal: (metersNum || 0) * priceNum
-              };
-            });
-          }
-          // Normal fallback
-          const metersNum = typeof i.meters === "number" ? i.meters : (typeof i.meters === "string" ? parseFloat(i.meters) : 0);
-          const rollsNum = typeof i.rolls === "number" ? i.rolls : (typeof i.rolls === "string" ? parseFloat(i.rolls) : 0);
-          const priceNum = typeof i.pricePerUnit === "number" ? i.pricePerUnit : (typeof i.pricePerUnit === "string" ? parseFloat(i.pricePerUnit) || 0 : 0);
-          const fallbackSubtotal = (typeof i.subtotal === "number" ? i.subtotal : (metersNum * priceNum));
-          return [{ 
-            productId: i.productId, 
-            rollId: i.rollId || undefined, 
-            rolls: rollsNum || 0, 
-            meters: metersNum || 0, 
-            pricePerMeter: priceNum, 
-            subtotal: fallbackSubtotal 
-          }];
-        })
+
+    const payload = {
+      invoiceNumber: editingSaleId ? invoiceNumber : undefined,
+      isDraft,
+      customerId: customerId ? parseInt(customerId) : undefined,
+      paymentType: paymentType as any,
+      dueDate: dueDate || undefined,
+      notes: notes || undefined,
+      items: buildItemsPayload(),
+    };
+
+    if (editingSaleId) {
+      // Edit mode: call PUT
+      try {
+        const res = await fetch(`${API_BASE}/api/sales/${editingSaleId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
+        setIsOpen(false);
+        resetForm();
+        toast({ title: "Nota berhasil diperbarui" });
+      } catch {
+        toast({ title: "Gagal menyimpan perubahan", variant: "destructive" });
       }
-    });
+    } else {
+      createMutation.mutate({ data: payload });
+    }
   };
+
 
   const baseFiltered = filterByDateRange(
     sales?.filter(s => {
@@ -534,14 +619,17 @@ export default function Penjualan() {
   );
 
   const filtered = useMemo(() => {
-    if (activeTab === "Semua") return baseFiltered;
-    if (activeTab === "Kredit") return baseFiltered.filter(s => s.status?.toLowerCase() === "unpaid");
+    if (activeTab === "Semua") return baseFiltered.filter(s => s.status !== 'cancelled');
+    if (activeTab === "Draft") return baseFiltered.filter(s => s.status === 'draft');
+    if (activeTab === "Kredit") return baseFiltered.filter(s => s.status?.toLowerCase() === "unpaid" || s.status === 'tempo');
+    if (activeTab === "Dibatalkan") return baseFiltered.filter(s => s.status === 'cancelled');
     return baseFiltered.filter(s => s.status?.toLowerCase() === activeTab.toLowerCase());
   }, [baseFiltered, activeTab]);
 
   const summaryData = useMemo(() => {
     if (!filtered) return { subTotal: 0, diBayar: 0, sisaBayar: 0, kembalian: 0, totalRefund: 0 };
-    return filtered.reduce((acc, s: any) => {
+    // Exclude draft and cancelled from financial summary
+    return filtered.filter(s => s.status !== 'draft' && s.status !== 'cancelled').reduce((acc, s: any) => {
       const baseTotal = parseFloat(s.totalAmount || "0");
       const diffTotal = s.returnDifference ? parseFloat(s.returnDifference) : 0;
       const grandTotal = baseTotal + diffTotal;
@@ -578,25 +666,27 @@ export default function Penjualan() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Aktivitas</h1>
           <p className="text-sm text-slate-500">Riwayat penjualan Anda</p>
         </div>
-        <Button onClick={() => { 
-          const existingInvoices = sales?.map(s => s.invoiceNumber) || [];
-          setInvoiceNumber(generateSequentialInvoiceNumber("INV", existingInvoices)); 
-          setIsOpen(true); 
-        }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+        <Button onClick={() => { resetForm(); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
           <Plus className="mr-2 h-4 w-4" /> Buat Nota
         </Button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b border-slate-200 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        {["Semua", "Lunas", "Kredit", "Partial"].map(tab => (
+        {["Semua", "Lunas", "Kredit", "Partial", "Draft", "Dibatalkan"].map(tab => (
           <button 
             key={tab}
             onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-            className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-green-600' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors relative ${
+              activeTab === tab 
+                ? tab === "Draft" ? 'text-slate-600' : tab === "Dibatalkan" ? 'text-red-500' : 'text-green-600' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
           >
             {tab}
-            {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />}
+            {activeTab === tab && <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full ${
+              tab === "Draft" ? 'bg-slate-500' : tab === "Dibatalkan" ? 'bg-red-500' : 'bg-green-600'
+            }`} />}
           </button>
         ))}
       </div>
@@ -751,15 +841,65 @@ export default function Penjualan() {
                       </div>
                     </div>
 
-                    {/* Action Button */}
+                    {/* Action Buttons — contextual based on status */}
                     <div className="flex items-end justify-end ml-2">
-                      <Button 
-                        size="sm" 
-                        className="rounded-full bg-green-600 hover:bg-green-700 font-bold h-8 px-4 shadow-sm"
-                        onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }}
-                      >
-                        Cetak
-                      </Button>
+                      {s.status === 'cancelled' ? (
+                        <span className="text-[10px] text-red-400 font-semibold px-2 py-1 bg-red-50 rounded-full">Dibatalkan</span>
+                      ) : s.status === 'draft' ? (
+                        <div className="flex flex-col gap-1.5">
+                          <Button 
+                            size="sm" 
+                            className="rounded-full bg-blue-600 hover:bg-blue-700 font-bold h-8 px-3 shadow-sm text-xs"
+                            onClick={() => { setPayPaymentType("tunai"); setPayDialogSaleId(s.id); }}
+                          >
+                            <CreditCard className="w-3 h-3 mr-1" /> Bayar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="rounded-full h-8 px-3 text-xs"
+                            onClick={() => openEditMode(s.id)}
+                          >
+                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                            disabled={cancelProcessing === s.id}
+                            onClick={() => handleCancel(s.id)}
+                          >
+                            <Ban className="w-3 h-3 mr-1" /> Hapus
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <Button 
+                            size="sm" 
+                            className="rounded-full bg-green-600 hover:bg-green-700 font-bold h-8 px-4 shadow-sm text-xs"
+                            onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }}
+                          >
+                            <Printer className="w-3 h-3 mr-1" /> Cetak
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full h-8 px-3 text-xs"
+                            onClick={() => openEditMode(s.id)}
+                          >
+                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                          </Button>
+                          <Button 
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                            disabled={cancelProcessing === s.id}
+                            onClick={() => handleCancel(s.id)}
+                          >
+                            <Ban className="w-3 h-3 mr-1" /> Hapus
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -783,15 +923,44 @@ export default function Penjualan() {
         )}
       </div>
 
+      {/* Pay Dialog */}
+      {payDialogSaleId !== null && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={() => setPayDialogSaleId(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Proses Pembayaran</h2>
+            <p className="text-sm text-slate-500 mb-4">Pilih metode pembayaran untuk nota ini</p>
+            <Select value={payPaymentType} onValueChange={setPayPaymentType}>
+              <SelectTrigger className="mb-4"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {paymentMethods.filter(m => m.isActive).length > 0
+                  ? paymentMethods.filter(m => m.isActive).map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)
+                  : <><SelectItem value="tunai">Tunai</SelectItem><SelectItem value="transfer">Transfer</SelectItem><SelectItem value="kredit">Kredit</SelectItem></>
+                }
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1" onClick={() => setPayDialogSaleId(null)}>Batal</Button>
+              <Button className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={payProcessing} onClick={() => handlePay(payDialogSaleId!)}>
+                {payProcessing ? "Memproses..." : "✅ Konfirmasi Bayar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
         <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle className="text-xl">Buat Penjualan Baru</DrawerTitle></DrawerHeader>
+          <DrawerHeader><DrawerTitle className="text-xl">{editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}</DrawerTitle></DrawerHeader>
           <div id="drawer-portal-target" />
           <div className="overflow-y-auto max-h-[calc(96vh-6rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">
               <span className="text-sm font-medium text-muted-foreground">No. Invoice:</span>
-              <span className="text-base font-mono font-bold break-all">{invoiceNumber}</span>
+              {editingSaleId ? (
+                <span className="text-base font-mono font-bold break-all">{invoiceNumber}</span>
+              ) : (
+                <span className="text-sm text-slate-400 italic">Akan ditetapkan saat pembayaran dikonfirmasi</span>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -863,13 +1032,38 @@ export default function Penjualan() {
             )}
           </div>
           </div>
-          <DrawerFooter className="mt-4 px-0 flex flex-row gap-2">
-            <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota" className="mr-auto">
-              <Printer className="h-4 w-4" />
-            </Button>
-            <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-            <Button className="flex-1" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Penjualan</Button>
+          <DrawerFooter className="mt-4 px-0 flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota">
+                <Printer className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+              {editingSaleId ? (
+                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleSubmit(false)} disabled={createMutation.isPending || items.length === 0}>
+                  Simpan Perubahan
+                </Button>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-slate-400 text-slate-700" 
+                    onClick={() => handleSubmit(true)} 
+                    disabled={createMutation.isPending || items.length === 0}
+                  >
+                    🕐 Simpan & Tahan
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-blue-600 hover:bg-blue-700" 
+                    onClick={() => handleSubmit(false)} 
+                    disabled={createMutation.isPending || items.length === 0}
+                  >
+                    💳 Simpan & Bayar
+                  </Button>
+                </>
+              )}
+            </div>
           </DrawerFooter>
+
         </DrawerContent>
       </Drawer>
       

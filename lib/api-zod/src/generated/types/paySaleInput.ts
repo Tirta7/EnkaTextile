@@ -5,14 +5,9 @@
  * TMCpos Textile POS/ERP API
  * OpenAPI spec version: 0.1.0
  */
-import type { SaleItemInput } from './saleItemInput';
 
-export interface SaleInput {
-  invoiceNumber?: string;
-  isDraft?: boolean;
-  customerId?: number;
+export interface PaySaleInput {
   paymentType: string;
   dueDate?: string;
   notes?: string;
-  items: SaleItemInput[];
 }

@@ -297,11 +297,18 @@ export interface SaleDetail {
 
 export interface SaleInput {
   invoiceNumber?: string;
+  isDraft?: boolean;
   customerId?: number;
   paymentType: string;
   dueDate?: string;
   notes?: string;
   items: SaleItemInput[];
+}
+
+export interface PaySaleInput {
+  paymentType: string;
+  dueDate?: string;
+  notes?: string;
 }
 
 export interface Purchase {

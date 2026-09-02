@@ -41,6 +41,7 @@ export * from './paymentInput';
 export * from './paymentMethod';
 export * from './paymentMethodInput';
 export * from './paymentMethodUpdate';
+export * from './paySaleInput';
 export * from './product';
 export * from './productInput';
 export * from './productRoll';

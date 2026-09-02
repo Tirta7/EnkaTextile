@@ -10,7 +10,10 @@ function numStr(v: string | null | undefined) { return parseFloat(v ?? "0"); }
 // ─── 1. SALES SUMMARY ────────────────────────────────────────────────────────
 router.get("/reports/sales-summary", async (req, res) => {
   const { startDate, endDate } = req.query;
-  const conditions: any[] = [];
+  // Exclude draft and cancelled from all reports
+  const conditions: any[] = [
+    sql`${salesTable.status} NOT IN ('draft', 'cancelled')`,
+  ];
   if (startDate) {
     const start = new Date(`${startDate}T00:00:00`);
     conditions.push(gte(salesTable.createdAt, start));
@@ -122,7 +125,10 @@ router.get("/reports/sales-summary", async (req, res) => {
 // ─── 2. SALES DETAIL ─────────────────────────────────────────────────────────
 router.get("/reports/sales-detail", async (req, res) => {
   const { startDate, endDate, status } = req.query;
-  const conditions: any[] = [];
+  // Exclude draft and cancelled
+  const conditions: any[] = [
+    sql`${salesTable.status} NOT IN ('draft', 'cancelled')`,
+  ];
   if (startDate) {
     const start = new Date(`${startDate}T00:00:00`);
     conditions.push(gte(salesTable.createdAt, start));
@@ -194,7 +200,9 @@ router.get("/reports/sales-tax", async (req, res) => {
   const { startDate, endDate, ppnRate } = req.query;
   const rate = ppnRate ? parseFloat(ppnRate as string) / 100 : PPN_RATE;
 
-  const conditions: any[] = [];
+  const conditions: any[] = [
+    sql`${salesTable.status} NOT IN ('draft', 'cancelled')`,
+  ];
   if (startDate) {
     const start = new Date(`${startDate}T00:00:00`);
     conditions.push(gte(salesTable.createdAt, start));
@@ -253,7 +261,9 @@ router.get("/reports/sales-tax", async (req, res) => {
 // ─── 4. SALES TREND DAILY ────────────────────────────────────────────────────
 router.get("/reports/sales-trend", async (req, res) => {
   const { startDate, endDate } = req.query;
-  const conditions: any[] = [];
+  const conditions: any[] = [
+    sql`${salesTable.status} NOT IN ('draft', 'cancelled')`,
+  ];
   if (startDate) {
     const start = new Date(`${startDate}T00:00:00`);
     conditions.push(gte(salesTable.createdAt, start));

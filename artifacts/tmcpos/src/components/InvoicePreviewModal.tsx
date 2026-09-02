@@ -45,6 +45,7 @@ export type InvoicePreviewData = {
   totalAmount: number | string;
   paidAmount: number | string;
   remainingAmount: number | string;
+  status?: string;
 };
 
 interface InvoicePreviewModalProps {
@@ -285,7 +286,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const totalYds = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
   const totalRolls = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
   
-  const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0;
+  const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0 && displayData?.status !== "draft";
   const availableRolls = rolls?.filter(r => r.status === 'available') || [];
 
   const uniqueReturns = useMemo(() => {
@@ -565,9 +566,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 <div className="w-[45%] rounded-lg overflow-hidden bg-white shadow-xs">
                   <table className="w-full text-right text-sm border-collapse">
                     <tbody>
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <td className="py-1 px-2 font-semibold text-slate-600 text-xs uppercase tracking-wider w-1/2">Total Kuantitas</td>
-                        <td className="py-1 px-2 font-medium text-slate-800 text-left">
+                      <tr className="bg-slate-50">
+                        <td className="py-0 px-2 font-semibold text-slate-600 text-xs uppercase tracking-wider w-1/2">Total Kuantitas</td>
+                        <td className="py-0 px-2 font-medium text-slate-800 text-left">
                           {totalYds.toFixed(2)} {(displayData.items?.[0] as any)?.primaryUnit || 'M'} / {totalRolls} Roll
                         </td>
                       </tr>
@@ -581,29 +582,29 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                         const totalExcVal = uniqueReturns.reduce((sum: number, ret: any) => sum + parseFloat(ret.totalExchangedValue || "0"), 0);
                         return (
                           <>
-                            <tr className="border-b border-slate-100">
-                              <td className="py-1 px-2 font-medium text-slate-500 text-xs">Total Awal</td>
-                              <td className="py-1 px-2 font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(baseTotal)}</td>
+                            <tr className="">
+                              <td className="py-0 px-2 font-medium text-slate-500 text-xs">Total Awal</td>
+                              <td className="py-0 px-2 font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(baseTotal)}</td>
                             </tr>
-                            <tr className="border-b border-slate-100">
-                              <td className="py-1 px-2 font-medium text-rose-600 text-xs">Dikembalikan (Retur)</td>
-                              <td className="py-1 px-2 font-medium text-rose-600">- Rp {new Intl.NumberFormat('id-ID').format(totalRetVal)}</td>
+                            <tr className="">
+                              <td className="py-0 px-2 font-medium text-rose-600 text-xs">Dikembalikan (Retur)</td>
+                              <td className="py-0 px-2 font-medium text-rose-600">- Rp {new Intl.NumberFormat('id-ID').format(totalRetVal)}</td>
                             </tr>
-                            <tr className="border-b border-slate-100">
-                              <td className="py-1 px-2 font-medium text-emerald-600 text-xs">Pengganti (Tukar)</td>
-                              <td className="py-1 px-2 font-medium text-emerald-600">+ Rp {new Intl.NumberFormat('id-ID').format(totalExcVal)}</td>
+                            <tr className="">
+                              <td className="py-0 px-2 font-medium text-emerald-600 text-xs">Pengganti (Tukar)</td>
+                              <td className="py-0 px-2 font-medium text-emerald-600">+ Rp {new Intl.NumberFormat('id-ID').format(totalExcVal)}</td>
                             </tr>
                             
                             {diffTotal < 0 && (
-                              <tr className="border-b border-slate-100 bg-emerald-50/60">
-                                <td className="py-1 px-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">Kembalian / Refund</td>
-                                <td className="py-1 px-2 font-bold text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diffTotal))}</td>
+                              <tr className="bg-emerald-50/60">
+                                <td className="py-0 px-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">Kembalian / Refund</td>
+                                <td className="py-0 px-2 font-bold text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diffTotal))}</td>
                               </tr>
                             )}
                             {diffTotal > 0 && (
-                              <tr className="border-b border-slate-100 bg-rose-50/60">
-                                <td className="py-1 px-2 font-bold text-rose-700 text-xs uppercase tracking-wider">Kurang Bayar</td>
-                                <td className="py-1 px-2 font-bold text-rose-700">Rp {new Intl.NumberFormat('id-ID').format(diffTotal)}</td>
+                              <tr className="bg-rose-50/60">
+                                <td className="py-0 px-2 font-bold text-rose-700 text-xs uppercase tracking-wider">Kurang Bayar</td>
+                                <td className="py-0 px-2 font-bold text-rose-700">Rp {new Intl.NumberFormat('id-ID').format(diffTotal)}</td>
                               </tr>
                             )}
                           </>
@@ -611,21 +612,21 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       })()}
 
                       <tr className="bg-indigo-600 text-white">
-                        <td className="py-1 px-2 font-bold text-xs uppercase tracking-widest text-indigo-100">Grand Total</td>
-                        <td className="py-1 px-2 font-bold text-sm tracking-tight">
+                        <td className="py-0.5 px-2 font-bold text-xs uppercase tracking-widest text-indigo-100">Grand Total</td>
+                        <td className="py-0.5 px-2 font-bold text-sm tracking-tight">
                           Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}
                         </td>
                       </tr>
                       
                       <tr>
-                        <td className="py-1 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
-                        <td className="py-1 px-2 font-medium text-slate-800">
+                        <td className="py-0 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
+                        <td className="py-0 px-2 font-medium text-slate-800">
                           Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}
                         </td>
                       </tr>
-                      <tr className="border-b border-slate-100">
-                        <td className="py-1 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
-                        <td className="py-1 px-2 font-medium text-rose-600">
+                      <tr className="">
+                        <td className="py-0 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
+                        <td className="py-0 px-2 font-medium text-rose-600">
                           Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}
                         </td>
                       </tr>

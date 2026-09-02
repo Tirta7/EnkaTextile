@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Combobox, ComboboxItem } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,13 +18,14 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
+import { OtpDialog } from "@/components/OtpDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 
 // ─── API Helpers ─────────────────────────────────────────────────────────────
 const API_BASE = window.location.origin;
 
-type SaleItem = { productId: number; productName: string; rollId?: number; selectedRolls?: {id: number, currentLength: number}[]; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
+type SaleItem = { categoryId?: number; productId: number; productName: string; rollId?: number; selectedRolls?: {id: number, currentLength: number}[]; unit: "meter" | "roll"; rolls: number | ""; meters: number | ""; pricePerUnit: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; targetLength?: number; };
 
 const STATUS_COLORS: Record<string, string> = {
   lunas: "bg-green-100 text-green-700 border-green-200",
@@ -33,8 +35,40 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "bg-red-50 text-red-500 border-red-200",
 };
 
-function SaleItemRow({ item, index, products, categories, updateItem, removeItem, allItems }: any) {
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+function SaleItemRow({ item, index, products, categories, updateItem, updateItemFields, removeItem, allItems }: any) {
+  if (!products || !categories) {
+    return <div className="h-24 w-full flex items-center justify-center bg-slate-50 animate-pulse rounded-lg border border-slate-100 mb-2"><div className="text-sm font-medium text-slate-400">Memuat baris...</div></div>;
+  }
+
+  const getCatIdStr = () => {
+    if (!item.categoryId || item.categoryId === 0 || item.categoryId === "0") return "all";
+    return item.categoryId.toString();
+  };
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>(getCatIdStr());
+  
+  // Sync selectedCategoryId if item.categoryId changes from parent (e.g. during Edit load)
+  useEffect(() => {
+    setSelectedCategoryId(getCatIdStr());
+  }, [item.categoryId]);
+
+  // Self-heal categoryId and units if products loaded late
+  useEffect(() => {
+    if (item.productId && products?.length > 0) {
+      const prod = products.find((p: any) => p.id?.toString() === item.productId?.toString());
+      if (prod) {
+        if (!item.categoryId || item.categoryId === 0 || item.categoryId === "0") {
+          if (prod.categoryId) updateItem(index, "categoryId", prod.categoryId);
+        }
+        if (!item.primaryUnit) {
+          updateItem(index, "primaryUnit", prod.primaryUnit);
+        }
+        if (!item.secondaryUnit) {
+          updateItem(index, "secondaryUnit", prod.secondaryUnit);
+        }
+      }
+    }
+  }, [item.productId, item.categoryId, item.primaryUnit, item.secondaryUnit, products, index, updateItem]);
   const [isRollModalOpen, setIsRollModalOpen] = useState(false);
   const [rollSearch, setRollSearch] = useState("");
   const [rollPage, setRollPage] = useState(1);
@@ -120,98 +154,93 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
     <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end p-3 bg-muted/30 rounded-lg">
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Kategori</label>
-        <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
-          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Semua" /></SelectTrigger>
-          <SelectContent>
-            <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              <SelectItem value="all" className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center font-semibold">
-                Semua Kategori
-              </SelectItem>
-              {categories?.map((c: any) => (
-                <SelectItem key={c.id} value={c.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm" title={c.description}>
-                  <div className="flex flex-col items-center justify-center gap-0.5 w-full text-center">
-                    <span className="font-semibold truncate w-full">{c.name}</span>
-                    {c.description && <span className="text-[10px] text-muted-foreground truncate w-full">{c.description}</span>}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <Combobox 
+          items={[
+            { value: "all", label: "Semua Kategori" },
+            ...(categories?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
+          ]}
+          value={selectedCategoryId}
+          onValueChange={setSelectedCategoryId}
+          placeholder="Semua"
+          searchPlaceholder="Cari kategori..."
+          className="h-12"
+        />
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Barang</label>
-        <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => { updateItem(index, "productId", parseInt(v)); }}>
-          <SelectTrigger className="h-12 py-1"><SelectValue placeholder="Pilih barang" /></SelectTrigger>
-          <SelectContent>
-            <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {filteredProducts?.map((p: any) => (
-                <SelectItem key={p.id} value={p.id.toString()} className="border shadow-sm hover:border-primary/50 py-3 h-auto text-sm justify-center text-center">
-                   <span className="font-semibold truncate w-full" title={p.name}>{p.name}</span>
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <Combobox
+          items={filteredProducts?.map((p: any) => ({ value: p.id.toString(), label: p.name })) || []}
+          value={item.productId ? item.productId.toString() : undefined}
+          onValueChange={(v) => updateItem(index, "productId", parseInt(v))}
+          placeholder="Pilih barang"
+          searchPlaceholder="Cari barang..."
+          className="h-12"
+        />
       </div>
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Roll (Stiker)</label>
         <Dialog open={isRollModalOpen} onOpenChange={setIsRollModalOpen}>
           <DialogTrigger asChild>
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full h-12 justify-between font-normal px-3" 
-              disabled={!item.productId || !rolls || rolls.length === 0}
-            >
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full h-12 justify-between font-normal px-3 bg-white" 
+                disabled={!item.productId}
+              >
               <span className="truncate">
                 {item.selectedRolls && item.selectedRolls.length > 0 
                    ? `${item.selectedRolls.length} Roll Terpilih`
                    : item.targetLength 
-                     ? `${item.targetLength} ${item.primaryUnit || 'unit'} (Auto)`
+                     ? `${String(item.targetLength).replace('.', ',')} ${item.primaryUnit || 'unit'} (Auto)`
                      : "Potong Bebas / Manual"}
               </span>
               <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] flex flex-col p-4" onInteractOutside={(e) => { e.preventDefault(); }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-0 rounded-2xl shadow-2xl" onInteractOutside={(e) => { e.preventDefault(); }}>
             <DialogHeader className="pb-2 border-b">
               <DialogTitle className="text-center font-bold text-base">
                 {item.productName || "Pilih Roll / Potongan"}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto px-1 flex flex-col gap-2 min-h-0">
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5 min-h-0">
               
               <div className="flex flex-col">
-                <label className="flex items-center gap-2 rounded-sm px-2 py-1.5 border hover:bg-slate-50 cursor-pointer w-full sm:w-1/3 mx-auto justify-center">
+                <label className="flex items-center gap-3 rounded-md px-4 py-3 border hover:bg-slate-50 cursor-pointer w-full sm:w-1/2 mx-auto justify-center bg-white shadow-sm">
                   <Checkbox 
                     checked={!item.targetLength && (!item.selectedRolls || item.selectedRolls.length === 0)}
+                    className="h-5 w-5"
                     onCheckedChange={() => {
-                      updateItem(index, "selectedRolls", []);
-                      updateItem(index, "targetLength", undefined);
+                      updateItemFields(index, {
+                        selectedRolls: [],
+                        targetLength: undefined
+                      });
                     }}
                   />
-                  <span className="text-sm font-medium">Potong Bebas</span>
+                  <span className="text-base font-medium">Potong Bebas</span>
                 </label>
               </div>
               
               {Object.keys(lengthGroups).length > 0 && (
-                <div className="space-y-1 bg-slate-50 p-2 rounded border border-slate-100">
-                  <div className="text-xs font-semibold text-slate-700 text-center">Pilih Otomatis (Per Ukuran)</div>
-                  <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 gap-1">
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="text-sm font-semibold text-slate-700 text-center mb-1">Pilih Otomatis (Per Ukuran)</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {Object.entries(lengthGroups).map(([len, count]) => (
-                      <label key={`len_${len}`} className="flex items-center justify-center gap-1.5 rounded-sm px-1.5 py-1 bg-white border hover:border-primary/50 cursor-pointer text-center">
+                      <label key={`len_${len}`} className="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 bg-slate-50 border hover:border-primary/50 hover:bg-primary/5 cursor-pointer text-center transition-colors">
                         <Checkbox 
                           checked={item.targetLength === parseFloat(len)}
+                          className="h-4 w-4"
                           onCheckedChange={() => {
-                            updateItem(index, "selectedRolls", []);
-                            updateItem(index, "targetLength", parseFloat(len));
-                            updateItem(index, "unit", "roll");
-                            updateItem(index, "rolls", 1);
-                            updateItem(index, "meters", parseFloat(len));
+                            updateItemFields(index, {
+                              selectedRolls: [],
+                              targetLength: parseFloat(len),
+                              unit: "roll",
+                              rolls: 1,
+                              meters: parseFloat(len)
+                            });
                           }}
                         />
-                        <span className="text-xs font-medium">{len} <span className="text-[9px] text-slate-400 font-normal">({count})</span></span>
+                        <span className="text-sm font-medium">{String(len).replace('.', ',')} <span className="text-[10px] text-slate-500 font-normal ml-0.5">({count})</span></span>
                       </label>
                     ))}
                   </div>
@@ -219,29 +248,29 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
               )}
 
               {availableRolls.length > 0 && (
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="text-xs font-semibold text-slate-700">Pilih Spesifik Barcode</div>
-                    <div className="relative w-[150px]">
-                      <Search className="absolute left-2 top-2 h-3 w-3 text-slate-400" />
+                <div className="flex-1 flex flex-col min-h-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <div className="text-sm font-semibold text-slate-700">Pilih Spesifik Barcode</div>
+                    <div className="relative w-full sm:w-[200px]">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                       <Input 
-                        placeholder="Cari..." 
-                        className="pl-7 h-7 text-xs bg-white" 
+                        placeholder="Cari barcode..." 
+                        className="pl-8 h-9 text-sm bg-slate-50" 
                         value={rollSearch}
                         onChange={e => { setRollSearch(e.target.value); setRollPage(1); }}
                       />
                     </div>
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto border rounded p-2 bg-slate-50/50">
+                  <div className="flex-1 overflow-y-auto border rounded-lg p-3 bg-slate-50">
                     {paginatedRolls.length === 0 ? (
-                      <div className="text-center py-4 text-xs text-slate-500">Tidak ada roll ditemukan</div>
+                      <div className="text-center py-6 text-sm text-slate-500">Tidak ada roll ditemukan</div>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {paginatedRolls.map((r: any) => {
                           const isChecked = item.selectedRolls?.some((sr: any) => sr.id === r.id);
                           return (
-                            <label key={r.id} className={`flex items-center gap-2 rounded px-2 py-1.5 border cursor-pointer transition-colors ${isChecked ? 'bg-primary/5 border-primary' : 'bg-white hover:border-primary/50'}`} title={r.barcode || r.id}>
+                            <label key={r.id} className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 border cursor-pointer transition-colors shadow-sm ${isChecked ? 'bg-primary/10 border-primary' : 'bg-white hover:border-primary/50'}`} title={r.barcode || r.id}>
                               <Checkbox 
                                 checked={isChecked}
                                 className="h-4 w-4 shrink-0"
@@ -252,21 +281,26 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                                   } else {
                                     newSelected = newSelected.filter((sr: any) => sr.id !== r.id);
                                   }
-                                  updateItem(index, "targetLength", undefined);
-                                  updateItem(index, "selectedRolls", newSelected);
-                                  
                                   if (newSelected.length > 0) {
                                     const sumMeters = newSelected.reduce((sum, sr) => sum + sr.currentLength, 0);
-                                    updateItem(index, "unit", "roll");
-                                    updateItem(index, "rolls", newSelected.length);
-                                    updateItem(index, "meters", sumMeters);
+                                    updateItemFields(index, {
+                                      targetLength: undefined,
+                                      selectedRolls: newSelected,
+                                      unit: "roll",
+                                      rolls: newSelected.length,
+                                      meters: sumMeters
+                                    });
                                   } else {
-                                    updateItem(index, "rolls", "");
-                                    updateItem(index, "meters", "");
+                                    updateItemFields(index, {
+                                      targetLength: undefined,
+                                      selectedRolls: newSelected,
+                                      rolls: "",
+                                      meters: ""
+                                    });
                                   }
                                 }}
                               />
-                              <span className="text-sm font-medium text-slate-700 whitespace-nowrap overflow-hidden">{r.currentLength}</span>
+                              <span className="text-sm font-semibold text-slate-700">{String(r.currentLength).replace('.', ',')}</span>
                             </label>
                           );
                         })}
@@ -275,7 +309,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                   </div>
                   
                   {totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center justify-between pt-4 mt-1">
                       <Button 
                         variant="outline" 
                         size="sm" 
@@ -284,7 +318,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                       >
                         Sebelumnya
                       </Button>
-                      <span className="text-xs text-slate-500 font-medium">
+                      <span className="text-sm text-slate-500 font-medium">
                         Halaman {rollPage} dari {totalPages}
                       </span>
                       <Button 
@@ -300,32 +334,35 @@ function SaleItemRow({ item, index, products, categories, updateItem, removeItem
                 </div>
               )}
             </div>
-            <div className="flex justify-end pt-2">
-              <Button onClick={() => setIsRollModalOpen(false)}>Selesai</Button>
+            <div className="flex justify-end p-4 border-t bg-slate-50">
+              <Button onClick={() => setIsRollModalOpen(false)} className="w-full sm:w-auto px-8">Selesai</Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
       <div className="md:col-span-1">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Satuan</label>
-        <Select value={item.unit} onValueChange={(v: string) => updateItem(index, "unit", v)} disabled={!!item.rollId}>
-          <SelectTrigger className="h-12 font-medium"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="meter">
-              {item.primaryUnit || "Meter"}
-              {item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit
-                ? " (Potongan)" : ""}
-            </SelectItem>
-            <SelectItem value="roll">
-              {item.secondaryUnit || "Roll"}
-              {item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit
-                ? " (Gulungan)" : ""}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <Combobox
+          items={[
+            {
+              value: "meter",
+              label: (item.primaryUnit?.trim() || "Satuan Utama") + (item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit ? " (Potongan)" : "")
+            },
+            {
+              value: "roll",
+              label: (item.secondaryUnit?.trim() || "Satuan Grosir") + (item.primaryUnit && item.secondaryUnit && item.primaryUnit === item.secondaryUnit ? " (Gulungan)" : "")
+            }
+          ]}
+          value={item.unit}
+          onValueChange={(v) => updateItem(index, "unit", v)}
+          disabled={!!item.rollId}
+          placeholder="Pilih"
+          searchPlaceholder="Cari satuan..."
+          className="h-12 font-medium"
+        />
       </div>
       <div className="md:col-span-1">
-        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "m"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "roll"})`}</label>
+        <label className="text-xs font-semibold text-muted-foreground mb-1.5 block truncate">{item.unit === "meter" ? `Jml (${item.primaryUnit?.toLowerCase() || "satuan"})` : `Jml (${item.secondaryUnit?.toLowerCase() || "satuan"})`}</label>
         <Input 
           className={`h-12 text-center text-lg font-medium ${item.unit === "roll" && item.targetLength && maxRolls === 0 ? "border-destructive bg-destructive/10 text-destructive" : ""} ${item.selectedRolls && item.selectedRolls.length > 0 ? "bg-muted/50 cursor-not-allowed" : ""}`} 
           type="number" step="any" min={0} max={maxRolls} 
@@ -392,6 +429,10 @@ export default function Penjualan() {
   const [previewSaleId, setPreviewSaleId] = useState<number | undefined>();
   const [activeTab, setActiveTab] = useState<string>("Semua");
 
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
+  const [otpAction, setOtpAction] = useState<"edit" | "cancel" | null>(null);
+  const [otpTargetId, setOtpTargetId] = useState<number | null>(null);
+
   const { data: sales, isLoading } = useListSales({}, { query: { queryKey: getListSalesQueryKey({}) } });
   const { data: customers } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
   const { data: categories } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
@@ -421,31 +462,87 @@ export default function Penjualan() {
     setEditingSaleId(null);
   };
 
-  // Open edit mode: fetch sale detail and fill form
+  const handleEditClick = (saleId: number) => {
+    setOtpTargetId(saleId);
+    setOtpAction("edit");
+    setOtpDialogOpen(true);
+  };
+
   const openEditMode = async (saleId: number) => {
     try {
       const res = await fetch(`${API_BASE}/api/sales/${saleId}`);
       const data = await res.json();
+      
+      let currentProducts = products;
+      if (!currentProducts || currentProducts.length === 0) {
+        try {
+          const prodRes = await fetch(`${API_BASE}/api/products`);
+          if (prodRes.ok) currentProducts = await prodRes.json();
+        } catch (e) {
+          console.error("Failed to fetch products fallback", e);
+        }
+      }
+
       setEditingSaleId(saleId);
       setInvoiceNumber(data.invoiceNumber || "");
       setCustomerId(data.customerId ? String(data.customerId) : "");
       setPaymentType(data.paymentType || "tunai");
       setDueDate(data.dueDate ? data.dueDate.split("T")[0] : "");
       setNotes(data.notes || "");
-      // Convert API items back to SaleItem format
-      const saleItems: SaleItem[] = (data.items || []).map((i: any) => ({
-        productId: i.productId,
-        productName: i.productName || "",
-        rollId: i.rollId,
-        unit: i.rolls > 0 ? "roll" as const : "meter" as const,
-        rolls: i.rolls || 0,
-        meters: i.meters || 0,
-        pricePerUnit: i.pricePerMeter || 0,
-        subtotal: i.subtotal || 0,
-        primaryUnit: i.primaryUnit,
-        secondaryUnit: i.secondaryUnit,
-      }));
-      setItems(saleItems);
+      // Convert API items back to SaleItem format and GROUP them!
+      const mergedItems: SaleItem[] = [];
+      const dataItems = data.items || [];
+      
+      dataItems.forEach((i: any) => {
+        const prod = currentProducts?.find((p: any) => p.id?.toString() === i.productId?.toString());
+        
+        if (i.rollId) {
+          // Find existing merged item for this product that is ALSO using selectedRolls
+          const existing = mergedItems.find(m => m.productId === i.productId && m.pricePerUnit === i.pricePerMeter && m.selectedRolls);
+          if (existing && existing.selectedRolls) {
+            existing.selectedRolls.push({ id: i.rollId, currentLength: parseFloat(i.meters) });
+            existing.rolls = (typeof existing.rolls === "number" ? existing.rolls : 0) + (i.rolls || 1);
+            existing.meters = (typeof existing.meters === "number" ? existing.meters : 0) + parseFloat(i.meters || 0);
+            existing.subtotal += parseFloat(i.subtotal || 0);
+            return;
+          }
+          
+          // Create new merged item
+          mergedItems.push({
+            categoryId: i.categoryId || prod?.categoryId || 0,
+            productId: i.productId,
+            productName: i.productName || prod?.name || "",
+            selectedRolls: [{ id: i.rollId, currentLength: parseFloat(i.meters) }],
+            unit: "roll",
+            rolls: i.rolls || 1,
+            meters: parseFloat(i.meters || 0),
+            pricePerUnit: parseFloat(i.pricePerMeter || 0),
+            subtotal: parseFloat(i.subtotal || 0),
+            primaryUnit: i.primaryUnit || prod?.primaryUnit,
+            secondaryUnit: i.secondaryUnit || prod?.secondaryUnit,
+          });
+        } else {
+          // Regular item without specific roll (bisa Potong Bebas atau Auto Roll)
+          const isAutoRoll = i.rolls > 0 && i.meters > 0;
+          const targetLen = isAutoRoll ? (parseFloat(i.meters) / parseFloat(i.rolls)) : undefined;
+          
+          mergedItems.push({
+            categoryId: i.categoryId || prod?.categoryId || 0,
+            productId: i.productId,
+            productName: i.productName || prod?.name || "",
+            unit: i.rolls > 0 ? "roll" : "meter",
+            rolls: parseFloat(i.rolls || 0),
+            meters: parseFloat(i.meters || 0),
+            pricePerUnit: parseFloat(i.pricePerMeter || 0),
+            subtotal: parseFloat(i.subtotal || 0),
+            targetLength: targetLen,
+            primaryUnit: i.primaryUnit || prod?.primaryUnit,
+            secondaryUnit: i.secondaryUnit || prod?.secondaryUnit,
+          });
+        }
+      });
+      
+      setItems(mergedItems);
       setIsOpen(true);
     } catch {
       toast({ title: "Gagal memuat data nota", variant: "destructive" });
@@ -473,8 +570,14 @@ export default function Penjualan() {
   };
 
   // Cancel a sale
-  const handleCancel = async (saleId: number) => {
+  const handleCancelClick = (saleId: number) => {
     if (!confirm("Yakin ingin membatalkan nota ini? Stok akan dikembalikan jika sudah dibayar.")) return;
+    setOtpTargetId(saleId);
+    setOtpAction("cancel");
+    setOtpDialogOpen(true);
+  };
+
+  const handleCancel = async (saleId: number) => {
     setCancelProcessing(saleId);
     try {
       const res = await fetch(`${API_BASE}/api/sales/${saleId}/cancel`, { method: "POST" });
@@ -495,29 +598,38 @@ export default function Penjualan() {
 
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
-  const updateItem = (index: number, field: keyof SaleItem, value: any) => {
+  const updateItemFields = (index: number, fields: Partial<SaleItem>) => {
     setItems(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[index] = { ...updated[index], ...fields };
       const item = updated[index];
-      if (field === "productId") {
-        const prod = products?.find(p => p.id === parseInt(value));
-        if (prod) {
-          item.productName = prod.name;
-          item.pricePerUnit = parseFloat(String(prod.pricePerMeter));
-          item.primaryUnit = prod.primaryUnit || undefined;
-          item.secondaryUnit = prod.secondaryUnit || undefined;
-        }
-      }
       
-      // Auto update meters when rolls change and targetLength is known
-      if (field === "rolls" && item.unit === "roll" && item.targetLength && !item.rollId) {
+      // Calculate derived state
+      if (item.unit === "roll" && item.targetLength && !item.rollId) {
         item.meters = (typeof item.rolls === "number" ? item.rolls : 0) * item.targetLength;
       }
-
       item.subtotal = (typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerUnit === "number" ? item.pricePerUnit : 0);
+      
       return updated;
     });
+  };
+
+  const updateItem = (index: number, field: keyof SaleItem, value: any) => {
+    updateItemFields(index, { [field]: value });
+    
+    // Auto populate productName etc when productId changes
+    if (field === "productId") {
+      const prod = products?.find(p => p.id === parseInt(value));
+      if (prod) {
+        updateItemFields(index, {
+          productName: prod.name,
+          pricePerUnit: parseFloat(String(prod.pricePerMeter)),
+          primaryUnit: prod.primaryUnit || undefined,
+          secondaryUnit: prod.secondaryUnit || undefined,
+          categoryId: prod.categoryId
+        });
+      }
+    }
   };
 
   const totalAmount = items.reduce((sum, i) => sum + i.subtotal, 0);
@@ -538,6 +650,7 @@ export default function Penjualan() {
       totalAmount,
       paidAmount,
       remainingAmount: totalAmount - paidAmount,
+      status: 'draft',
       items: items.map(i => {
         const prod = products?.find(p => p.id === i.productId);
         const cat = categories?.find(c => c.id === prod?.categoryId);
@@ -580,7 +693,7 @@ export default function Penjualan() {
     const payload = {
       invoiceNumber: editingSaleId ? invoiceNumber : undefined,
       isDraft,
-      customerId: customerId ? parseInt(customerId) : undefined,
+      customerId: (customerId && customerId !== "0") ? parseInt(customerId) : undefined,
       paymentType: paymentType as any,
       dueDate: dueDate || undefined,
       notes: notes || undefined,
@@ -778,7 +891,7 @@ export default function Penjualan() {
                 <div key={s.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
                   
                   {/* Top Row: Date & Price */}
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-center bg-background px-4 py-2 rounded-2xl">
                     <span className="text-xs font-semibold text-slate-500">
                       {formatDate(s.createdAt)}
                     </span>
@@ -789,8 +902,8 @@ export default function Penjualan() {
 
                   {/* Main Content: Avatar, Title, Status */}
                   <div className="flex gap-3">
-                    <div className="w-[60px] h-[60px] rounded-2xl shrink-0 bg-violet-50 flex items-center justify-center border border-violet-100">
-                      <UserIcon className="w-8 h-8 text-violet-300" strokeWidth={1.5} />
+                    <div className="w-15 h-15 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-8 w-8 text-primary" />
                     </div>
                     
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -858,7 +971,7 @@ export default function Penjualan() {
                             size="sm" 
                             variant="outline"
                             className="rounded-full h-8 px-3 text-xs"
-                            onClick={() => openEditMode(s.id)}
+                            onClick={() => handleEditClick(s.id)}
                           >
                             <Pencil className="w-3 h-3 mr-1" /> Edit
                           </Button>
@@ -867,7 +980,7 @@ export default function Penjualan() {
                             variant="ghost"
                             className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                             disabled={cancelProcessing === s.id}
-                            onClick={() => handleCancel(s.id)}
+                            onClick={() => handleCancelClick(s.id)}
                           >
                             <Ban className="w-3 h-3 mr-1" /> Hapus
                           </Button>
@@ -885,7 +998,7 @@ export default function Penjualan() {
                             size="sm"
                             variant="outline"
                             className="rounded-full h-8 px-3 text-xs"
-                            onClick={() => openEditMode(s.id)}
+                            onClick={() => handleEditClick(s.id)}
                           >
                             <Pencil className="w-3 h-3 mr-1" /> Edit
                           </Button>
@@ -894,7 +1007,7 @@ export default function Penjualan() {
                             variant="ghost"
                             className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
                             disabled={cancelProcessing === s.id}
-                            onClick={() => handleCancel(s.id)}
+                            onClick={() => handleCancelClick(s.id)}
                           >
                             <Ban className="w-3 h-3 mr-1" /> Hapus
                           </Button>
@@ -965,33 +1078,33 @@ export default function Penjualan() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">Pelanggan</label>
-                <Select value={customerId} onValueChange={setCustomerId}>
-                  <SelectTrigger><SelectValue placeholder="Pilih pelanggan (opsional)" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Pelanggan Umum</SelectItem>
-                    {customers?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  items={[
+                    { value: "0", label: "Pelanggan Umum" },
+                    ...(customers?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
+                  ]}
+                  value={customerId}
+                  onValueChange={setCustomerId}
+                  placeholder="Pilih pelanggan (opsional)"
+                  searchPlaceholder="Cari pelanggan..."
+                />
               </div>
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {paymentMethods.filter(m => m.isActive).length > 0
-                      ? paymentMethods.filter(m => m.isActive).map(m => (
-                          <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
-                        ))
-                      : (
-                          <>
-                            <SelectItem value="tunai">Tunai</SelectItem>
-                            <SelectItem value="transfer">Transfer</SelectItem>
-                            <SelectItem value="kredit">Kredit</SelectItem>
-                          </>
-                        )
-                    }
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  items={paymentMethods.filter(m => m.isActive).length > 0
+                    ? paymentMethods.filter(m => m.isActive).map(m => ({ value: m.code, label: m.name }))
+                    : [
+                        { value: "tunai", label: "Tunai" },
+                        { value: "transfer", label: "Transfer" },
+                        { value: "kredit", label: "Kredit" },
+                      ]
+                  }
+                  value={paymentType}
+                  onValueChange={setPaymentType}
+                  placeholder="Pilih metode"
+                  searchPlaceholder="Cari..."
+                />
               </div>
               {paymentType === "kredit" && (
                 <div>
@@ -1013,13 +1126,23 @@ export default function Penjualan() {
                 <Button type="button" variant="outline" size="sm" onClick={addItem}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Item</Button>
               </div>
               {items.length === 0 && (
-                <div className="text-center py-6 border-2 border-dashed rounded-lg text-muted-foreground text-sm">
-                  Belum ada item. Klik "Tambah Item" untuk memulai.
-                </div>
+                <div className="text-center py-8 border-2 border-dashed rounded-xl text-muted-foreground text-sm font-medium">Belum ada item. Klik "Tambah Item" untuk memulai.</div>
               )}
+              <div className="space-y-2">
                 {items.map((item, index) => (
-                  <SaleItemRow key={index} item={item} index={index} products={products} categories={categories} updateItem={updateItem} removeItem={removeItem} allItems={items} />
+                  <SaleItemRow 
+                    key={`item-${index}`} 
+                    item={item} 
+                    index={index} 
+                    products={products} 
+                    categories={categories} 
+                    updateItem={updateItem} 
+                    updateItemFields={updateItemFields}
+                    removeItem={removeItem} 
+                    allItems={items} 
+                  />
                 ))}
+              </div>
             </div>
 
             {items.length > 0 && (
@@ -1067,8 +1190,24 @@ export default function Penjualan() {
         </DrawerContent>
       </Drawer>
       
-      <InvoicePreviewModal open={previewOpen} onOpenChange={setPreviewOpen} data={previewData} saleId={previewSaleId} />
+      <InvoicePreviewModal 
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        data={previewData}
+        saleId={previewSaleId}
+      />
+      <OtpDialog
+        open={otpDialogOpen}
+        onOpenChange={setOtpDialogOpen}
+        onSuccess={(token) => {
+          setOtpDialogOpen(false);
+          if (otpAction === "edit" && otpTargetId) {
+            openEditMode(otpTargetId);
+          } else if (otpAction === "cancel" && otpTargetId) {
+            handleCancel(otpTargetId);
+          }
+        }}
+      />
     </div>
   );
 }
-

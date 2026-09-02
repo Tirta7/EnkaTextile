@@ -630,6 +630,7 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     .select({
       productId: saleItemsTable.productId,
       productName: productsTable.name,
+      categoryId: productsTable.categoryId,
       categoryName: categoriesTable.name,
       primaryUnit: productsTable.primaryUnit,
       secondaryUnit: productsTable.secondaryUnit,

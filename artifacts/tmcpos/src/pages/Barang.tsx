@@ -38,7 +38,7 @@ const schema = z.object({
   rollStock: z.number().min(0).optional(),
   meterStock: z.number().min(0).optional(),
   minStock: z.number().min(0),
-  rollLengths: z.array(z.number()).optional(),
+  rollLengths: z.array(z.any()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -109,7 +109,13 @@ export default function Barang() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const payload = { ...data, imageUrl: imageUrl ?? undefined };
+      const parsedRollLengths = data.rollLengths?.map(r => {
+        if (typeof r === 'string') {
+          return parseFloat(r.replace(',', '.')) || 0;
+        }
+        return r || 0;
+      });
+      const payload = { ...data, imageUrl: imageUrl ?? undefined, rollLengths: parsedRollLengths };
       if (editingId) {
         await updateMutation.mutateAsync({ id: editingId, data: payload });
       } else {
@@ -568,9 +574,13 @@ export default function Barang() {
                             field.onChange(val);
                             // Adjust rollLengths array size
                             const currentLengths = form.getValues('rollLengths') || [];
-                            const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || 0);
+                            const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] !== undefined ? currentLengths[i] : "");
                             form.setValue('rollLengths', newLengths);
-                            form.setValue('meterStock', newLengths.reduce((a,b)=>a+b, 0));
+                            const total = newLengths.reduce((a, b) => {
+                              const bNum = typeof b === 'string' ? parseFloat(b.replace(',', '.')) : b;
+                              return a + (bNum || 0);
+                            }, 0);
+                            form.setValue('meterStock', parseFloat(total.toFixed(3)));
                           }} 
                         />
                       </FormControl>
@@ -587,31 +597,39 @@ export default function Barang() {
                   )} />
 
                   {/* Dynamic inputs for roll lengths */}
-                  {(form.watch('rollStock') || 0) > 0 && !editingId && (
-                    <div className="md:col-span-3 bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                      <label className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
-                          <div key={i} className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-500">Roll #{i + 1}</label>
-                            <Input
-                              type="number" step="any" min={0}
-                              placeholder="Panjang..."
-                              className="h-8 text-sm"
-                              value={form.watch(`rollLengths.${i}`) || ''}
-                              onChange={e => {
-                                const val = parseFloat(e.target.value) || 0;
-                                const newLengths = [...(form.getValues('rollLengths') || [])];
-                                newLengths[i] = val;
-                                form.setValue('rollLengths', newLengths);
-                                form.setValue('meterStock', parseFloat(newLengths.reduce((a,b)=>a+b, 0).toFixed(3)));
-                              }}
-                            />
-                          </div>
-                        ))}
+                  {(form.watch('rollStock') || 0) > 0 && !editingId && (() => {
+                    const currentLengths = form.watch('rollLengths') || [];
+                    return (
+                      <div className="md:col-span-3 bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                        <label className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                          {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
+                            <div key={i} className="space-y-1.5">
+                              <label className="text-xs font-medium text-slate-500">Roll #{i + 1}</label>
+                              <Input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Panjang..."
+                                className="h-8 text-sm"
+                                value={currentLengths[i] !== undefined ? currentLengths[i] : ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const newLengths = [...(form.getValues('rollLengths') || [])];
+                                  newLengths[i] = val;
+                                  form.setValue('rollLengths', newLengths, { shouldValidate: true, shouldDirty: true });
+                                  const total = newLengths.reduce((a, b) => {
+                                    const bNum = typeof b === 'string' ? parseFloat(b.replace(',', '.')) : b;
+                                    return a + (bNum || 0);
+                                  }, 0);
+                                  form.setValue('meterStock', parseFloat(total.toFixed(3)), { shouldValidate: true, shouldDirty: true });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem className="md:col-span-3">

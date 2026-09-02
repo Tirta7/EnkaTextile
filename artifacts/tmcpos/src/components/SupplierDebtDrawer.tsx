@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { Receipt, AlertCircle, CheckCircle2, DollarSign, ArrowRightCircle } from "lucide-react";
-import { useListPayables } from "@workspace/api-client-react";
+import { useListPayables, getListPayablesQueryKey } from "@workspace/api-client-react";
 import { PurchaseDetailModal } from "./PurchaseDetailModal";
 
 interface SupplierDebtDrawerProps {
@@ -19,8 +19,8 @@ export function SupplierDebtDrawer({ supplierId, supplierName, isOpen, onClose }
   const [viewPurchaseId, setViewPurchaseId] = useState<number | null>(null);
 
   const { data: payables, isLoading } = useListPayables(
-    { query: { supplierId: supplierId?.toString() } },
-    { query: { enabled: !!supplierId && isOpen } }
+    { supplierId: supplierId || undefined },
+    { query: { enabled: !!supplierId && isOpen, queryKey: getListPayablesQueryKey({ supplierId: supplierId || undefined }) } }
   );
 
   const debts = payables?.filter(p => p.status !== "lunas") || [];

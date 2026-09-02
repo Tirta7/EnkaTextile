@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PurchaseDetailModal } from "@/components/PurchaseDetailModal";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -322,23 +323,20 @@ export default function Pembelian() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {paymentMethods.filter(m => m.isActive).length > 0
-                      ? paymentMethods.filter(m => m.isActive).map(m => (
-                          <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
-                        ))
-                      : (
-                          <>
-                            <SelectItem value="tunai">Tunai</SelectItem>
-                            <SelectItem value="transfer">Transfer</SelectItem>
-                            <SelectItem value="kredit">Kredit</SelectItem>
-                          </>
-                        )
-                    }
-                  </SelectContent>
-                </Select>
+                <Combobox
+                  items={paymentMethods.filter(m => m.isActive).length > 0
+                    ? paymentMethods.filter(m => m.isActive).map(m => ({ value: m.code, label: m.name }))
+                    : [
+                        { value: "tunai", label: "Tunai" },
+                        { value: "transfer", label: "Transfer" },
+                        { value: "kredit", label: "Kredit" },
+                      ]
+                  }
+                  value={paymentType}
+                  onValueChange={setPaymentType}
+                  placeholder="Pilih metode"
+                  searchPlaceholder="Cari..."
+                />
               </div>
               {paymentType === "kredit" && (
                 <div>
@@ -365,25 +363,30 @@ export default function Pembelian() {
                   <div className="flex flex-col md:grid md:grid-cols-12 gap-2 md:items-end">
                     <div className="md:col-span-2">
                       <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
-                      <Select value={item.categoryId ? item.categoryId.toString() : ""} onValueChange={(v: string) => updateItem(index, "categoryId", parseInt(v))}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Semua" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Semua</SelectItem>
-                          {categories?.map((c: any) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        items={[
+                          { value: "0", label: "Semua" },
+                          ...(categories?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
+                        ]}
+                        value={item.categoryId ? item.categoryId.toString() : undefined}
+                        onValueChange={(v) => updateItem(index, "categoryId", parseInt(v))}
+                        placeholder="Semua"
+                        searchPlaceholder="Cari kategori..."
+                        className="h-8"
+                      />
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-xs text-muted-foreground mb-1 block">Barang</label>
-                      <Select value={item.productId ? item.productId.toString() : ""} onValueChange={(v: string) => updateItem(index, "productId", parseInt(v))}>
-                        <SelectTrigger className="h-8"><SelectValue placeholder="Pilih" /></SelectTrigger>
-                        <SelectContent>
-                          {products
-                            ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
-                            .map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)
-                          }
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        items={products
+                          ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
+                          .map((p: any) => ({ value: p.id.toString(), label: p.name })) || []}
+                        value={item.productId ? item.productId.toString() : undefined}
+                        onValueChange={(v) => updateItem(index, "productId", parseInt(v))}
+                        placeholder="Pilih"
+                        searchPlaceholder="Cari barang..."
+                        className="h-8"
+                      />
                     </div>
                     <div className="md:col-span-1">
                       <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>

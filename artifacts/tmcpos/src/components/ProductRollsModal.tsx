@@ -118,7 +118,8 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
     try {
       // Loop to create multiple rolls if qty > 1
       for (let i = 0; i < qty; i++) {
-        const len = parseFloat(newLengths[i]) || 0;
+        const rawLen = newLengths[i];
+        const len = typeof rawLen === 'string' ? parseFloat(rawLen.replace(',', '.')) || 0 : (rawLen || 0);
         await createMutation.mutateAsync({
           id: productId,
           data: {
@@ -255,7 +256,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                     const val = e.target.value;
                     setNewQty(val);
                     const parsed = parseInt(val) || 0;
-                    const newArr = Array.from({ length: parsed }, (_, i) => newLengths[i] || "");
+                    const newArr = Array.from({ length: parsed }, (_, i) => newLengths[i] !== undefined ? newLengths[i] : "");
                     setNewLengths(newArr);
                   }}
                   className="h-8 text-xs w-16 text-center bg-white"
@@ -278,10 +279,10 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                     <div key={i} className="space-y-1">
                       <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
                       <Input
-                        type="number" step="any" min={0}
+                        type="text" inputMode="decimal"
                         placeholder="Pjg (yds)"
                         className="h-7 text-xs px-2"
-                        value={newLengths[i] || ''}
+                        value={newLengths[i] ?? ''}
                         onChange={e => {
                           const val = e.target.value;
                           const newArr = [...newLengths];

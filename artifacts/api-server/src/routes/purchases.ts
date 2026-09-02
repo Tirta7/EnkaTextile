@@ -178,6 +178,7 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
     .select({
       productId: purchaseItemsTable.productId,
       productName: productsTable.name,
+      categoryId: productsTable.categoryId,
       rollId: purchaseItemsTable.rollId,
       rolls: purchaseItemsTable.rolls,
       meters: purchaseItemsTable.meters,

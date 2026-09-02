@@ -366,6 +366,7 @@ export interface PurchaseDetail {
 }
 
 export interface PurchaseInput {
+  invoiceNumber?: string;
   supplierId: number;
   paymentType: string;
   dueDate?: string;

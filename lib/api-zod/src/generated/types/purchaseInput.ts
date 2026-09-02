@@ -8,6 +8,7 @@
 import type { PurchaseItemInput } from './purchaseItemInput';
 
 export interface PurchaseInput {
+  invoiceNumber?: string;
   supplierId: number;
   paymentType: string;
   dueDate?: string;

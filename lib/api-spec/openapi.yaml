@@ -1950,6 +1950,8 @@ components:
       type: object
       required: [supplierId, paymentType, items]
       properties:
+        invoiceNumber:
+          type: string
         supplierId:
           type: integer
         paymentType:

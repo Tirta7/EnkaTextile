@@ -212,8 +212,7 @@ export const CreateProductBody = zod.object({
   "pricePerRoll": zod.number().optional(),
   "rollStock": zod.number().optional(),
   "meterStock": zod.number().optional(),
-  "minStock": zod.number().optional(),
-  "rollLengths": zod.array(zod.number()).optional()
+  "minStock": zod.number().optional()
 })
 
 export const CreateProductResponse = zod.object({
@@ -747,6 +746,7 @@ export const ListPurchasesResponse = zod.array(ListPurchasesResponseItem)
  * @summary Create a purchase transaction
  */
 export const CreatePurchaseBody = zod.object({
+  "invoiceNumber": zod.string().optional(),
   "supplierId": zod.number(),
   "paymentType": zod.string(),
   "dueDate": zod.string().optional(),
@@ -758,8 +758,7 @@ export const CreatePurchaseBody = zod.object({
   "meters": zod.number(),
   "pricePerMeter": zod.number(),
   "subtotal": zod.number(),
-  "barcode": zod.string().optional(),
-  "rollLengths": zod.array(zod.number()).optional()
+  "barcode": zod.string().optional()
 }))
 })
 

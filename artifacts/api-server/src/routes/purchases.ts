@@ -54,7 +54,7 @@ router.post("/purchases", async (req, res): Promise<void> => {
   const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
   const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
 
-  const invoiceNumber = `PO-${Date.now()}`;
+  const invoiceNumber = parsed.data.invoiceNumber || `PO-${Date.now()}`;
 
   const [purchase] = await db.insert(purchasesTable).values({
     invoiceNumber,

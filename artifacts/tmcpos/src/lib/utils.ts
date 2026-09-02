@@ -49,3 +49,30 @@ export function generateInvoiceNumber(prefix: string = "INV"): string {
   const rand = Math.floor(Math.random() * 9000) + 1000;
   return `${prefix}/${y}${m}${d}/${rand}`;
 }
+
+export function generateSequentialInvoiceNumber(prefix: string = "INV", existingInvoices: string[] = []): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${y}${m}${d}`;
+  
+  let maxSeq = 0;
+  for (const inv of existingInvoices) {
+    if (inv && inv.startsWith(`${prefix}/${dateStr}/`)) {
+      const seqStr = inv.split('/').pop();
+      if (seqStr) {
+        const seq = parseInt(seqStr, 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    }
+  }
+  
+  // Jika belum ada mulai dari 1 (0001)
+  const nextSeq = maxSeq > 0 ? maxSeq + 1 : 1;
+  const seqPadded = String(nextSeq).padStart(4, "0");
+  
+  return `${prefix}/${dateStr}/${seqPadded}`;
+}

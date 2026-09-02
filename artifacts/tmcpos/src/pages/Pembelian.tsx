@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
+import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 
 type PurchaseItem = { categoryId?: number; productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; rollLengths?: number[]; };
@@ -39,6 +39,7 @@ export default function Pembelian() {
   const [paymentType, setPaymentType] = useState<string>("tunai");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   const { data: purchases, isLoading } = useListPurchases({}, { query: { queryKey: getListPurchasesQueryKey({}) } });
   const { data: suppliers } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
@@ -109,6 +110,7 @@ export default function Pembelian() {
     if (!supplierId) { toast({ title: "Pilih supplier", variant: "destructive" }); return; }
     createMutation.mutate({
       data: {
+        invoiceNumber,
         supplierId: parseInt(supplierId),
         paymentType: paymentType as any,
         dueDate: dueDate || undefined,
@@ -150,7 +152,11 @@ export default function Pembelian() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pembelian</h1>
             <p className="text-sm text-slate-500">Riwayat kulakan dari supplier</p>
           </div>
-          <Button onClick={() => setIsOpen(true)} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+          <Button onClick={() => { 
+            const existingInvoices = purchases?.map(p => p.invoiceNumber) || [];
+            setInvoiceNumber(generateSequentialInvoiceNumber("INV-IN", existingInvoices)); 
+            setIsOpen(true); 
+          }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>

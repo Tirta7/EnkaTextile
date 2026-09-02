@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatRupiah, formatDate, generateInvoiceNumber } from "@/lib/utils";
+import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { InvoicePreviewModal, InvoicePreviewData } from "@/components/InvoicePreviewModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -578,7 +578,11 @@ export default function Penjualan() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Aktivitas</h1>
           <p className="text-sm text-slate-500">Riwayat penjualan Anda</p>
         </div>
-        <Button onClick={() => { setInvoiceNumber(generateInvoiceNumber()); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+        <Button onClick={() => { 
+          const existingInvoices = sales?.map(s => s.invoiceNumber) || [];
+          setInvoiceNumber(generateSequentialInvoiceNumber("INV", existingInvoices)); 
+          setIsOpen(true); 
+        }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
           <Plus className="mr-2 h-4 w-4" /> Buat Nota
         </Button>
       </div>

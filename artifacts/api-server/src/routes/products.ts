@@ -71,8 +71,9 @@ router.post("/products", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const d = parsed.data;
   const barcodeToSave = d.barcode ? d.barcode : `PRD-${Date.now()}`;
+  const { rollLengths: createRollLengths, ...productData } = d;
   const [prod] = await db.insert(productsTable).values({
-    ...d,
+    ...productData,
     barcode: barcodeToSave,
     primaryUnit: d.primaryUnit || "METER",
     secondaryUnit: d.secondaryUnit || "ROLL",
@@ -89,7 +90,9 @@ router.post("/products", async (req, res): Promise<void> => {
     const meterStockNum = d.meterStock ?? 0;
     if (rollStockNum > 0) {
       const rollsToInsert = Array.from({ length: rollStockNum }).map((_, i) => {
-        const lengthToUse = (d.rollLengths && d.rollLengths[i]) ? d.rollLengths[i] : (meterStockNum / rollStockNum);
+      const lengthToUse = (createRollLengths && createRollLengths[i] != null && createRollLengths[i] > 0)
+        ? createRollLengths[i]
+        : (meterStockNum / rollStockNum);
         return {
           productId: prod.id,
           barcode: `${prod.barcode}-R${Date.now()}-${i + 1}`,
@@ -206,14 +209,22 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     
     if (rollStockNum > currentRollCount) {
       const diff = rollStockNum - currentRollCount;
-      const avgLength = rollStockNum > 0 ? (meterStockNum / rollStockNum).toFixed(3) : "0";
-      const rollsToInsert = Array.from({ length: diff }).map((_, i) => ({
-        productId: prod.id,
-        barcode: `${prod.barcode || `PRD-${prod.id}`}-R${Date.now()}-${i + 1}`,
-        originalLength: String(avgLength),
-        currentLength: String(avgLength),
-        status: "available",
-      }));
+      const avgLength = rollStockNum > 0 ? (meterStockNum / rollStockNum) : 0;
+      const updateRollLengths = d.rollLengths;
+      const rollsToInsert = Array.from({ length: diff }).map((_, i) => {
+        // i offset by currentRollCount so rollLengths index aligns with new rolls
+        const offsetIdx = currentRollCount + i;
+        const lengthToUse = (updateRollLengths && updateRollLengths[offsetIdx] != null && updateRollLengths[offsetIdx] > 0)
+          ? updateRollLengths[offsetIdx]
+          : avgLength;
+        return {
+          productId: prod.id,
+          barcode: `${prod.barcode || `PRD-${prod.id}`}-R${Date.now()}-${i + 1}`,
+          originalLength: String(lengthToUse),
+          currentLength: String(lengthToUse),
+          status: "available",
+        };
+      });
       if (rollsToInsert.length > 0) {
         await db.insert(productRollsTable).values(rollsToInsert);
       }

@@ -251,7 +251,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
                 <div className="flex-1 flex flex-col min-h-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                     <div className="text-sm font-semibold text-slate-700">Pilih Spesifik Barcode</div>
-                    <div className="relative w-full sm:w-[200px]">
+                    <div className="relative w-full sm:w-50">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Cari barcode..." 
@@ -419,8 +419,10 @@ export default function Penjualan() {
   const [paymentType, setPaymentType] = useState<string>("tunai");
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
+  const [dpAmount, setDpAmount] = useState<string>("");
   const [payDialogSaleId, setPayDialogSaleId] = useState<number | null>(null);
   const [payPaymentType, setPayPaymentType] = useState<string>("tunai");
+  const [payAmount, setPayAmount] = useState<string>("");
   const [payProcessing, setPayProcessing] = useState(false);
   const [cancelProcessing, setCancelProcessing] = useState<number | null>(null);
   
@@ -459,6 +461,7 @@ export default function Penjualan() {
     setPaymentType("tunai");
     setDueDate("");
     setNotes("");
+    setDpAmount("");
     setEditingSaleId(null);
   };
 
@@ -489,6 +492,7 @@ export default function Penjualan() {
       setPaymentType(data.paymentType || "tunai");
       setDueDate(data.dueDate ? data.dueDate.split("T")[0] : "");
       setNotes(data.notes || "");
+      setDpAmount(data.status === "partial" || data.status === "held" ? (data.paidAmount ? data.paidAmount.toString() : "") : "");
       // Convert API items back to SaleItem format and GROUP them!
       const mergedItems: SaleItem[] = [];
       const dataItems = data.items || [];
@@ -697,6 +701,7 @@ export default function Penjualan() {
       paymentType: paymentType as any,
       dueDate: dueDate || undefined,
       notes: notes || undefined,
+      dpAmount: dpAmount ? parseFloat(dpAmount) : undefined,
       items: buildItemsPayload(),
     };
 
@@ -771,7 +776,7 @@ export default function Penjualan() {
   }, [filtered]);
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
+    <div className="space-y-4 md:space-y-6 max-w-200 mx-auto pb-4">
       
       {/* Mobile-optimized Header */}
       <div className="flex items-center justify-between pt-2 pb-4">
@@ -949,6 +954,24 @@ export default function Penjualan() {
                                 <span className="text-emerald-600">Tukar: +Rp {new Intl.NumberFormat('id-ID').format((s as any).totalExchangedValue || 0)}</span>
                               </div>
                             )}
+                          </div>
+                        )}
+                        
+                        {(s.status === 'partial' || parseFloat(String(s.paidAmount || 0)) > 0 && s.status !== 'lunas') && (
+                          <div className="flex flex-col gap-1 mt-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-indigo-200 text-indigo-700 bg-indigo-50 uppercase tracking-widest font-bold">
+                                Ada DP / Uang Muka
+                              </Badge>
+                              <span className="text-[10px] font-bold text-rose-600">
+                                (Sisa Bayar: Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.totalAmount || 0)) - parseFloat(String(s.paidAmount || 0)))})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium ml-0.5">
+                              <span className="text-slate-600">Total: Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.totalAmount || 0)))}</span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-emerald-600">DP: -Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.paidAmount || 0)))}</span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1146,10 +1169,32 @@ export default function Penjualan() {
             </div>
 
             {items.length > 0 && (
-              <div className="flex justify-end pt-2">
-                <div className="text-right">
-                  <span className="text-muted-foreground mr-4">Total:</span>
-                  <span className="text-xl font-bold">{formatRupiah(totalAmount)}</span>
+              <div className="flex justify-end pt-4 border-t mt-4">
+                <div className="text-right space-y-3 w-full sm:w-auto">
+                  <div className="flex justify-end items-center">
+                    <span className="text-muted-foreground mr-4 font-medium">Total:</span>
+                    <span className="text-xl font-bold text-slate-900">{formatRupiah(totalAmount)}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-end gap-3">
+                    <span className="text-sm font-semibold text-slate-600">DP / Uang Muka (Opsional):</span>
+                    <input
+                      type="number"
+                      value={dpAmount}
+                      onChange={e => setDpAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-40 text-right font-bold h-9 border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 text-indigo-700 placeholder:text-indigo-300"
+                    />
+                  </div>
+                  
+                  {dpAmount && parseFloat(dpAmount) > 0 && (
+                    <div className="flex items-center justify-end gap-3">
+                      <span className="text-sm font-bold text-rose-600">Sisa Pembayaran:</span>
+                      <div className="w-40 text-right font-bold text-rose-600 text-lg">
+                        {formatRupiah(totalAmount - parseFloat(dpAmount))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1211,3 +1256,14 @@ export default function Penjualan() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

@@ -286,7 +286,8 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   const totalYds = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.meters as string || "0"), 0) || 0;
   const totalRolls = allActiveItems.reduce((sum: number, item: any) => sum + parseFloat(item.rolls as string || "0"), 0) || 0;
   
-  const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0 && displayData?.status !== "draft";
+  const isPaid = parseFloat(displayData?.remainingAmount as string || "0") <= 0 && parseFloat(displayData?.totalAmount as string || "0") > 0 && displayData?.status !== "draft" && displayData?.status !== "held";
+  const isDraft = displayData?.status === "draft" || displayData?.status === "held" || !displayData?.invoiceNumber;
   const availableRolls = rolls?.filter(r => r.status === 'available') || [];
 
   const uniqueReturns = useMemo(() => {
@@ -381,6 +382,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   <div className="lunas-watermark text-[150px] font-bold text-green-500/10 rotate-[-30deg] select-none border-8 border-green-500/10 p-8 rounded-3xl tracking-widest uppercase">LUNAS</div>
                 </div>
               )}
+              {isDraft && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+                  <div className="lunas-watermark text-[150px] font-bold text-slate-500/10 rotate-[-30deg] select-none border-8 border-slate-500/10 p-8 rounded-3xl tracking-widest uppercase">DRAFT</div>
+                </div>
+              )}
 
               {/* Header */}
               <div className="flex justify-between items-start mb-1 pb-1 border-b-[1.5px] border-indigo-100 relative z-10">
@@ -395,6 +401,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     <QrCode className="w-4 h-4 text-indigo-400 no-print" /> No. {displayData.invoiceNumber || "DRAFT"}
                   </div>
                   {isPaid && <div className="lunas-stamp mt-1 inline-block border-[1.5px] border-green-600 text-green-600 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">LUNAS</div>}
+                  {isDraft && <div className="lunas-stamp mt-1 inline-block border-[1.5px] border-slate-500 text-slate-500 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">DRAFT</div>}
                 </div>
                 
                 <div className="w-[35%] text-right text-xs flex flex-col items-end">
@@ -796,5 +803,6 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
     </>
   );
 }
+
 
 

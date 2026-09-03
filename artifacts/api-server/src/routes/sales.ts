@@ -219,13 +219,13 @@ router.get("/sales", async (req, res) => {
     .orderBy(desc(salesTable.createdAt));
 
   res.json(sales.map(s => {
-    // For draft/cancelled, return as-is without recalculation
-    if (s.status === 'draft' || s.status === 'cancelled') {
+    // For draft/cancelled/held, return as-is without recalculation
+    if (s.status === 'draft' || s.status === 'cancelled' || s.status === 'held') {
       return {
         ...s,
         totalAmount: numStr(s.totalAmount),
         paidAmount: numStr(s.paidAmount),
-        remainingAmount: numStr(s.totalAmount),
+        remainingAmount: numStr(s.totalAmount) - numStr(s.paidAmount),
         dueDate: s.dueDate?.toISOString() ?? null,
         createdAt: s.createdAt.toISOString(),
         hasReturns: false,
@@ -268,7 +268,7 @@ router.post("/sales", async (req, res): Promise<void> => {
     const parsed = CreateSaleBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-    const { customerId, paymentType, dueDate, notes, items } = parsed.data;
+    const { customerId, paymentType, dueDate, notes, items, dpAmount } = parsed.data;
     const isDraft = (req.body as any).isDraft === true;
 
     const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
@@ -278,9 +278,10 @@ router.post("/sales", async (req, res): Promise<void> => {
     let invoiceNumber: string;
 
     if (isDraft) {
-      // Draft: no invoice number yet, no stock deduction
-      status = 'draft';
-      invoiceNumber = `DRAFT-${Date.now()}`;
+      // Draft/Held: invoice number temp, deduct stock
+      paidAmount = dpAmount || 0;
+      status = paidAmount > 0 ? 'partial' : 'held';
+      invoiceNumber = `HOLD-${Date.now()}`;
     } else {
       paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
       status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
@@ -311,15 +312,17 @@ router.post("/sales", async (req, res): Promise<void> => {
       });
     }
 
-    if (!isDraft) {
-      // Deduct stock only for non-draft sales
+    // Deduct stock for all except purely virtual draft (we use 'held' now which deducts)
+    if (status !== 'draft') {
       await deductStockForItems(items, invoiceNumber);
+    }
 
-      // Create receivable for tempo sales
-      if (status !== "lunas" && customerId) {
+    if (!isDraft) {
+      // Create receivable for tempo or partial sales
+      if (status === "partial" || status === "tempo" || status === "unpaid") {
         await db.insert(receivablesTable).values({
           saleId: sale.id,
-          customerId,
+          customerId: customerId ?? null,
           totalAmount: totalAmount.toString(),
           paidAmount: paidAmount.toString(),
           status: status === "partial" ? "partial" : "unpaid",
@@ -371,51 +374,81 @@ router.post("/sales/:id/pay", async (req, res): Promise<void> => {
     const id = parseInt(req.params.id);
     const [sale] = await db.select().from(salesTable).where(eq(salesTable.id, id));
     if (!sale) { res.status(404).json({ error: "Not found" }); return; }
-    if (sale.status !== 'draft') { res.status(400).json({ error: "Hanya nota dengan status Draft yang bisa dibayar" }); return; }
+    if (sale.status === 'lunas' || sale.status === 'cancelled') { res.status(400).json({ error: "Nota ini sudah lunas atau dibatalkan" }); return; }
 
     const { paymentType, dueDate, notes } = req.body;
     const items = await db.select().from(saleItemsTable).where(eq(saleItemsTable.saleId, id));
 
     const totalAmount = numStr(sale.totalAmount);
-    const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
-    const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+    // If it was held, subtract the DP already paid
+    const remainingToPay = totalAmount - numStr(sale.paidAmount);
+    
+    const { amount } = req.body;
+    let additionalPaid = 0;
+    
+    if (paymentType !== "kredit" && paymentType !== "tempo") {
+      additionalPaid = amount !== undefined ? numStr(amount) : remainingToPay;
+    }
+    
+    const finalPaidAmount = numStr(sale.paidAmount) + additionalPaid;
+    
+    const status = finalPaidAmount >= totalAmount ? "lunas" : finalPaidAmount > 0 ? "partial" : "tempo";
 
-    // Assign real sequential invoice number now
-    const invoiceNumber = await generateNextInvoiceNumber("INV");
+    // Assign real sequential invoice number now if it's still HOLD/DRAFT
+    const invoiceNumber = sale.invoiceNumber.startsWith("HOLD-") || sale.invoiceNumber.startsWith("DRAFT-") ? await generateNextInvoiceNumber("INV") : sale.invoiceNumber;
 
     // Update sale header
     await db.update(salesTable).set({
       invoiceNumber,
       paymentType: paymentType || sale.paymentType,
-      paidAmount: paidAmount.toString(),
+      paidAmount: finalPaidAmount.toString(),
       status,
       dueDate: dueDate ? new Date(dueDate) : (sale.dueDate ?? null),
       notes: notes ?? sale.notes,
       updatedAt: sql`NOW()`,
     }).where(eq(salesTable.id, id));
 
-    // Deduct stock now
-    const itemsForDeduction = items.map(i => ({
-      productId: i.productId,
-      rollId: i.rollId,
-      rolls: numStr(i.rolls as string),
-      meters: numStr(i.meters as string),
-      pricePerMeter: numStr(i.pricePerMeter as string),
-      subtotal: numStr(i.subtotal as string),
-    }));
-    await deductStockForItems(itemsForDeduction, invoiceNumber);
+    // Deduct stock ONLY if it was purely 'draft' (our 'held' already deducted)
+    if (sale.status === 'draft') {
+      const itemsForDeduction = items.map(i => ({
+        productId: i.productId,
+        rollId: i.rollId,
+        rolls: numStr(i.rolls as string),
+        meters: numStr(i.meters as string),
+        pricePerMeter: numStr(i.pricePerMeter as string),
+        subtotal: numStr(i.subtotal as string),
+      }));
+      await deductStockForItems(itemsForDeduction, invoiceNumber);
+    }
 
-    // Create receivable if tempo
+    // Create or update receivable if tempo
     const customerId = sale.customerId;
-    if (status !== "lunas" && customerId) {
-      await db.insert(receivablesTable).values({
-        saleId: id,
-        customerId,
-        totalAmount: totalAmount.toString(),
-        paidAmount: paidAmount.toString(),
-        status: status === "partial" ? "partial" : "unpaid",
-        dueDate: dueDate ? new Date(dueDate) : null,
-      });
+    if (status !== "lunas") {
+      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+      if (existingReceivables.length > 0) {
+        await db.update(receivablesTable).set({
+          paidAmount: finalPaidAmount.toString(),
+          status: status === "partial" ? "partial" : "unpaid",
+        }).where(eq(receivablesTable.id, existingReceivables[0].id));
+      } else {
+        await db.insert(receivablesTable).values({
+          saleId: id,
+          customerId,
+          totalAmount: totalAmount.toString(),
+          paidAmount: finalPaidAmount.toString(),
+          status: status === "partial" ? "partial" : "unpaid",
+          dueDate: dueDate ? new Date(dueDate) : null,
+        });
+      }
+    } else if (status === "lunas") {
+      // If fully paid, remove or mark as paid in receivables if exists
+      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+      if (existingReceivables.length > 0) {
+         await db.update(receivablesTable).set({
+           paidAmount: finalPaidAmount.toString(),
+           status: "paid"
+         }).where(eq(receivablesTable.id, existingReceivables[0].id));
+      }
     }
 
     broadcastRefresh();
@@ -465,7 +498,8 @@ router.post("/sales/:id/cancel", async (req, res): Promise<void> => {
     } else if (sale.status === 'cancelled') {
       res.status(400).json({ error: "Nota sudah dibatalkan" }); return;
     } else {
-      // Paid sale: reverse stock, mark cancelled
+      // Paid or held sale: reverse stock, mark cancelled
+      // held has deducted stock, so we reverse it
       await reverseStockForItems(id, sale.invoiceNumber);
 
       // Remove receivables if any
@@ -508,7 +542,7 @@ router.put("/sales/:id", async (req, res): Promise<void> => {
     const parsed = CreateSaleBody.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-    const { customerId, paymentType, dueDate, notes, items } = parsed.data;
+    const { customerId, paymentType, dueDate, notes, items, dpAmount } = parsed.data;
 
     // If sale was already paid, reverse stock from old items first
     if (sale.status !== 'draft') {
@@ -521,15 +555,20 @@ router.put("/sales/:id", async (req, res): Promise<void> => {
     const totalAmount = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
     let paidAmount = numStr(sale.paidAmount);
-    // If was draft, it's still draft after edit (no payment logic change)
-    // If was paid, recalculate based on old paidAmount vs new total
-    if (sale.status !== 'draft') {
-      const paymentTypeToUse = paymentType || sale.paymentType;
-      paidAmount = (paymentTypeToUse !== "kredit" && paymentTypeToUse !== "tempo") ? totalAmount : Math.min(numStr(sale.paidAmount), totalAmount);
-    }
+    let statusAfter = sale.status;
 
-    const statusAfter = sale.status === 'draft' ? 'draft' :
-      (paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo");
+    if (sale.status === 'draft' || sale.status === 'held') {
+       paidAmount = dpAmount || paidAmount;
+       statusAfter = paidAmount > 0 ? 'partial' : 'held';
+    } else {
+      const paymentTypeToUse = paymentType || sale.paymentType;
+      if (dpAmount !== undefined) {
+        paidAmount = dpAmount;
+      } else {
+        paidAmount = (paymentTypeToUse !== "kredit" && paymentTypeToUse !== "tempo") ? totalAmount : Math.min(numStr(sale.paidAmount), totalAmount);
+      }
+      statusAfter = (paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo");
+    }
 
     // Update sale header
     await db.update(salesTable).set({
@@ -557,14 +596,14 @@ router.put("/sales/:id", async (req, res): Promise<void> => {
     }
 
     // Deduct stock for new items (only if not draft)
-    if (sale.status !== 'draft') {
+    if (statusAfter !== 'draft') {
       await deductStockForItems(items, sale.invoiceNumber);
     }
 
     // Update receivables if exists
-    if (sale.status !== 'draft') {
+    if (statusAfter === 'partial' || statusAfter === 'tempo' || statusAfter === 'unpaid' || statusAfter === 'lunas') {
       const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
-      if (statusAfter !== 'lunas' && customerId) {
+      if (statusAfter !== 'lunas') {
         if (existingReceivables.length > 0) {
           await db.update(receivablesTable).set({
             totalAmount: totalAmount.toString(),
@@ -575,7 +614,7 @@ router.put("/sales/:id", async (req, res): Promise<void> => {
         } else {
           await db.insert(receivablesTable).values({
             saleId: id,
-            customerId: customerId ?? sale.customerId ?? 0,
+            customerId: customerId ?? sale.customerId ?? null,
             totalAmount: totalAmount.toString(),
             paidAmount: paidAmount.toString(),
             status: statusAfter === "partial" ? "partial" : "unpaid",
@@ -786,3 +825,12 @@ router.delete("/sales/:id", async (req, res): Promise<void> => {
 });
 
 export default router;
+
+
+
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+﻿import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -460,10 +460,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           <span className="text-slate-400 ml-1 text-xs">/ {item.totalRolls} {(item as any).secondaryUnit || 'Roll'}</span>
                         </td>
                         <td className="py-1 px-2 text-right font-semibold text-slate-600">
-                          {new Intl.NumberFormat('id-ID').format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
+                          {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(item.pricePerMeter as string || item.pricePerUnit as string || "0"))}
                         </td>
                         <td className="py-1 px-2 text-right font-medium text-slate-900">
-                          {new Intl.NumberFormat('id-ID').format(item.totalSubtotal)}
+                          {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(item.totalSubtotal)}
                         </td>
                         {saleId && <td className="no-print text-center px-1"></td>}
                       </tr>
@@ -475,11 +475,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                         let diffSign = "";
                         let diffColor = "text-slate-500";
                         if (diff > 0) {
-                          diffText = `KURANG PEMBAYARAN${statusTxt}: RP ${new Intl.NumberFormat('id-ID').format(diff)}`;
+                          diffText = `KURANG PEMBAYARAN${statusTxt}: RP ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(diff)}`;
                           diffSign = "+";
                           diffColor = "text-rose-600";
                         } else if (diff < 0) {
-                          diffText = `KEMBALIAN / REFUND${statusTxt}: RP ${new Intl.NumberFormat('id-ID').format(Math.abs(diff))}`;
+                          diffText = `KEMBALIAN / REFUND${statusTxt}: RP ${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.abs(diff))}`;
                           diffSign = "-";
                           diffColor = "text-emerald-600";
                         }
@@ -501,10 +501,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                   <span className="text-slate-400 ml-1 text-xs">/ {exc.rolls} {(exc as any).secondaryUnit || 'Roll'}</span>
                                 </td>
                                 <td className="py-1 px-3 text-right font-semibold text-slate-600">
-                                  {new Intl.NumberFormat('id-ID').format(parseFloat(exc.pricePerMeter as string || "0"))}
+                                  {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(exc.pricePerMeter as string || "0"))}
                                 </td>
                                 <td className="py-1 px-3 text-right font-medium text-slate-800">
-                                  {new Intl.NumberFormat('id-ID').format(parseFloat(exc.subtotal as string || "0"))}
+                                  {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(exc.subtotal as string || "0"))}
                                 </td>
                                 {saleId && <td className="no-print"></td>}
                               </tr>
@@ -591,27 +591,27 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           <>
                             <tr className="">
                               <td className="py-0 px-2 font-medium text-slate-500 text-xs">Total Awal</td>
-                              <td className="py-0 px-2 font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID').format(baseTotal)}</td>
+                              <td className="py-0 px-2 font-medium text-slate-800">Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(baseTotal)}</td>
                             </tr>
                             <tr className="">
                               <td className="py-0 px-2 font-medium text-rose-600 text-xs">Dikembalikan (Retur)</td>
-                              <td className="py-0 px-2 font-medium text-rose-600">- Rp {new Intl.NumberFormat('id-ID').format(totalRetVal)}</td>
+                              <td className="py-0 px-2 font-medium text-rose-600">- Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totalRetVal)}</td>
                             </tr>
                             <tr className="">
                               <td className="py-0 px-2 font-medium text-emerald-600 text-xs">Pengganti (Tukar)</td>
-                              <td className="py-0 px-2 font-medium text-emerald-600">+ Rp {new Intl.NumberFormat('id-ID').format(totalExcVal)}</td>
+                              <td className="py-0 px-2 font-medium text-emerald-600">+ Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totalExcVal)}</td>
                             </tr>
                             
                             {diffTotal < 0 && (
                               <tr className="bg-emerald-50/60">
                                 <td className="py-0 px-2 font-bold text-emerald-700 text-xs uppercase tracking-wider">Kembalian / Refund</td>
-                                <td className="py-0 px-2 font-bold text-emerald-700">Rp {new Intl.NumberFormat('id-ID').format(Math.abs(diffTotal))}</td>
+                                <td className="py-0 px-2 font-bold text-emerald-700">Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(Math.abs(diffTotal))}</td>
                               </tr>
                             )}
                             {diffTotal > 0 && (
                               <tr className="bg-rose-50/60">
                                 <td className="py-0 px-2 font-bold text-rose-700 text-xs uppercase tracking-wider">Kurang Bayar</td>
-                                <td className="py-0 px-2 font-bold text-rose-700">Rp {new Intl.NumberFormat('id-ID').format(diffTotal)}</td>
+                                <td className="py-0 px-2 font-bold text-rose-700">Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(diffTotal)}</td>
                               </tr>
                             )}
                           </>
@@ -621,26 +621,85 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                       <tr className="bg-indigo-600 text-white">
                         <td className="py-0.5 px-2 font-bold text-xs uppercase tracking-widest text-indigo-100">Grand Total</td>
                         <td className="py-0.5 px-2 font-bold text-sm tracking-tight">
-                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.totalAmount as string || "0"))}
+                          Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(displayData.totalAmount as string || "0"))}
                         </td>
                       </tr>
                       
                       <tr>
                         <td className="py-0 px-2 font-medium text-slate-500 text-xs">Di Bayar</td>
                         <td className="py-0 px-2 font-medium text-slate-800">
-                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.paidAmount as string || "0"))}
+                          Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(displayData.paidAmount as string || "0"))}
                         </td>
                       </tr>
                       <tr className="">
                         <td className="py-0 px-2 font-medium text-slate-500 text-xs">Sisa Bayar</td>
                         <td className="py-0 px-2 font-medium text-rose-600">
-                          Rp {new Intl.NumberFormat('id-ID').format(parseFloat(displayData.remainingAmount as string || "0"))}
+                          Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(displayData.remainingAmount as string || "0"))}
                         </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </div>
+
+              {/* ─── Riwayat Cicilan / Tahapan Pembayaran ─────────────────── */}
+              {(() => {
+                const history = (displayData as any).paymentHistory;
+                if (!history || history.length === 0) return null;
+                return (
+                  <div className="mt-3 relative z-10 border-t border-indigo-100 pt-2">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <div className="w-4 h-4 rounded bg-indigo-100 flex items-center justify-center">
+                        <Clock className="w-2.5 h-2.5 text-indigo-600" />
+                      </div>
+                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">Riwayat Tahapan Pembayaran</span>
+                    </div>
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-indigo-50 border-b border-indigo-100">
+                          <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider w-6">No</th>
+                          <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Tanggal &amp; Waktu</th>
+                          <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Metode</th>
+                          <th className="py-0.5 px-2 text-right font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Nominal</th>
+                          <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Ket.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map((p: any, idx: number) => {
+                          const dt = new Date(p.paidAt);
+                          const dateStr = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+                          const timeStr = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                          const methodLabel: Record<string, string> = {
+                            tunai: 'Tunai', transfer: 'Transfer', cashless: 'Cashless/QRIS'
+                          };
+                          return (
+                            <tr key={p.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                              <td className="py-0.5 px-2 text-slate-500 font-medium">{p.step}</td>
+                              <td className="py-0.5 px-2 text-slate-700 font-medium whitespace-nowrap">{dateStr} <span className="text-indigo-500">{timeStr}</span></td>
+                              <td className="py-0.5 px-2">
+                                <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0 rounded font-semibold text-[10px] uppercase">
+                                  {methodLabel[p.paymentMethod] || p.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="py-0.5 px-2 text-right font-bold text-emerald-700">
+                                Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(p.amount)}
+                              </td>
+                              <td className="py-0.5 px-2 text-slate-500 text-[10px] italic">{p.notes || '-'}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-emerald-50 border-t border-emerald-200">
+                          <td colSpan={3} className="py-0.5 px-2 text-right font-bold text-emerald-700 text-[10px] uppercase tracking-wider">Total Terbayar (Cicilan)</td>
+                          <td className="py-0.5 px-2 text-right font-bold text-emerald-700">
+                            Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(history.reduce((s: number, p: any) => s + p.amount, 0))}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
             )}
           </div>
@@ -659,7 +718,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               <span className="text-xs font-semibold text-orange-800 uppercase tracking-wider">Barang yang dikembalikan</span>
               <span className="font-bold text-sm">{itemToExchange?.productName}</span>
               <span className="text-xs text-orange-700">
-                {parseFloat(itemToExchange?.meters || 0)} {(itemToExchange as any)?.primaryUnit || 'M'} / {parseFloat(itemToExchange?.rolls || 0)} {(itemToExchange as any)?.secondaryUnit || 'Roll'} (Rp {new Intl.NumberFormat('id-ID').format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
+                {parseFloat(itemToExchange?.meters || 0)} {(itemToExchange as any)?.primaryUnit || 'M'} / {parseFloat(itemToExchange?.rolls || 0)} {(itemToExchange as any)?.secondaryUnit || 'Roll'} (Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(parseFloat(itemToExchange?.pricePerMeter || itemToExchange?.pricePerUnit || 0))})
               </span>
             </div>
 
@@ -767,7 +826,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   <div className="space-y-2 bg-rose-50 p-3 rounded-lg border border-rose-100 mt-2">
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-sm font-bold text-rose-800">Kekurangan Bayar</label>
-                      <span className="font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID').format(diff)}</span>
+                      <span className="font-bold text-rose-600">Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(diff)}</span>
                     </div>
                     <label className="text-xs font-medium text-rose-700">Status Pembayaran Selisih</label>
                     <Select value={exchangePaymentStatus || (displayData?.remainingAmount && parseFloat(displayData.remainingAmount as string) > 0 ? "tempo" : "lunas")} onValueChange={(val: "lunas" | "tempo") => setExchangePaymentStatus(val)}>

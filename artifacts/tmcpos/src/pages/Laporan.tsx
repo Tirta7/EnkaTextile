@@ -229,38 +229,33 @@ export default function Laporan() {
   );
 
   return (
-    <div className="space-y-5 max-w-[1400px] mx-auto pb-8">
+    <div className="flex flex-col h-full w-full overflow-auto">
       {/* Header */}
-      <div className="flex items-end justify-between pt-2">
+      <div className="flex-none flex items-end justify-between pt-1 pb-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Laporan</h1>
           <p className="text-sm text-slate-500 mt-0.5">Analisa performa bisnis Anda</p>
         </div>
       </div>
 
-      <Tabs defaultValue="penjualan" className="w-full">
+      <Tabs defaultValue="penjualan" className="w-full flex-1">
         {/* Tab List */}
-        <div className="relative mb-6 overflow-x-auto">
-          <TabsList className="flex h-12 w-full min-w-max justify-start overflow-x-auto rounded-xl bg-slate-100 p-1 gap-1">
-            <TabsTrigger value="penjualan"
-              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
+        <div className="flex-none overflow-x-auto hide-scrollbar mb-4">
+          <TabsList className="flex h-10 w-full min-w-max justify-start rounded-xl bg-slate-100 p-1 gap-1">
+            <TabsTrigger value="penjualan" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
               <TrendingUp className="h-4 w-4" /> Ringkasan
             </TabsTrigger>
-            <TabsTrigger value="detail"
-              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
+            <TabsTrigger value="detail" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
               <FileText className="h-4 w-4" /> Detail Transaksi
             </TabsTrigger>
-            <TabsTrigger value="pajak"
-              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
+            <TabsTrigger value="pajak" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
               <Receipt className="h-4 w-4" /> Laporan PPN
             </TabsTrigger>
-            <TabsTrigger value="stok"
-              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
+            <TabsTrigger value="stok" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
               <Package className="h-4 w-4" /> Stok
             </TabsTrigger>
-            <TabsTrigger value="refunds"
-              className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-10 whitespace-nowrap">
-              <ArrowDownToLine className="h-4 w-4" /> Refund (Transfer)
+            <TabsTrigger value="refunds" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
+              <ArrowDownToLine className="h-4 w-4" /> Refund
             </TabsTrigger>
           </TabsList>
         </div>

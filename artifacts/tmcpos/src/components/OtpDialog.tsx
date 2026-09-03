@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShieldCheck, Bell, Loader2 } from "lucide-react";
+import { ShieldCheck, Bell, Loader2, FlaskConical, Copy } from "lucide-react";
 
 interface OtpDialogProps {
   open: boolean;
@@ -16,6 +16,7 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [devOtp, setDevOtp] = useState<string | null>(null); // DEV MODE
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
       setOtpInput("");
       setError("");
       setCountdown(0);
+      setDevOtp(null);
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [open]);
@@ -41,6 +43,7 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
         setLoading(false);
         return;
       }
+      if (data.devOtp) setDevOtp(data.devOtp); // DEV MODE
       startCountdown(data.expiresInMinutes);
       setStep("entering");
     } catch {
@@ -140,6 +143,24 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
               <p className="text-sm text-slate-600 mb-1">Masukkan 6-digit kode OTP</p>
               <p className="text-xs text-slate-400">Kode telah dikirim ke owner via Push Notifikasi</p>
             </div>
+
+            {/* DEV MODE: tampilkan kode OTP langsung */}
+            {devOtp && (
+              <div
+                className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 cursor-pointer hover:bg-amber-100 transition-colors group"
+                onClick={() => setOtpInput(devOtp)}
+                title="Klik untuk isi otomatis"
+              >
+                <FlaskConical className="w-5 h-5 text-amber-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-0.5">
+                    🔧 Dev Mode — Klik untuk isi otomatis
+                  </p>
+                  <p className="text-2xl font-black tracking-[0.3em] text-amber-800">{devOtp}</p>
+                </div>
+                <Copy className="w-4 h-4 text-amber-400 group-hover:text-amber-600 transition-colors shrink-0" />
+              </div>
+            )}
             
             <div className="space-y-4">
               <div className="flex justify-center">
@@ -161,7 +182,11 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
               )}
 
               <div className="flex flex-col gap-2">
-                <Button className="w-full bg-violet-600 hover:bg-violet-700 h-12 text-base font-semibold rounded-xl" onClick={handleVerify} disabled={loading || countdown <= 0}>
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 h-12 text-base font-semibold rounded-xl"
+                  onClick={handleVerify}
+                  disabled={loading || countdown <= 0}
+                >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Verifikasi OTP"}
                 </Button>
                 
@@ -169,7 +194,13 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
                   <span className={countdown <= 0 ? "text-red-500 font-medium" : "text-slate-500"}>
                     {countdown > 0 ? `Berlaku: ${formatTime(countdown)}` : "OTP Expired"}
                   </span>
-                  <Button variant="ghost" size="sm" className="h-auto p-0 text-violet-600 hover:text-violet-700 hover:bg-transparent font-semibold" onClick={requestOtp} disabled={loading}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-violet-600 hover:text-violet-700 hover:bg-transparent font-semibold"
+                    onClick={requestOtp}
+                    disabled={loading}
+                  >
                     Kirim Ulang OTP
                   </Button>
                 </div>

@@ -7,17 +7,19 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatRupiah(amount: number | string | null | undefined): string {
   const num = typeof amount === "string" ? parseFloat(amount) : (amount ?? 0);
+  const rounded = Math.round(isNaN(num) ? 0 : num);
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(num);
+  }).format(rounded);
 }
 
 export function formatNumber(value: number | string | null | undefined): string {
   const num = typeof value === "string" ? parseFloat(value) : (value ?? 0);
-  return new Intl.NumberFormat("id-ID").format(num);
+  const rounded = Math.round(isNaN(num) ? 0 : num);
+  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(rounded);
 }
 
 export function formatDate(date: string | Date | null | undefined): string {

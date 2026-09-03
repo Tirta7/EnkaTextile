@@ -13,7 +13,7 @@ import { Combobox, ComboboxItem } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -425,6 +425,14 @@ export default function Penjualan() {
   const [payAmount, setPayAmount] = useState<string>("");
   const [payProcessing, setPayProcessing] = useState(false);
   const [cancelProcessing, setCancelProcessing] = useState<number | null>(null);
+  // ── Cicilan langsung dari Penjualan ──
+  const [cicilanOpen, setCicilanOpen] = useState(false);
+  const [cicilanSaleData, setCicilanSaleData] = useState<any>(null);
+  const [cicilanRecId, setCicilanRecId] = useState<number | null>(null);
+  const [cicilanAmount, setCicilanAmount] = useState("");
+  const [cicilanMethod, setCicilanMethod] = useState("tunai");
+  const [cicilanNotes, setCicilanNotes] = useState("");
+  const [cicilanProcessing, setCicilanProcessing] = useState(false);
   
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] = useState<InvoicePreviewData | null>(null);
@@ -596,6 +604,52 @@ export default function Penjualan() {
   };
 
 
+  // ── Buka drawer cicilan dari card Penjualan ──
+  const handleOpenCicilan = async (saleId: number) => {
+    try {
+      const saleRes = await fetch(`${API_BASE}/api/sales/${saleId}`, { credentials: "include" });
+      const saleData = await saleRes.json();
+      const recRes = await fetch(`${API_BASE}/api/receivables`, { credentials: "include" });
+      const recList = await recRes.json();
+      const rec = Array.isArray(recList) ? recList.find((r: any) => r.saleId === saleId) : null;
+      setCicilanSaleData(saleData);
+      setCicilanRecId(rec?.id ?? null);
+      setCicilanAmount("");
+      setCicilanMethod("tunai");
+      setCicilanNotes("");
+      setCicilanOpen(true);
+    } catch {
+      toast({ title: "Gagal memuat data piutang", variant: "destructive" });
+    }
+  };
+
+  const handleCicilanPay = async () => {
+    if (!cicilanRecId) {
+      toast({ title: "Data piutang tidak ditemukan. Invoice belum punya receivable.", variant: "destructive" }); return;
+    }
+    const amount = parseFloat(cicilanAmount) || 0;
+    const remaining = cicilanSaleData?.remainingAmount || 0;
+    if (amount <= 0) { toast({ title: "Jumlah harus lebih dari 0", variant: "destructive" }); return; }
+    if (amount > remaining) { toast({ title: `Melebihi sisa piutang (${formatRupiah(remaining)})`, variant: "destructive" }); return; }
+    setCicilanProcessing(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/receivables/${cicilanRecId}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amount, paymentMethod: cicilanMethod, notes: cicilanNotes || undefined }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey({}) });
+      setCicilanOpen(false);
+      toast({ title: "✅ Cicilan berhasil dicatat!", description: `Dibayar: ${formatRupiah(amount)}` });
+    } catch {
+      toast({ title: "Gagal mencatat cicilan", variant: "destructive" });
+    } finally {
+      setCicilanProcessing(false);
+    }
+  };
+
   const addItem = () => {
     setItems(prev => [...prev, { productId: 0, productName: "", unit: "meter", rolls: "", meters: "", pricePerUnit: "", subtotal: 0 }]);
   };
@@ -612,7 +666,7 @@ export default function Penjualan() {
       if (item.unit === "roll" && item.targetLength && !item.rollId) {
         item.meters = (typeof item.rolls === "number" ? item.rolls : 0) * item.targetLength;
       }
-      item.subtotal = (typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerUnit === "number" ? item.pricePerUnit : 0);
+      item.subtotal = Math.round((typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerUnit === "number" ? item.pricePerUnit : 0));
       
       return updated;
     });
@@ -636,7 +690,7 @@ export default function Penjualan() {
     }
   };
 
-  const totalAmount = items.reduce((sum, i) => sum + i.subtotal, 0);
+  const totalAmount = Math.round(items.reduce((sum, i) => sum + i.subtotal, 0));
 
   const handlePreview = () => {
     let customerName = "Umum";
@@ -776,10 +830,12 @@ export default function Penjualan() {
   }, [filtered]);
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-200 mx-auto pb-4">
+    <div className="flex flex-col h-full gap-0 w-full">
       
-      {/* Mobile-optimized Header */}
-      <div className="flex items-center justify-between pt-2 pb-4">
+      {/* ── Static Top Strip: judul + tab + filter + summary ── */}
+      <div className="flex-none space-y-2 pb-2">
+      {/* Header */}
+      <div className="flex items-center justify-between pt-1 pb-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Aktivitas</h1>
           <p className="text-sm text-slate-500">Riwayat penjualan Anda</p>
@@ -865,199 +921,214 @@ export default function Penjualan() {
           </div>
         </div>
       )}
+      </div> {/* end static top strip */}
 
-      {/* Activity Feed List */}
-      <div className="space-y-4">
+      {/* ── Scrollable Table Container ── */}
+      <div className="flex-1 overflow-auto min-h-0">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
         {isLoading ? (
-          Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
-              <Skeleton className="w-14 h-14 rounded-2xl" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-3 w-1/3" />
-                <Skeleton className="h-3 w-full mt-4" />
-              </div>
-            </div>
-          ))
+          <div className="p-6 space-y-3">
+            {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}
+          </div>
         ) : filtered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div className="text-center py-16">
             <ReceiptIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
             <h3 className="text-lg font-bold text-slate-700">Belum ada aktivitas</h3>
             <p className="text-sm text-slate-500 mt-1">Transaksi penjualan Anda akan muncul di sini.</p>
           </div>
         ) : (
-          <>
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s) => {
-              const isLunas = s.status === 'lunas';
-              const isKredit = s.status === 'kredit';
-              const customerName = (s as any).customerName || "Pelanggan Umum";
-              
-              return (
-                <div key={s.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
-                  
-                  {/* Top Row: Date & Price */}
-                  <div className="flex justify-between items-center bg-background px-4 py-2 rounded-2xl">
-                    <span className="text-xs font-semibold text-slate-500">
-                      {formatDate(s.createdAt)}
-                    </span>
-                    <span className="text-sm font-bold text-slate-800">
-                      {formatRupiah(s.totalAmount)}
-                    </span>
-                  </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-8">#</th>
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pelanggan</th>
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
+                  <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">DP / Terbayar</th>
+                  <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Sisa</th>
+                  <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((s, idx) => {
+                  const isLunas = s.status === 'lunas';
+                  const isPartial = s.status === 'partial';
+                  const isHeld = s.status === 'held' || s.status === 'draft';
+                  const isCancelled = s.status === 'cancelled';
+                  const customerName = (s as any).customerName || "Umum";
+                  const total = Math.round(parseFloat(String(s.totalAmount || 0)));
+                  const paid = Math.round(parseFloat(String(s.paidAmount || 0)));
+                  const sisa = Math.round(total - paid);
+                  const hasDP = paid > 0 && !isLunas;
+                  const hasRetur = (s as any).hasReturns;
 
-                  {/* Main Content: Avatar, Title, Status */}
-                  <div className="flex gap-3">
-                    <div className="w-15 h-15 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <CheckCircle2 className="h-8 w-8 text-primary" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
-                        {customerName}
-                      </h3>
-                      
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        {isLunas ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
-                        ) : isKredit ? (
-                          <Clock className="w-4 h-4 text-orange-500 fill-orange-50" />
-                        ) : (
-                          <AlertCircle className="w-4 h-4 text-blue-500 fill-blue-50" />
-                        )}
-                        <span className="text-xs font-medium text-slate-600 capitalize">
-                          {isLunas ? "Pembayaran selesai" : isKredit ? "Menunggu pelunasan" : s.status}
-                        </span>
-                      </div>
-                      
-                      <div className="flex flex-col gap-1 mt-1">
-                        <p className="text-[11px] text-slate-400 truncate">
-                          1 [INV] {s.invoiceNumber} • {s.paymentType}
-                        </p>
-                        {(s as any).hasReturns && (
-                          <div className="flex flex-col gap-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-amber-200 text-amber-700 bg-amber-50 uppercase tracking-widest font-bold">
-                                Ada Retur/Tukar
-                              </Badge>
-                              {((s as any).returnDifference !== undefined && (s as any).returnDifference !== 0) && (
-                                <span className={`text-[10px] font-bold ${(s as any).returnDifference > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                  {(s as any).returnDifference > 0 
-                                    ? `(Selisih Tukar: Kurang Bayar Rp ${new Intl.NumberFormat('id-ID').format((s as any).returnDifference)}${isLunas ? ' - LUNAS' : ''})` 
-                                    : `(Selisih Tukar: Lebih Bayar Rp ${new Intl.NumberFormat('id-ID').format(Math.abs((s as any).returnDifference))}${isLunas ? ' - SELESAI' : ''})`}
+                  // Status badge config
+                  let badgeCls = "bg-slate-100 text-slate-600";
+                  let badgeLabel = s.status || "-";
+                  if (isLunas) { badgeCls = "bg-green-100 text-green-700"; badgeLabel = "Lunas"; }
+                  else if (isPartial) { badgeCls = "bg-blue-100 text-blue-700"; badgeLabel = "Partial"; }
+                  else if (s.status === 'held') { badgeCls = "bg-amber-100 text-amber-700"; badgeLabel = "Hold"; }
+                  else if (s.status === 'draft') { badgeCls = "bg-slate-100 text-slate-600"; badgeLabel = "Draft"; }
+                  else if (s.status === 'kredit') { badgeCls = "bg-orange-100 text-orange-700"; badgeLabel = "Kredit"; }
+                  else if (isCancelled) { badgeCls = "bg-red-100 text-red-600"; badgeLabel = "Batal"; }
+
+                  return (
+                    <>
+                      <tr
+                        key={s.id}
+                        className={`hover:bg-slate-50/80 transition-colors ${isCancelled ? 'opacity-50' : ''}`}
+                      >
+                        {/* No */}
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">
+                          {(currentPage - 1) * 20 + idx + 1}
+                        </td>
+                        {/* Tanggal */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="text-xs font-medium text-slate-600">{formatDate(s.createdAt)}</span>
+                        </td>
+                        {/* Invoice */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[11px] font-mono text-slate-700 leading-tight">{s.invoiceNumber}</span>
+                            <span className="text-[10px] text-slate-400 capitalize">{s.paymentType}</span>
+                          </div>
+                        </td>
+                        {/* Pelanggan */}
+                        <td className="py-2.5 px-3">
+                          <span className="text-sm font-semibold text-slate-800">{customerName}</span>
+                          {hasRetur && (
+                            <span className="ml-1.5 text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full uppercase">Retur</span>
+                          )}
+                        </td>
+                        {/* Status */}
+                        <td className="py-2.5 px-3">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeCls}`}>
+                            {badgeLabel}
+                          </span>
+                        </td>
+                        {/* Total */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <span className="text-sm font-bold text-slate-800">{formatRupiah(total)}</span>
+                        </td>
+                        {/* DP / Terbayar */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          {paid > 0 ? (
+                            <span className="text-sm font-semibold text-emerald-600">{formatRupiah(paid)}</span>
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
+                        {/* Sisa */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          {sisa > 0 ? (
+                            <span className="text-sm font-bold text-rose-600">{formatRupiah(sisa)}</span>
+                          ) : (
+                            <span className="text-xs text-slate-300">—</span>
+                          )}
+                        </td>
+                        {/* Aksi */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-1 justify-center">
+                            {isCancelled ? (
+                              <span className="text-[10px] text-red-400 font-semibold px-2 py-1 bg-red-50 rounded-full">Dibatalkan</span>
+                            ) : (
+                              <>
+                                {/* Cetak */}
+                                {!isHeld && (
+                                  <button
+                                    title="Cetak"
+                                    className="w-7 h-7 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 flex items-center justify-center transition-colors"
+                                    onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }}
+                                  >
+                                    <Printer className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {/* Bayar (draft) */}
+                                {s.status === 'draft' && (
+                                  <button
+                                    title="Bayar"
+                                    className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center transition-colors"
+                                    onClick={() => { setPayPaymentType("tunai"); setPayDialogSaleId(s.id); }}
+                                  >
+                                    <CreditCard className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {/* Bayar Cicilan (partial / held) */}
+                                {(isPartial || s.status === 'held') && sisa > 0 && (
+                                  <button
+                                    title="Bayar Cicilan"
+                                    className="w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-700 flex items-center justify-center transition-colors"
+                                    onClick={() => handleOpenCicilan(s.id)}
+                                  >
+                                    <DollarSign className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {/* Edit */}
+                                <button
+                                  title="Edit"
+                                  className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors"
+                                  onClick={() => handleEditClick(s.id)}
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                {/* Hapus */}
+                                <button
+                                  title="Hapus"
+                                  className={`w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors ${cancelProcessing === s.id ? 'opacity-50 pointer-events-none' : ''}`}
+                                  onClick={() => handleCancelClick(s.id)}
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Sub-row: DP / Retur info */}
+                      {(hasDP || hasRetur) && (
+                        <tr key={`${s.id}-sub`} className="bg-slate-50/60 border-t-0">
+                          <td colSpan={2}></td>
+                          <td colSpan={7} className="py-1 px-3 pb-2">
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                              {hasDP && (
+                                <span className="text-[10px] text-slate-500">
+                                  <span className="font-semibold text-indigo-600">DP/Cicilan:</span>{" "}
+                                  {formatRupiah(paid)} dibayar · Sisa <span className="font-bold text-rose-600">{formatRupiah(sisa)}</span>
+                                </span>
+                              )}
+                              {hasRetur && (s as any).totalReturnedValue > 0 && (
+                                <span className="text-[10px] text-slate-500">
+                                  <span className="font-semibold text-amber-600">Retur:</span>{" "}
+                                  -{formatRupiah((s as any).totalReturnedValue || 0)}
+                                  {(s as any).totalExchangedValue > 0 && ` · Tukar: +${formatRupiah((s as any).totalExchangedValue)}`}
                                 </span>
                               )}
                             </div>
-                            {((s as any).totalReturnedValue > 0 || (s as any).totalExchangedValue > 0) && (
-                              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium ml-0.5">
-                                <span className="text-rose-600">Retur: -Rp {new Intl.NumberFormat('id-ID').format((s as any).totalReturnedValue || 0)}</span>
-                                <span className="text-slate-300">|</span>
-                                <span className="text-emerald-600">Tukar: +Rp {new Intl.NumberFormat('id-ID').format((s as any).totalExchangedValue || 0)}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {(s.status === 'partial' || parseFloat(String(s.paidAmount || 0)) > 0 && s.status !== 'lunas') && (
-                          <div className="flex flex-col gap-1 mt-1.5">
-                            <div className="flex items-center gap-1.5">
-                              <Badge variant="outline" className="text-[9px] h-4 py-0 px-1.5 border-indigo-200 text-indigo-700 bg-indigo-50 uppercase tracking-widest font-bold">
-                                Ada DP / Uang Muka
-                              </Badge>
-                              <span className="text-[10px] font-bold text-rose-600">
-                                (Sisa Bayar: Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.totalAmount || 0)) - parseFloat(String(s.paidAmount || 0)))})
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-medium ml-0.5">
-                              <span className="text-slate-600">Total: Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.totalAmount || 0)))}</span>
-                              <span className="text-slate-300">|</span>
-                              <span className="text-emerald-600">DP: -Rp {new Intl.NumberFormat('id-ID').format(parseFloat(String(s.paidAmount || 0)))}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons — contextual based on status */}
-                    <div className="flex items-end justify-end ml-2">
-                      {s.status === 'cancelled' ? (
-                        <span className="text-[10px] text-red-400 font-semibold px-2 py-1 bg-red-50 rounded-full">Dibatalkan</span>
-                      ) : s.status === 'draft' ? (
-                        <div className="flex flex-col gap-1.5">
-                          <Button 
-                            size="sm" 
-                            className="rounded-full bg-blue-600 hover:bg-blue-700 font-bold h-8 px-3 shadow-sm text-xs"
-                            onClick={() => { setPayPaymentType("tunai"); setPayDialogSaleId(s.id); }}
-                          >
-                            <CreditCard className="w-3 h-3 mr-1" /> Bayar
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="rounded-full h-8 px-3 text-xs"
-                            onClick={() => handleEditClick(s.id)}
-                          >
-                            <Pencil className="w-3 h-3 mr-1" /> Edit
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                            disabled={cancelProcessing === s.id}
-                            onClick={() => handleCancelClick(s.id)}
-                          >
-                            <Ban className="w-3 h-3 mr-1" /> Hapus
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          <Button 
-                            size="sm" 
-                            className="rounded-full bg-green-600 hover:bg-green-700 font-bold h-8 px-4 shadow-sm text-xs"
-                            onClick={() => { setPreviewData(null); setPreviewSaleId(s.id); setPreviewOpen(true); }}
-                          >
-                            <Printer className="w-3 h-3 mr-1" /> Cetak
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="outline"
-                            className="rounded-full h-8 px-3 text-xs"
-                            onClick={() => handleEditClick(s.id)}
-                          >
-                            <Pencil className="w-3 h-3 mr-1" /> Edit
-                          </Button>
-                          <Button 
-                            size="sm"
-                            variant="ghost"
-                            className="rounded-full h-8 px-3 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
-                            disabled={cancelProcessing === s.id}
-                            onClick={() => handleCancelClick(s.id)}
-                          >
-                            <Ban className="w-3 h-3 mr-1" /> Hapus
-                          </Button>
-                        </div>
+                          </td>
+                        </tr>
                       )}
-                    </div>
-                  </div>
-                  
-                  {/* Bottom Bar: Additional Info (Optional) */}
-                  <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
-                    <span>Kasir: Admin</span>
-                    <div className="flex gap-0.5 text-slate-200">
-                      {/* Decorative stars mimicking Gojek rating */}
-                      {[1,2,3,4,5].map(star => <svg key={star} className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-        {filtered && filtered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-2">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
+      </div> {/* end scrollable table container */}
+
+      {/* ── Pagination Bar (Sticky bawah, selalu terlihat) ── */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">
+            Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} transaksi
+          </span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       {/* Pay Dialog */}
       {payDialogSaleId !== null && (
@@ -1234,7 +1305,90 @@ export default function Penjualan() {
 
         </DrawerContent>
       </Drawer>
-      
+       
+      {/* ── Drawer: Bayar Cicilan dari Penjualan ── */}
+      <Drawer open={cicilanOpen} onOpenChange={(open) => { if (!open) setCicilanOpen(false); }}>
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
+          <DrawerHeader>
+            <DrawerTitle className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4 text-violet-600" /> Bayar Cicilan Piutang
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] space-y-4 px-1">
+            {cicilanSaleData && (
+              <>
+                <div className="p-3 bg-slate-50 rounded-xl text-sm space-y-2 border border-slate-100">
+                  <div className="flex justify-between"><span className="text-slate-500">Pelanggan:</span><span className="font-semibold">{cicilanSaleData.customerName || "-"}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Invoice:</span><span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded">{cicilanSaleData.invoiceNumber}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Grand Total:</span><span className="font-semibold">{formatRupiah(cicilanSaleData.totalAmount)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Sudah Dibayar:</span><span className="font-semibold text-emerald-600">{formatRupiah(cicilanSaleData.paidAmount)}</span></div>
+                  <div className="flex justify-between border-t border-slate-200 pt-2">
+                    <span className="font-bold text-slate-700">Sisa Piutang:</span>
+                    <span className="font-bold text-violet-700 cursor-pointer hover:underline" onClick={() => setCicilanAmount(String(cicilanSaleData.remainingAmount))} title="Klik untuk bayar lunas">
+                      {formatRupiah(cicilanSaleData.remainingAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {!cicilanRecId && (
+                  <div className="p-3 bg-amber-50 rounded-xl text-sm text-amber-700 border border-amber-200">
+                    ⚠️ Invoice ini belum memiliki data piutang. Pastikan telah tersimpan dengan DP terlebih dahulu.
+                  </div>
+                )}
+
+                {cicilanSaleData.paymentHistory && cicilanSaleData.paymentHistory.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Cicilan Sebelumnya</p>
+                    {cicilanSaleData.paymentHistory.map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                        <div>
+                          <span className="text-[11px] font-semibold text-slate-600 capitalize">{p.paymentMethod}</span>
+                          <span className="text-[10px] text-slate-400 ml-1.5">
+                            {new Date(p.paidAt).toLocaleDateString('id-ID', {day:'2-digit',month:'short'})} {new Date(p.paidAt).toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'})}
+                          </span>
+                        </div>
+                        <span className="font-bold text-emerald-700 text-sm">{formatRupiah(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Jumlah Bayar Cicilan (Rp)</label>
+                  <Input type="number" min={0} placeholder="0" value={cicilanAmount} onChange={e => setCicilanAmount(e.target.value)} />
+                  {cicilanAmount && (
+                    <span className="text-xs font-semibold text-violet-600 block bg-violet-50 px-2 py-1 rounded-md border border-violet-100 mt-1.5">
+                      Preview: {formatRupiah(parseFloat(cicilanAmount) || 0)}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
+                  <Select value={cicilanMethod} onValueChange={setCicilanMethod}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tunai">Tunai</SelectItem>
+                      <SelectItem value="transfer">Transfer</SelectItem>
+                      <SelectItem value="cashless">Cashless/QRIS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Catatan</label>
+                  <Input placeholder="Catatan opsional" value={cicilanNotes} onChange={e => setCicilanNotes(e.target.value)} />
+                </div>
+              </>
+            )}
+          </div>
+          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
+            <Button type="button" variant="ghost" className="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200" onClick={() => setCicilanOpen(false)}>Batal</Button>
+            <Button className="flex-1 bg-violet-600 hover:bg-violet-700" onClick={handleCicilanPay} disabled={!cicilanAmount || !cicilanRecId || cicilanProcessing}>
+              {cicilanProcessing ? "Menyimpan..." : "Simpan Cicilan"}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
       <InvoicePreviewModal 
         open={previewOpen}
         onOpenChange={setPreviewOpen}

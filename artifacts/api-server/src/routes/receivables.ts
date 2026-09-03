@@ -156,4 +156,54 @@ router.post("/receivables/:id/payments", async (req, res): Promise<void> => {
   });
 });
 
+// ─── POST /receivables/migrate-held ────────────────────────────────────────────
+// Endpoint migrasi: buat receivable untuk invoice HOLD dengan DP yang sudah ada di DB
+// tapi belum punya receivable (data lama sebelum fix ini)
+router.post("/receivables/migrate-held", async (req, res): Promise<void> => {
+  try {
+    // Cari semua sales dengan status 'partial' yang punya invoiceNumber HOLD- (belum dikonfirmasi)
+    const heldPartialSales = await db
+      .select({
+        id: salesTable.id,
+        invoiceNumber: salesTable.invoiceNumber,
+        customerId: salesTable.customerId,
+        totalAmount: salesTable.totalAmount,
+        paidAmount: salesTable.paidAmount,
+        status: salesTable.status,
+        dueDate: salesTable.dueDate,
+      })
+      .from(salesTable)
+      .where(sql`${salesTable.status} = 'partial' AND ${salesTable.paidAmount}::numeric > 0`);
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const sale of heldPartialSales) {
+      // Cek apakah sudah ada receivable untuk sale ini
+      const existing = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, sale.id));
+      if (existing.length > 0) {
+        skipped++;
+        continue;
+      }
+
+      // Buat receivable baru
+      await db.insert(receivablesTable).values({
+        saleId: sale.id,
+        customerId: sale.customerId ?? null,
+        totalAmount: sale.totalAmount!.toString(),
+        paidAmount: sale.paidAmount!.toString(),
+        status: "partial",
+        dueDate: sale.dueDate ?? null,
+      });
+      created++;
+    }
+
+    broadcastRefresh();
+
+    res.json({ message: `Migrasi selesai. Dibuat: ${created}, Dilewati (sudah ada): ${skipped}` });
+  } catch (error: any) {
+    res.status(500).json({ error: "Gagal migrasi", detail: String(error) });
+  }
+});
+
 export default router;

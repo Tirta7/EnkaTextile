@@ -100,6 +100,7 @@ router.post("/request-return-otp", async (req: Request, res: Response) => {
       otpSent: true,
       expiresInMinutes: remainingMin,
       isReuse,
+      devOtp: activeOtp!.otp, // DEV MODE: tampilkan kode di popup (hapus saat production)
     });
   } catch (error) {
     console.error("request-return-otp error:", error);

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, stockMutationsTable, productRollsTable, returnsTable, returnReturnedItemsTable, returnExchangedItemsTable } from "@workspace/db";
+import { salesTable, saleItemsTable, customersTable, productsTable, categoriesTable, receivablesTable, paymentsTable, stockMutationsTable, productRollsTable, returnsTable, returnReturnedItemsTable, returnExchangedItemsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, inArray, ne } from "drizzle-orm";
 import { CreateSaleBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
@@ -317,21 +317,26 @@ router.post("/sales", async (req, res): Promise<void> => {
       await deductStockForItems(items, invoiceNumber);
     }
 
+    // Create receivable for:
+    // - Non-draft: tempo/partial sales
+    // - HOLD/Draft WITH DP (partial): customer masih punya sisa hutang, harus masuk piutang
+    const shouldCreateReceivable = (!isDraft && (status === "partial" || status === "tempo" || status === "unpaid"))
+      || (isDraft && status === "partial" && paidAmount > 0 && paidAmount < totalAmount);
+
+    if (shouldCreateReceivable) {
+      await db.insert(receivablesTable).values({
+        saleId: sale.id,
+        customerId: customerId ?? null,
+        totalAmount: totalAmount.toString(),
+        paidAmount: paidAmount.toString(),
+        status: "partial",
+        dueDate: dueDate ? new Date(dueDate) : null,
+      });
+    }
+
+    broadcastRefresh();
+
     if (!isDraft) {
-      // Create receivable for tempo or partial sales
-      if (status === "partial" || status === "tempo" || status === "unpaid") {
-        await db.insert(receivablesTable).values({
-          saleId: sale.id,
-          customerId: customerId ?? null,
-          totalAmount: totalAmount.toString(),
-          paidAmount: paidAmount.toString(),
-          status: status === "partial" ? "partial" : "unpaid",
-          dueDate: dueDate ? new Date(dueDate) : null,
-        });
-      }
-
-      broadcastRefresh();
-
       // Push notification
       try {
         let customerName = "Umum";
@@ -348,8 +353,6 @@ router.post("/sales", async (req, res): Promise<void> => {
       } catch (error) {
         console.error("Gagal mengirim push notif untuk sale", error);
       }
-    } else {
-      broadcastRefresh();
     }
 
     res.status(201).json({
@@ -395,7 +398,8 @@ router.post("/sales/:id/pay", async (req, res): Promise<void> => {
     const status = finalPaidAmount >= totalAmount ? "lunas" : finalPaidAmount > 0 ? "partial" : "tempo";
 
     // Assign real sequential invoice number now if it's still HOLD/DRAFT
-    const invoiceNumber = sale.invoiceNumber.startsWith("HOLD-") || sale.invoiceNumber.startsWith("DRAFT-") ? await generateNextInvoiceNumber("INV") : sale.invoiceNumber;
+    const isHold = sale.invoiceNumber.startsWith("HOLD-") || sale.invoiceNumber.startsWith("DRAFT-");
+    const invoiceNumber = isHold ? await generateNextInvoiceNumber("INV") : sale.invoiceNumber;
 
     // Update sale header
     await db.update(salesTable).set({
@@ -421,33 +425,37 @@ router.post("/sales/:id/pay", async (req, res): Promise<void> => {
       await deductStockForItems(itemsForDeduction, invoiceNumber);
     }
 
-    // Create or update receivable if tempo
+    // Create or update receivable
     const customerId = sale.customerId;
+    const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+
     if (status !== "lunas") {
-      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
       if (existingReceivables.length > 0) {
+        // Update existing receivable: paidAmount, status, dan invoiceNumber (jika HOLD dikonfirmasi)
         await db.update(receivablesTable).set({
           paidAmount: finalPaidAmount.toString(),
           status: status === "partial" ? "partial" : "unpaid",
+          updatedAt: sql`NOW()`,
         }).where(eq(receivablesTable.id, existingReceivables[0].id));
       } else {
+        // Buat receivable baru (termasuk kasus HOLD tanpa DP yang baru dikonfirmasi dengan metode tempo)
         await db.insert(receivablesTable).values({
           saleId: id,
           customerId,
           totalAmount: totalAmount.toString(),
           paidAmount: finalPaidAmount.toString(),
           status: status === "partial" ? "partial" : "unpaid",
-          dueDate: dueDate ? new Date(dueDate) : null,
+          dueDate: dueDate ? new Date(dueDate) : (sale.dueDate ?? null),
         });
       }
     } else if (status === "lunas") {
-      // If fully paid, remove or mark as paid in receivables if exists
-      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+      // Jika lunas, tandai receivable sebagai paid (atau hapus)
       if (existingReceivables.length > 0) {
-         await db.update(receivablesTable).set({
-           paidAmount: finalPaidAmount.toString(),
-           status: "paid"
-         }).where(eq(receivablesTable.id, existingReceivables[0].id));
+        await db.update(receivablesTable).set({
+          paidAmount: finalPaidAmount.toString(),
+          status: "lunas",
+          updatedAt: sql`NOW()`,
+        }).where(eq(receivablesTable.id, existingReceivables[0].id));
       }
     }
 
@@ -600,28 +608,36 @@ router.put("/sales/:id", async (req, res): Promise<void> => {
       await deductStockForItems(items, sale.invoiceNumber);
     }
 
-    // Update receivables if exists
-    if (statusAfter === 'partial' || statusAfter === 'tempo' || statusAfter === 'unpaid' || statusAfter === 'lunas') {
-      const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
-      if (statusAfter !== 'lunas') {
-        if (existingReceivables.length > 0) {
-          await db.update(receivablesTable).set({
-            totalAmount: totalAmount.toString(),
-            paidAmount: paidAmount.toString(),
-            status: statusAfter === "partial" ? "partial" : "unpaid",
-            updatedAt: sql`NOW()`,
-          }).where(eq(receivablesTable.saleId, id));
-        } else {
-          await db.insert(receivablesTable).values({
-            saleId: id,
-            customerId: customerId ?? sale.customerId ?? null,
-            totalAmount: totalAmount.toString(),
-            paidAmount: paidAmount.toString(),
-            status: statusAfter === "partial" ? "partial" : "unpaid",
-            dueDate: dueDate ? new Date(dueDate) : null,
-          });
-        }
-      } else if (statusAfter === 'lunas' && existingReceivables.length > 0) {
+    // Update/create receivables berdasarkan status
+    const existingReceivables = await db.select().from(receivablesTable).where(eq(receivablesTable.saleId, id));
+
+    if (statusAfter === 'partial' || statusAfter === 'tempo' || statusAfter === 'unpaid') {
+      // Perlu piutang — baik untuk HOLD+DP maupun invoice non-draft
+      if (existingReceivables.length > 0) {
+        await db.update(receivablesTable).set({
+          totalAmount: totalAmount.toString(),
+          paidAmount: paidAmount.toString(),
+          status: statusAfter === "partial" ? "partial" : "unpaid",
+          updatedAt: sql`NOW()`,
+        }).where(eq(receivablesTable.saleId, id));
+      } else {
+        await db.insert(receivablesTable).values({
+          saleId: id,
+          customerId: customerId ?? sale.customerId ?? null,
+          totalAmount: totalAmount.toString(),
+          paidAmount: paidAmount.toString(),
+          status: statusAfter === "partial" ? "partial" : "unpaid",
+          dueDate: dueDate ? new Date(dueDate) : (sale.dueDate ?? null),
+        });
+      }
+    } else if (statusAfter === 'lunas') {
+      // Lunas — hapus piutang
+      if (existingReceivables.length > 0) {
+        await db.delete(receivablesTable).where(eq(receivablesTable.saleId, id));
+      }
+    } else if (statusAfter === 'held') {
+      // HOLD tanpa DP — tidak ada piutang, hapus jika sebelumnya ada (DP dihapus)
+      if (existingReceivables.length > 0) {
         await db.delete(receivablesTable).where(eq(receivablesTable.saleId, id));
       }
     }
@@ -748,6 +764,31 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     }
   }
 
+  // ─── Ambil riwayat pembayaran cicilan dari tabel payments ────────────────
+  let paymentHistory: any[] = [];
+  const receivableForSale = await db
+    .select()
+    .from(receivablesTable)
+    .where(eq(receivablesTable.saleId, id));
+
+  if (receivableForSale.length > 0) {
+    const recId = receivableForSale[0].id;
+    const pmts = await db
+      .select()
+      .from(paymentsTable)
+      .where(eq(paymentsTable.receivableId, recId))
+      .orderBy(paymentsTable.paidAt);
+
+    paymentHistory = pmts.map((p, idx) => ({
+      step: idx + 1,
+      id: p.id,
+      amount: numStr(p.amount),
+      paymentMethod: p.paymentMethod,
+      notes: p.notes,
+      paidAt: p.paidAt.toISOString(),
+    }));
+  }
+
   res.json({
     ...sale,
     status: finalStatus,
@@ -756,6 +797,7 @@ router.get("/sales/:id", async (req, res): Promise<void> => {
     remainingAmount: sale.status === 'draft' ? numStr(sale.totalAmount) : (remainingAmount > 0 ? remainingAmount : 0),
     dueDate: sale.dueDate?.toISOString() ?? null,
     createdAt: sale.createdAt.toISOString(),
+    paymentHistory,
     items: (() => {
       let availableReturnedItems = [...returnedItems];
       return items.map(i => {

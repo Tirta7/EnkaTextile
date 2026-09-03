@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListMutations, useCreateMutation, useListProducts, getListMutationsQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -89,10 +89,10 @@ export default function Mutasi() {
   });
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-200 mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex flex-col pt-2 pb-2">
-        <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-full w-full">
+      {/* Static Top Strip */}
+      <div className="flex-none space-y-2 pb-2">
+        <div className="flex items-center justify-between pt-1 pb-2">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Mutasi Stok</h1>
             <p className="text-sm text-slate-500">Riwayat barang masuk & keluar</p>
@@ -101,164 +101,86 @@ export default function Mutasi() {
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>
-
-        {/* Scrollable Tabs */}
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* Tabs */}
+        <div className="flex gap-3 border-b border-slate-200">
           {(['semua', 'masuk', 'keluar', 'penyesuaian'] as const).map((tab) => {
-            let label = "Semua";
-            if (tab === "masuk") label = "Masuk";
-            if (tab === "keluar") label = "Keluar";
-            if (tab === "penyesuaian") label = "Penyesuaian";
+            const label = tab === 'masuk' ? 'Masuk' : tab === 'keluar' ? 'Keluar' : tab === 'penyesuaian' ? 'Penyesuaian' : 'Semua';
             return (
-              <button
-                key={tab}
-                onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                  activeTab === tab
-                    ? "bg-violet-900 text-white shadow-md shadow-violet-200"
-                    : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
-                }`}
-              >
+              <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                className={`pb-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-violet-700' : 'text-slate-500 hover:text-slate-800'}`}>
                 {label}
+                {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-violet-600" />}
               </button>
             );
           })}
         </div>
-      </div>
-
-      {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari barang atau referensi..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
+        {/* Filter */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input placeholder="Cari barang atau referensi..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+          </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
         </div>
-        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
       </div>
 
-      {/* Activity Feed List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-5 w-1/4" />
-              </div>
-              <div className="flex gap-3">
-                <Skeleton className="w-12 h-12 rounded-2xl" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </div>
+      {/* Scrollable Table */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : tabFiltered?.length === 0 ? (
+            <div className="text-center py-16"><ArrowLeftRight className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Belum ada mutasi</h3></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Produk</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tipe</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Meter/Yd</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Roll</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {tabFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((m, idx) => {
+                    const cfg = TYPE_CONFIG[m.type ?? "masuk"];
+                    let badgeCls = "bg-slate-100 text-slate-700";
+                    if (m.type === 'masuk') badgeCls = "bg-green-100 text-green-700";
+                    else if (m.type === 'keluar') badgeCls = "bg-red-100 text-red-700";
+                    else badgeCls = "bg-blue-100 text-blue-700";
+                    const sign = m.type === 'keluar' ? '-' : '+';
+                    return (
+                      <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(m.createdAt)}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">{(m as any).productName || <span className="text-slate-400 italic">Dihapus</span>}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeCls}`}>{cfg?.label}</span>
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-bold text-sm ${m.type === 'keluar' ? 'text-rose-600' : 'text-emerald-600'}`}>{sign}{formatNumber(m.meters)}</td>
+                        <td className={`py-2.5 px-3 text-right text-xs font-medium ${m.type === 'keluar' ? 'text-rose-500' : 'text-emerald-500'}`}>{m.rolls > 0 ? `${sign}${formatNumber(m.rolls)}` : <span className="text-slate-300">—</span>}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-500 italic">{m.description || <span className="text-slate-300">—</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))
-        ) : tabFiltered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <ArrowLeftRight className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Belum ada mutasi</h3>
-            <p className="text-sm text-slate-500 mt-1">Tidak ada riwayat pergerakan stok.</p>
-          </div>
-        ) : (
-          <>
-            {tabFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((m) => {
-              const cfg = TYPE_CONFIG[m.type ?? "masuk"];
-              const Icon = cfg?.icon ?? ArrowLeftRight;
-              
-              // Decorative Badge Class
-              let badgeClass = "bg-slate-100 text-slate-700";
-              let iconClass = "text-slate-500";
-              let iconBgClass = "bg-slate-50 border-slate-100";
-              
-              if (m.type === 'masuk') {
-                badgeClass = "bg-green-100 text-green-700";
-                iconClass = "text-green-500";
-                iconBgClass = "bg-green-50 border-green-100";
-              } else if (m.type === 'keluar') {
-                badgeClass = "bg-red-100 text-red-700";
-                iconClass = "text-red-500";
-                iconBgClass = "bg-red-50 border-red-100";
-              } else {
-                badgeClass = "bg-blue-100 text-blue-700";
-                iconClass = "text-blue-500";
-                iconBgClass = "bg-blue-50 border-blue-100";
-              }
-
-              return (
-                <div key={m.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden transition-all hover:shadow-md">
-                  
-                  {/* Decorative side accent */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${badgeClass.split(' ')[0]}`} />
-
-                  {/* Header: Waktu & Referensi */}
-                  <div className="flex justify-between items-start pl-2">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                        {formatDate(m.createdAt)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      {m.reference && (
-                        <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded-full block">
-                          Ref: {m.reference}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Body: Info Barang & Stok */}
-                  <div className="flex gap-3 items-center pl-2">
-                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${iconBgClass}`}>
-                      <Icon className={`w-6 h-6 ${iconClass}`} strokeWidth={2} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
-                        {(m as any).productName || "Barang Dihapus"}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
-                          {cfg?.label}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900 leading-none">
-                          {m.type === 'keluar' ? '-' : '+'}{formatNumber(m.meters)} <span className="text-[10px] font-normal text-slate-500">Mtr/Yd</span>
-                        </span>
-                        {m.rolls > 0 && (
-                          <span className="text-xs font-medium text-slate-500 mt-1">
-                            {m.type === 'keluar' ? '-' : '+'}{formatNumber(m.rolls)} <span className="text-[10px]">Roll</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer: Keterangan */}
-                  {m.description && (
-                    <div className="mt-2 pl-2 border-t border-slate-100 pt-3">
-                      <p className="text-xs text-slate-500 italic">"{m.description}"</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </>
-        )}
-        {tabFiltered && tabFiltered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(tabFiltered.length / 20)} onPageChange={setCurrentPage} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Pagination Bar */}
+      {tabFiltered && tabFiltered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, tabFiltered.length)} dari {tabFiltered.length} mutasi</span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(tabFiltered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

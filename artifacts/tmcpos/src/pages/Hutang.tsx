@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPayables, useAddPayablePayment, getListPayablesQueryKey } from "@workspace/api-client-react";
@@ -98,251 +98,120 @@ export default function Hutang() {
   const overdueCount = payables?.filter(p => (p as any).isOverdue).length ?? 0;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex flex-col pt-2 pb-2">
-        <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-full w-full">
+      {/* Static Top Strip */}
+      <div className="flex-none space-y-2 pb-2">
+        <div className="flex items-center justify-between pt-1 pb-1">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hutang</h1>
             <p className="text-sm text-slate-500">Kelola tagihan dari supplier</p>
           </div>
         </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="bg-red-50 rounded-3xl p-4 border border-red-100 flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-10">
-            <Receipt className="w-24 h-24 text-red-500" />
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-red-50 rounded-2xl p-3 border border-red-100 flex flex-col justify-center relative overflow-hidden">
+            <span className="text-[10px] font-semibold text-red-600 mb-0.5">Total Aktif</span>
+            <span className="text-sm font-bold text-red-900">{formatRupiah(totalHutang)}</span>
           </div>
-          <span className="text-xs font-semibold text-red-600 mb-1">Total Aktif</span>
-          <span className="text-lg font-bold text-red-900">{formatRupiah(totalHutang)}</span>
+          <div className="bg-white rounded-2xl p-3 border border-slate-200 flex flex-col justify-center">
+            <span className="text-[10px] font-semibold text-slate-500 mb-0.5">Tagihan Aktif</span>
+            <span className="text-sm font-bold text-slate-900">{payables?.filter(p => p.status !== "lunas").length ?? 0}</span>
+          </div>
+          <div className={`${overdueCount > 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-200"} rounded-2xl p-3 border flex flex-col justify-center`}>
+            <span className={`text-[10px] font-semibold mb-0.5 ${overdueCount > 0 ? "text-red-600" : "text-slate-500"}`}>Jatuh Tempo</span>
+            <span className={`text-sm font-bold ${overdueCount > 0 ? "text-red-700" : "text-slate-900"}`}>{overdueCount} Tagihan</span>
+          </div>
         </div>
-        <div className="bg-white rounded-3xl p-4 border border-slate-200 flex flex-col justify-center">
-          <span className="text-xs font-semibold text-slate-500 mb-1">Tagihan Aktif</span>
-          <span className="text-lg font-bold text-slate-900">{payables?.filter(p => p.status !== "lunas").length ?? 0}</span>
+        {/* Tabs */}
+        <div className="flex gap-3 border-b border-slate-200">
+          {(['semua', 'belum_bayar', 'partial', 'lunas'] as const).map((tab) => {
+            const label = tab === 'belum_bayar' ? 'Belum Bayar' : tab === 'partial' ? 'Sebagian' : tab === 'lunas' ? 'Lunas' : 'Semua';
+            return (
+              <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                className={`pb-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-violet-700' : 'text-slate-500 hover:text-slate-800'}`}>
+                {label}
+                {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-violet-600" />}
+              </button>
+            );
+          })}
         </div>
-        <div className={`${overdueCount > 0 ? "bg-red-50 border-red-200" : "bg-white border-slate-200"} rounded-3xl p-4 border flex flex-col justify-center col-span-2 md:col-span-1`}>
-          <span className={`text-xs font-semibold mb-1 ${overdueCount > 0 ? "text-red-600" : "text-slate-500"}`}>Jatuh Tempo</span>
-          <span className={`text-lg font-bold ${overdueCount > 0 ? "text-red-700" : "text-slate-900"}`}>{overdueCount} Tagihan</span>
+        {/* Filter */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input placeholder="Cari supplier atau invoice..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+          </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
         </div>
       </div>
 
-      {/* Scrollable Tabs */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-        {(['semua', 'belum_bayar', 'partial', 'lunas'] as const).map((tab) => {
-          let label = "Semua";
-          if (tab === "belum_bayar") label = "Belum Bayar";
-          if (tab === "partial") label = "Sebagian";
-          if (tab === "lunas") label = "Lunas";
-          return (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                activeTab === tab
-                  ? "bg-violet-900 text-white shadow-md shadow-violet-200"
-                  : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari supplier atau invoice..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
-        </div>
-        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
-      </div>
-
-      {/* Activity Feed List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-5 w-1/4" />
-              </div>
-              <div className="flex gap-3">
-                <Skeleton className="w-12 h-12 rounded-2xl" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </div>
+      {/* Scrollable Table */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : filtered?.length === 0 ? (
+            <div className="text-center py-16"><Receipt className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada hutang</h3></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Invoice</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supplier</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terbayar</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sisa</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Jatuh Tempo</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                    const isOverdue = (p as any).isOverdue && p.status !== "lunas";
+                    let badgeClass = "bg-red-100 text-red-700";
+                    if (p.status === "lunas") badgeClass = "bg-green-100 text-green-700";
+                    else if (p.status === "partial") badgeClass = "bg-blue-100 text-blue-700";
+                    return (
+                      <tr key={p.id} className={`hover:bg-slate-50/80 transition-colors ${isOverdue ? 'bg-red-50/20' : ''}`}>
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate((p as any).createdAt)}</td>
+                        <td className="py-2.5 px-3 text-xs font-mono text-slate-500">{(p as any).invoiceNumber || `#${p.id}`}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">{(p as any).supplierName || "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah((p as any).totalAmount ?? 0)}</td>
+                        <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold">{formatRupiah((p as any).paidAmount ?? 0)}</td>
+                        <td className={`py-2.5 px-3 text-right font-bold ${(p as any).remainingAmount > 0 ? 'text-red-600' : 'text-slate-400'}`}>{(p as any).remainingAmount > 0 ? formatRupiah((p as any).remainingAmount) : '—'}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>{p.status?.replace("_", " ")}</span>
+                        </td>
+                        <td className={`py-2.5 px-3 text-center text-xs ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-500'}`}>{formatDate((p as any).dueDate)}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          {p.status !== "lunas" && (
+                            <button className="w-7 h-7 rounded-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-colors mx-auto" title="Bayar" onClick={() => openPayment(p.id)}>
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))
-        ) : filtered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <Receipt className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Tidak ada hutang</h3>
-            <p className="text-sm text-slate-500 mt-1">Belum ada tagihan dari supplier.</p>
-          </div>
-        ) : (
-          <Accordion type="multiple" className="w-full space-y-4">
-            {groupedFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((group: any[], groupIdx: number) => {
-              const supplierName = group[0].supplierName || "Umum";
-              const totalGroupAmount = group.reduce((sum: number, p: any) => sum + (p.totalAmount ?? 0), 0);
-              const totalGroupPaid = group.reduce((sum: number, p: any) => sum + (p.paidAmount ?? 0), 0);
-              const totalGroupRemaining = group.reduce((sum: number, p: any) => sum + (p.remainingAmount ?? 0), 0);
-              const hasOverdue = group.some((p: any) => p.isOverdue && p.status !== "lunas");
-              const pct = totalGroupAmount > 0 ? Math.round((totalGroupPaid / totalGroupAmount) * 100) : 0;
-              const hasDebt = totalGroupRemaining > 0;
-
-              let groupBadgeClass = "bg-slate-100 text-slate-700";
-              let groupIconClass = "text-slate-500";
-              let groupIconBgClass = "bg-slate-50 border-slate-100";
-              let GroupStatusIcon = AlertCircle;
-
-              if (!hasDebt) {
-                groupBadgeClass = "bg-green-100 text-green-700";
-                groupIconClass = "text-green-500";
-                groupIconBgClass = "bg-green-50 border-green-100";
-                GroupStatusIcon = CheckCircle2;
-              } else if (totalGroupPaid > 0) {
-                groupBadgeClass = "bg-blue-100 text-blue-700";
-                groupIconClass = "text-blue-500";
-                groupIconBgClass = "bg-blue-50 border-blue-100";
-                GroupStatusIcon = DollarSign;
-              } else {
-                groupBadgeClass = "bg-red-100 text-red-700";
-                groupIconClass = "text-red-500";
-                groupIconBgClass = "bg-red-50 border-red-100";
-                GroupStatusIcon = AlertTriangle;
-              }
-
-              return (
-                <AccordionItem value={`supplier-${group[0].supplierId || groupIdx}`} key={`supplier-${group[0].supplierId || groupIdx}`} className={`bg-white rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border ${hasOverdue ? 'border-red-200 bg-red-50/5' : 'border-slate-100'} overflow-hidden`}>
-                  <AccordionTrigger className="p-4 hover:no-underline hover:bg-slate-50/50 transition-colors [&[data-state=open]]:border-b border-slate-100 relative">
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${hasOverdue ? 'bg-red-500' : groupBadgeClass.split(' ')[0]}`} />
-                    
-                    <div className="flex flex-col w-full pl-2 pr-2 gap-2">
-                      <div className="flex w-full gap-3 items-center">
-                        <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${groupIconBgClass}`}>
-                          <GroupStatusIcon className={`w-6 h-6 ${groupIconClass}`} strokeWidth={2} />
-                        </div>
-                        
-                        <div className="flex-1 min-w-0 text-left flex flex-col justify-center">
-                          <h3 className="font-bold text-slate-800 text-[15px] truncate">
-                            {supplierName}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${groupBadgeClass}`}>
-                              {hasDebt ? `${group.filter((p: any) => p.status !== 'lunas').length} Tagihan` : 'Lunas'}
-                            </span>
-                            {hasOverdue && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-red-100 text-red-700">
-                                Jatuh Tempo
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="text-right flex flex-col items-end justify-center mr-2">
-                          <span className="text-sm font-bold text-slate-900 block leading-tight mb-0.5">
-                            {formatRupiah(totalGroupRemaining)}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-medium">Sisa Hutang</span>
-                        </div>
-                      </div>
-
-                      {pct > 0 && hasDebt && (
-                        <div className="w-full mt-1 border-t border-slate-100 pt-2 pb-1 pr-6">
-                           <div className="flex justify-between text-[10px] mb-1">
-                             <span className="font-medium text-slate-500">Progress Pembayaran Total</span>
-                             <span className="font-bold text-slate-700">{pct}%</span>
-                           </div>
-                           <Progress value={pct} className="h-1.5 bg-slate-100" />
-                        </div>
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  
-                  <AccordionContent className="p-4 pt-4 bg-slate-50/50 border-t border-slate-100">
-                    <div className="space-y-3">
-                      {group.map((p: any) => {
-                        const total = (p as any).totalAmount ?? 0;
-                        const paid = (p as any).paidAmount ?? 0;
-                        const itemPct = total > 0 ? Math.round((paid / total) * 100) : 0;
-                        const isOverdue = (p as any).isOverdue && p.status !== "lunas";
-                        
-                        let badgeClass = "bg-slate-100 text-slate-700";
-                        if (p.status === 'lunas') badgeClass = "bg-green-100 text-green-700";
-                        else if (p.status === 'partial') badgeClass = "bg-blue-100 text-blue-700";
-                        else badgeClass = "bg-red-100 text-red-700";
-
-                        return (
-                          <div key={p.id} className={`bg-white rounded-2xl p-4 shadow-sm border ${isOverdue ? 'border-red-200' : 'border-slate-200'} flex flex-col gap-3 relative overflow-hidden`}>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                                  {formatDate((p as any).createdAt)}
-                                </span>
-                                <span className="text-xs bg-slate-100 text-slate-600 font-mono px-2 py-1 rounded-md inline-block">
-                                  {(p as any).invoiceNumber || `#${p.id}`}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-sm font-bold text-slate-900 block mb-1">
-                                  {formatRupiah(total)}
-                                </span>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
-                                  {p.status?.replace("_", " ")}
-                                </span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex justify-between items-center mt-1">
-                              <span className={`text-xs font-medium ${isOverdue ? 'text-red-600' : 'text-slate-500'}`}>
-                                Tempo: {formatDate((p as any).dueDate)}
-                              </span>
-                              {p.status !== "lunas" && (
-                                <Button size="sm" className="h-7 rounded-full bg-violet-600 hover:bg-violet-700 text-white font-semibold text-[11px] px-4 shadow-sm" onClick={() => openPayment(p.id)}>
-                                  <Plus className="mr-1 h-3 w-3" /> Bayar
-                                </Button>
-                              )}
-                            </div>
-                            
-                            <div className="mt-1 border-t border-slate-100 pt-3">
-                              <div className="flex justify-between text-[11px] mb-1.5">
-                                <span className="font-medium text-slate-500">Progress Pembayaran</span>
-                                <span className="font-bold text-slate-700">{itemPct}%</span>
-                              </div>
-                              <Progress value={itemPct} className="h-1.5 bg-slate-100" />
-                              <div className="flex justify-between text-[11px] mt-1.5">
-                                <span className="text-slate-400">Terbayar: <span className="font-medium text-slate-600">{formatRupiah(paid)}</span></span>
-                                {(p as any).remainingAmount > 0 && (
-                                  <span className="text-red-600 font-medium">Sisa: {formatRupiah((p as any).remainingAmount)}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        )}
-        {groupedFiltered && groupedFiltered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(groupedFiltered.length / 20)} onPageChange={setCurrentPage} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Pagination Bar */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} hutang</span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

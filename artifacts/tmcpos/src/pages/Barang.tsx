@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListProducts, useListCategories, useListUnits, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, getListCategoriesQueryKey, getListUnitsQueryKey } from "@workspace/api-client-react";
@@ -170,216 +170,140 @@ export default function Barang() {
   const lowStockCount = products?.filter(p => p.isLowStock).length ?? 0;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex items-center justify-between pt-2 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Barang</h1>
-          <p className="text-sm text-slate-500">Kelola inventaris dan stok</p>
-        </div>
-        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-          <Plus className="mr-2 h-4 w-4" /> Tambah
-        </Button>
-      </div>
-
-      {lowStockCount > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-          <span className="text-sm text-amber-800 dark:text-amber-200">{lowStockCount} barang memiliki stok rendah</span>
-          <Button variant="link" size="sm" className="text-amber-700 p-0 h-auto" onClick={() => setShowLowStock(!showLowStock)}>
-            {showLowStock ? "Tampilkan semua" : "Lihat barang stok rendah"}
+    <div className="flex flex-col h-full w-full">
+      {/* Static Top Strip */}
+      <div className="flex-none space-y-2 pb-2">
+        <div className="flex items-center justify-between pt-1 pb-2">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Barang</h1>
+            <p className="text-sm text-slate-500">Kelola inventaris dan stok</p>
+          </div>
+          <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+            <Plus className="mr-2 h-4 w-4" /> Tambah
           </Button>
         </div>
-      )}
 
-      {/* Alphabet Filter */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-3 pt-1 w-full hide-scrollbar">
-        <button
-          onClick={() => setCategoryAlphabetFilter(null)}
-          className={`shrink-0 flex items-center justify-center h-8 px-3 rounded-lg text-xs font-bold transition-colors border ${
-            categoryAlphabetFilter === null
-              ? "bg-slate-800 text-white border-slate-800 shadow-sm"
-              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800"
-          }`}
-        >
-          Semua
-        </button>
-        {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
-          const hasCategoriesWithLetter = categories?.some(c => c.name.toUpperCase().startsWith(letter));
-          const isActive = categoryAlphabetFilter === letter;
-          
-          if (!hasCategoriesWithLetter && !isActive) return null; // Sembunyikan huruf yang tidak ada kategorinya untuk menghemat ruang
-          
-          return (
-            <button
-              key={letter}
-              onClick={() => setCategoryAlphabetFilter(isActive ? null : letter)}
-              className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold transition-all border ${
-                isActive
-                  ? "bg-violet-600 text-white border-violet-600 shadow-sm ring-2 ring-violet-600/20 ring-offset-1"
-                  : "bg-white text-slate-500 border-slate-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200"
-              }`}
-            >
-              {letter}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Premium Category Grid */}
-      <div className="flex flex-wrap gap-2 pb-4 pt-1 mb-4 w-full">
-        {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
-          const count = products?.filter(p => p.categoryId === c.id).length || 0;
-          const isActive = selectedCategoryId === c.id;
-          return (
-            <button 
-              key={c.id}
-              onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
-              className={`group relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold tracking-wide transition-all duration-300 shadow-sm border ${
-                isActive 
-                  ? "bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 ring-offset-1" 
-                  : "bg-white text-muted-foreground border-border hover:border-primary/50 hover:text-primary hover:shadow-md hover:-translate-y-0.5"
-              }`}
-            >
-              <span className="text-left leading-snug whitespace-normal">{c.name}</span>
-              <span className={`shrink-0 flex items-center justify-center rounded-full text-[10px] px-2 py-0.5 font-bold ${
-                isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary"
-              }`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-        {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).length === 0 && (
-          <div className="w-full text-center py-6 text-slate-400 text-sm italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            Kategori dengan awalan huruf tersebut tidak ditemukan
+        {lowStockCount > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <span className="text-sm text-amber-800 flex-1">{lowStockCount} barang memiliki stok rendah</span>
+            <Button variant="link" size="sm" className="text-amber-700 p-0 h-auto" onClick={() => setShowLowStock(!showLowStock)}>
+              {showLowStock ? "Semua" : "Lihat"}
+            </Button>
           </div>
         )}
-      </div>
 
-      {/* Filter & Search */}
-      <div className="flex flex-col gap-3">
-        <div className="relative w-full">
+        {/* Alphabet Filter */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+          <button onClick={() => setCategoryAlphabetFilter(null)}
+            className={`shrink-0 flex items-center justify-center h-7 px-2.5 rounded-lg text-xs font-bold transition-colors border ${categoryAlphabetFilter === null ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"}`}>
+            Semua
+          </button>
+          {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
+            const has = categories?.some(c => c.name.toUpperCase().startsWith(letter));
+            if (!has && categoryAlphabetFilter !== letter) return null;
+            return (
+              <button key={letter} onClick={() => setCategoryAlphabetFilter(categoryAlphabetFilter === letter ? null : letter)}
+                className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold transition-all border ${categoryAlphabetFilter === letter ? "bg-violet-600 text-white border-violet-600" : "bg-white text-slate-500 border-slate-200 hover:bg-violet-50 hover:text-violet-600"}`}>
+                {letter}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Category Grid */}
+        <div className="flex flex-wrap gap-1.5">
+          {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
+            const count = products?.filter(p => p.categoryId === c.id).length || 0;
+            const isActive = selectedCategoryId === c.id;
+            return (
+              <button key={c.id} onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
+                className={`group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 border ${isActive ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-white text-muted-foreground border-border hover:border-primary/50 hover:text-primary"}`}>
+                <span>{c.name}</span>
+                <span className={`shrink-0 rounded-full text-[10px] px-1.5 py-0.5 font-bold ${isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-slate-100 text-slate-500"}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari nama barang atau no lot..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
+          <Input placeholder="Cari nama barang atau no lot..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
       </div>
 
-      {/* Activity Feed List */}
-      <div className="space-y-4">
-        {selectedCategoryId === null ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3>
-            <p className="text-sm text-slate-500 mt-1">Pilih kategori di atas untuk menampilkan barang.</p>
-          </div>
-        ) : isLoading ? (
-          Array(4).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
-              <Skeleton className="w-14 h-14 rounded-2xl" />
-              <div className="flex-1 space-y-2 py-1">
-                <Skeleton className="h-5 w-1/3" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
+      {/* Scrollable Table */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {selectedCategoryId === null ? (
+            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3><p className="text-sm text-slate-500 mt-1">Pilih kategori di atas untuk menampilkan barang.</p></div>
+          ) : isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : filtered?.length === 0 ? (
+            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3><p className="text-sm text-slate-500 mt-1">Belum ada barang pada kategori ini.</p></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Barang</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Barcode / Lot</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Harga Jual</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Stok Meter</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Stok Roll</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => (
+                    <tr key={p.id} className={`hover:bg-slate-50/80 transition-colors ${p.isLowStock ? 'bg-amber-50/20' : ''}`}>
+                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${p.isLowStock ? 'bg-amber-50 border-amber-100' : 'bg-violet-50 border-violet-100'}`}>
+                            <Package className={`w-3.5 h-3.5 ${p.isLowStock ? 'text-amber-400' : 'text-violet-400'}`} strokeWidth={1.5} />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800">{p.name}</div>
+                            {p.rackLocation && <div className="text-[10px] text-slate-400">Rak: {p.rackLocation}</div>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{p.barcode || p.lotNumber || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah(p.pricePerMeter)}</td>
+                      <td className={`py-2.5 px-3 text-right font-bold ${p.isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</td>
+                      <td className="py-2.5 px-3 text-right text-slate-600">{formatNumber(p.rollStock)}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${p.isLowStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                          {p.isLowStock ? 'Stok Rendah' : 'Aman'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button title="Lihat Roll" className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-colors" onClick={() => openViewRolls(p)}><Package className="w-3.5 h-3.5" /></button>
+                          <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></button>
+                          <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
-        ) : filtered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3>
-            <p className="text-sm text-slate-500 mt-1">Belum ada barang pada kategori ini.</p>
-          </div>
-        ) : (
-          <>
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p) => (
-              <div key={p.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
-                {/* Top Row */}
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    {p.barcode || "NO BARCODE"}
-                  </span>
-                  <span className="text-sm font-bold text-slate-800">
-                    {formatRupiah(p.pricePerMeter)}
-                  </span>
-                </div>
-
-                {/* Main Content */}
-                <div className="flex gap-3">
-                  <div className={`w-[60px] h-[60px] rounded-2xl shrink-0 flex items-center justify-center border ${p.isLowStock ? 'bg-amber-50 border-amber-100' : 'bg-violet-50 border-violet-100'}`}>
-                    <Package className={`w-8 h-8 ${p.isLowStock ? 'text-amber-400' : 'text-violet-300'}`} strokeWidth={1.5} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
-                      {p.name}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {p.isLowStock ? (
-                        <AlertCircle className="w-4 h-4 text-amber-500 fill-amber-50" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
-                      )}
-                      <span className={`text-xs font-medium capitalize ${p.isLowStock ? 'text-amber-600' : 'text-slate-600'}`}>
-                        {p.isLowStock ? "Stok Rendah" : "Stok Aman"}
-                      </span>
-                    </div>
-                    
-                    <p className="text-[12px] text-slate-400 mt-1 truncate font-medium">
-                      Lot/Rak: {p.lotNumber || "-"} {p.rackLocation ? `• ${p.rackLocation}` : ""}
-                    </p>
-                  </div>
-
-                  {/* Actions Dropdown */}
-                  <div className="flex items-start justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-600">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                        <DropdownMenuItem onClick={() => openViewRolls(p)} className="gap-2 cursor-pointer">
-                          <Package className="h-4 w-4 text-slate-500" /> Lihat Roll
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEdit(p)} className="gap-2 cursor-pointer">
-                          <Pencil className="h-4 w-4 text-slate-500" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
-                          onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}
-                        >
-                          <Trash2 className="h-4 w-4" /> Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Bottom Bar: Stock Info */}
-                <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg">
-                    <span className="text-slate-500">Total Stok:</span>
-                    <span className="text-slate-700 font-bold">{formatNumber(p.meterStock)} {p.primaryUnit?.toLowerCase()}</span>
-                    <span className="text-slate-300">|</span>
-                    <span className="text-slate-700 font-bold">{formatNumber(p.rollStock)} {p.secondaryUnit?.toLowerCase()}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-        {filtered && filtered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Pagination Bar */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} barang</span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <Drawer 
         open={isOpen} 

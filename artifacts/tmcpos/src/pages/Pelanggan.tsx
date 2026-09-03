@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, getListCustomersQueryKey } from "@workspace/api-client-react";
@@ -59,132 +59,91 @@ export default function Pelanggan() {
   const filtered = customers?.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search)));
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex items-center justify-between pt-2 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pelanggan</h1>
-          <p className="text-sm text-slate-500">Daftar buku tamu dan limit</p>
+    <div className="flex flex-col h-full w-full">
+      {/* ── Static Top Strip ── */}
+      <div className="flex-none space-y-2 pb-2">
+        <div className="flex items-center justify-between pt-1 pb-2">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pelanggan</h1>
+            <p className="text-sm text-slate-500">Daftar buku tamu dan limit</p>
+          </div>
+          <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
+            <Plus className="mr-2 h-4 w-4" /> Tambah
+          </Button>
         </div>
-        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-          <Plus className="mr-2 h-4 w-4" /> Tambah
-        </Button>
-      </div>
-
-      {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+        <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari nama atau telepon..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
+          <Input placeholder="Cari nama atau telepon..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
         </div>
       </div>
 
-      {/* Activity Feed List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          Array(4).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
-              <Skeleton className="w-14 h-14 rounded-2xl" />
-              <div className="flex-1 space-y-2 py-1">
-                <Skeleton className="h-5 w-1/3" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
+      {/* ── Scrollable Table ── */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : filtered?.length === 0 ? (
+            <div className="text-center py-16"><Users className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada pelanggan</h3></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Telepon</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Alamat</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Hutang / Limit</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c, idx) => (
+                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${c.isOverLimit ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
+                            <User className={`w-3.5 h-3.5 ${c.isOverLimit ? 'text-red-400' : 'text-violet-400'}`} strokeWidth={1.5} />
+                          </div>
+                          <span className="font-semibold text-slate-800">{c.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3 text-slate-500 text-xs">{c.phone || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[160px] truncate">{c.address || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <span className={`text-sm font-bold block ${c.isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>{formatRupiah(c.currentDebt ?? 0)}</span>
+                        <span className="text-[10px] text-slate-400">Limit: {formatRupiah(c.creditLimit)}</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${c.isOverLimit ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
+                          {c.isOverLimit ? 'Over Limit' : 'Aman'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1 justify-center">
+                          <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></button>
+                          <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus pelanggan ini?')) deleteMutation.mutate({ id: c.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
-        ) : filtered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <Users className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Tidak ada pelanggan</h3>
-            <p className="text-sm text-slate-500 mt-1">Belum ada data pelanggan yang ditambahkan.</p>
-          </div>
-        ) : (
-          <>
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c) => (
-              <div key={c.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3">
-                {/* Top Row */}
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    {c.phone || "Tanpa No. HP"}
-                  </span>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block mb-0.5">Hutang Saat Ini</span>
-                    <span className={`text-sm font-bold ${c.isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>
-                      {formatRupiah(c.currentDebt ?? 0)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Main Content */}
-                <div className="flex gap-3">
-                  <div className={`w-[60px] h-[60px] rounded-2xl shrink-0 flex items-center justify-center border ${c.isOverLimit ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
-                    <User className={`w-8 h-8 ${c.isOverLimit ? 'text-red-400' : 'text-violet-300'}`} strokeWidth={1.5} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-bold text-slate-900 text-[15px] truncate leading-tight">
-                      {c.name}
-                    </h3>
-                    
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      {c.isOverLimit ? (
-                        <AlertCircle className="w-4 h-4 text-red-500 fill-red-50" />
-                      ) : (
-                        <CheckCircle2 className="w-4 h-4 text-green-600 fill-green-100" />
-                      )}
-                      <span className={`text-xs font-medium capitalize ${c.isOverLimit ? 'text-red-600' : 'text-slate-600'}`}>
-                        {c.isOverLimit ? "Over Limit Kredit" : "Status Aman"}
-                      </span>
-                    </div>
-                    
-                    <p className="text-[12px] text-slate-400 mt-1 truncate font-medium">
-                      Limit: {formatRupiah(c.creditLimit)}
-                    </p>
-                  </div>
-
-                  {/* Actions Dropdown */}
-                  <div className="flex items-start justify-end">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-600">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                        <DropdownMenuItem onClick={() => openEdit(c)} className="gap-2 cursor-pointer">
-                          <Pencil className="h-4 w-4 text-slate-500" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="gap-2 text-red-600 focus:text-red-700 cursor-pointer"
-                          onClick={() => { if (confirm('Hapus pelanggan ini?')) deleteMutation.mutate({ id: c.id }); }}
-                        >
-                          <Trash2 className="h-4 w-4" /> Hapus
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                {/* Bottom Bar: Address Info */}
-                {c.address && (
-                  <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between text-[11px] font-medium text-slate-400">
-                    <span className="truncate pr-4 flex-1">Alamat: {c.address}</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </>
-        )}
-        {filtered && filtered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* ── Pagination Bar ── */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} pelanggan</span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
+
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

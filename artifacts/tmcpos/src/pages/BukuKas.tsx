@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListCashEntries, useGetCashBalance, useCreateCashEntry, getListCashEntriesQueryKey, getGetCashBalanceQueryKey, useListReturns, getListReturnsQueryKey } from "@workspace/api-client-react";
@@ -77,10 +77,10 @@ export default function BukuKas() {
   const totalOut = entries?.filter(e => e.type === "expense" || e.type === "keluar").reduce((sum, e) => sum + (e as any).amount, 0) ?? 0;
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex flex-col pt-2 pb-2">
-        <div className="flex items-center justify-between mb-4">
+    <div className="flex flex-col h-full w-full">
+      {/* Static Top Strip */}
+      <div className="flex-none space-y-2 pb-2">
+        <div className="flex items-center justify-between pt-1 pb-1">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Buku Kas</h1>
             <p className="text-sm text-slate-500">Catat pemasukan & pengeluaran</p>
@@ -89,167 +89,106 @@ export default function BukuKas() {
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="bg-violet-50 rounded-3xl p-4 border border-violet-100 flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute -right-4 -bottom-4 opacity-10">
-            <TrendingUp className="w-24 h-24" />
+        {/* Summary Cards */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-violet-50 rounded-2xl p-3 border border-violet-100 flex flex-col justify-center relative overflow-hidden">
+            <span className="text-[10px] font-semibold text-violet-600 mb-0.5">Saldo Kas</span>
+            <span className="text-sm font-bold text-violet-900">{formatRupiah((balance as any)?.balance ?? 0)}</span>
           </div>
-          <span className="text-xs font-semibold text-violet-600 mb-1">Saldo Kas</span>
-          <span className="text-lg font-bold text-violet-900">{formatRupiah((balance as any)?.balance ?? 0)}</span>
-        </div>
-        <div className="bg-green-50 rounded-3xl p-4 border border-green-200 flex flex-col justify-center">
-          <span className="text-xs font-semibold text-green-700 mb-1">Total Pemasukan</span>
-          <span className="text-lg font-bold text-green-900">{formatRupiah(totalIn)}</span>
-        </div>
-        <div className="bg-red-50 rounded-3xl p-4 border border-red-200 flex flex-col justify-center col-span-2 md:col-span-1">
-          <span className="text-xs font-semibold text-red-700 mb-1">Total Pengeluaran</span>
-          <span className="text-lg font-bold text-red-900">{formatRupiah(totalOut)}</span>
-        </div>
-      </div>
-
-      {/* Scrollable Tabs */}
-      <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-        {(['semua', 'income', 'expense'] as const).map((tab) => {
-          let label = "Semua";
-          if (tab === "income") label = "Pemasukan";
-          if (tab === "expense") label = "Pengeluaran";
-          return (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                activeTab === tab
-                  ? "bg-violet-900 text-white shadow-md shadow-violet-200"
-                  : "bg-white text-slate-500 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari keterangan transaksi..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
-        </div>
-        <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
-      </div>
-
-      {/* Activity Feed List */}
-      <div className="space-y-4">
-        {isLoading ? (
-          Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 space-y-3">
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-5 w-1/4" />
-              </div>
-              <div className="flex gap-3">
-                <Skeleton className="w-12 h-12 rounded-2xl" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </div>
-            </div>
-          ))
-        ) : filtered?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <BookOpen className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Belum ada transaksi kas</h3>
-            <p className="text-sm text-slate-500 mt-1">Catat pemasukan atau pengeluaran Anda.</p>
+          <div className="bg-green-50 rounded-2xl p-3 border border-green-200 flex flex-col justify-center">
+            <span className="text-[10px] font-semibold text-green-700 mb-0.5">Total Masuk</span>
+            <span className="text-sm font-bold text-green-900">{formatRupiah(totalIn)}</span>
           </div>
-        ) : (
-          <>
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e) => {
-              const isIncome = e.type === "income" || e.type === "masuk";
-              const Icon = isIncome ? ArrowUpFromLine : ArrowDownToLine;
-              const iconClass = isIncome ? "text-emerald-500" : "text-rose-500";
-              const iconBgClass = isIncome ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100";
-              const badgeClass = isIncome ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
-              const StatusIcon = e.type === "masuk" || e.type === "keluar" ? BookOpen : Icon;
+          <div className="bg-red-50 rounded-2xl p-3 border border-red-200 flex flex-col justify-center">
+            <span className="text-[10px] font-semibold text-red-700 mb-0.5">Total Keluar</span>
+            <span className="text-sm font-bold text-red-900">{formatRupiah(totalOut)}</span>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-3 border-b border-slate-200">
+          {(['semua', 'income', 'expense'] as const).map((tab) => {
+            const label = tab === 'income' ? 'Pemasukan' : tab === 'expense' ? 'Pengeluaran' : 'Semua';
+            return (
+              <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                className={`pb-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-violet-700' : 'text-slate-500 hover:text-slate-800'}`}>
+                {label}
+                {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-violet-600" />}
+              </button>
+            );
+          })}
+        </div>
+        {/* Filter */}
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input placeholder="Cari keterangan transaksi..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+          </div>
+          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+        </div>
+      </div>
 
-              const isRetur = (e as any).reference?.startsWith("RET-");
-
-              return (
-                <div 
-                  key={e.id} 
-                  onClick={() => {
-                    if (isRetur) {
-                      const foundReturn = returns?.find(r => r.returnNumber === (e as any).reference);
-                      if (foundReturn) setPreviewReturnId(foundReturn.id);
-                    }
-                  }}
-                  className={`bg-white rounded-3xl p-4 sm:p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4 relative overflow-hidden transition-all duration-300 ${isRetur ? 'cursor-pointer hover:shadow-md hover:border-violet-200 group' : ''}`}
-                >
-                  {isRetur && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="sm" className="h-8 rounded-full text-violet-600 bg-violet-50 hover:bg-violet-100">
-                        Lihat Retur
-                      </Button>
-                    </div>
-                  )}
-                  {/* Decorative corner accent */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${badgeClass.split(' ')[0]}`} />
-
-                  {/* Header: Waktu */}
-                  <div className="flex justify-between items-start pl-2">
-                    <div>
-                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                        {formatDate(e.createdAt)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-sm font-bold block ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                        {isIncome ? '+' : '-'}{formatRupiah((e as any).amount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body: Info Transaksi */}
-                  <div className="flex gap-3 items-center pl-2">
-                    <div className={`w-[48px] h-[48px] rounded-2xl shrink-0 flex items-center justify-center border ${iconBgClass}`}>
-                      <StatusIcon className={`w-6 h-6 ${iconClass}`} strokeWidth={2} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-800 text-[15px] truncate">
-                        {e.description}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>
-                          {isIncome ? "Pemasukan" : "Pengeluaran"}
-                        </span>
-                        {(e as any).reference && (
-                          <span className="text-xs font-medium text-slate-400 capitalize">
-                            Ref: {(e as any).reference}
+      {/* Scrollable Table */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : filtered?.length === 0 ? (
+            <div className="text-center py-16"><BookOpen className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Belum ada transaksi kas</h3></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Keterangan</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Referensi</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tipe</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((e, idx) => {
+                    const isIncome = e.type === "income" || e.type === "masuk";
+                    const isRetur = (e as any).reference?.startsWith("RET-");
+                    return (
+                      <tr key={e.id}
+                        className={`hover:bg-slate-50/80 transition-colors ${isRetur ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (isRetur) {
+                            const foundReturn = returns?.find(r => r.returnNumber === (e as any).reference);
+                            if (foundReturn) setPreviewReturnId(foundReturn.id);
+                          }
+                        }}>
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(e.createdAt)}</td>
+                        <td className="py-2.5 px-3 font-medium text-slate-800">{e.description}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(e as any).reference || <span className="text-slate-200">—</span>}</td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            {isIncome ? 'Masuk' : 'Keluar'}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-        {filtered && filtered.length > 20 && (
-          <div className="pt-4 flex justify-center pb-8">
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
-          </div>
-        )}
+                        </td>
+                        <td className={`py-2.5 px-3 text-right font-bold text-sm ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {isIncome ? '+' : '-'}{formatRupiah((e as any).amount)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Pagination Bar */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} transaksi</span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
+      )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) setIsOpen(false); }}>
         <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">

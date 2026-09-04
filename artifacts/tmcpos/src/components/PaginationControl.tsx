@@ -37,7 +37,7 @@ export function PaginationControl({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className="py-4">
+    <div className="py-0 sm:py-1">
       <Pagination>
         <PaginationContent>
           <PaginationItem>

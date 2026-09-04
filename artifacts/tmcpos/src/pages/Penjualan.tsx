@@ -882,40 +882,40 @@ export default function Penjualan() {
 
       {/* Rekap Summary (Moved to Top) */}
       {filtered && filtered.length > 0 && (
-        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
-              <ReceiptIcon className="w-5 h-5" />
+        <div className="bg-white p-3 sm:p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
+              <ReceiptIcon className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-800 text-sm">Rekap Penjualan</h2>
-              <p className="text-xs text-slate-500">{filtered.length} Transaksi Ditemukan</p>
+              <h2 className="font-bold text-slate-800 text-sm leading-tight">Rekap Penjualan</h2>
+              <p className="text-[10px] sm:text-xs text-slate-500">{filtered.length} Transaksi</p>
             </div>
           </div>
           
-          <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-row gap-3 md:gap-8 md:justify-end">
-            <div className="flex flex-col p-2 bg-slate-50/50 rounded-xl md:bg-transparent md:p-0">
-              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sub Total</span>
-              <span className="font-bold text-slate-800">{formatRupiah(summaryData.subTotal)}</span>
+          <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-row gap-x-2 gap-y-1.5 md:gap-8 md:justify-end">
+            <div className="flex flex-col md:p-0">
+              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sub Total</span>
+              <span className="font-bold text-sm sm:text-base text-slate-800 leading-tight">{formatRupiah(summaryData.subTotal)}</span>
             </div>
-            <div className="flex flex-col p-2 bg-slate-50/50 rounded-xl md:bg-transparent md:p-0">
-              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Di Bayar</span>
-              <span className="font-bold text-slate-800">{formatRupiah(summaryData.diBayar)}</span>
+            <div className="flex flex-col md:p-0">
+              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Di Bayar</span>
+              <span className="font-bold text-sm sm:text-base text-slate-800 leading-tight">{formatRupiah(summaryData.diBayar)}</span>
             </div>
-            <div className="flex flex-col p-2 bg-rose-50/50 rounded-xl md:bg-transparent md:p-0">
-              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
-              <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
+            <div className="flex flex-col md:p-0">
+              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
+              <span className="font-bold text-sm sm:text-base text-rose-600 leading-tight">{formatRupiah(summaryData.sisaBayar)}</span>
             </div>
             {summaryData.totalRefund > 0 && (
-              <div className="flex flex-col p-2 bg-emerald-50/50 rounded-xl md:bg-transparent md:p-0 md:border-l md:border-slate-200 md:pl-8">
-                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund</span>
-                <span className="font-bold text-emerald-600">{formatRupiah(summaryData.totalRefund)}</span>
+              <div className="flex flex-col md:p-0 md:border-l md:border-slate-200 md:pl-8">
+                <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund</span>
+                <span className="font-bold text-sm sm:text-base text-emerald-600 leading-tight">{formatRupiah(summaryData.totalRefund)}</span>
               </div>
             )}
             {summaryData.kembalian > 0 && (
-              <div className="flex flex-col p-2 bg-emerald-50/50 rounded-xl md:bg-transparent md:p-0 md:border-l md:border-slate-200 md:pl-8">
-                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
-                <span className="font-bold text-emerald-600">{formatRupiah(summaryData.kembalian)}</span>
+              <div className="flex flex-col md:p-0 md:border-l md:border-slate-200 md:pl-8">
+                <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
+                <span className="font-bold text-sm sm:text-base text-emerald-600 leading-tight">{formatRupiah(summaryData.kembalian)}</span>
               </div>
             )}
           </div>
@@ -1121,8 +1121,8 @@ export default function Penjualan() {
 
       {/* ── Pagination Bar (Sticky bawah, selalu terlihat) ── */}
       {filtered && filtered.length > 20 && (
-        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
-          <span className="text-xs text-slate-400">
+        <div className="flex-none border-t border-slate-200 bg-white px-3 sm:px-4 py-1 sm:py-2.5 flex flex-col sm:flex-row items-center justify-between rounded-b-2xl shadow-sm gap-1 sm:gap-0">
+          <span className="text-[10px] sm:text-xs text-slate-400">
             Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} transaksi
           </span>
           <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />

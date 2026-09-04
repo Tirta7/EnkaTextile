@@ -882,7 +882,7 @@ export default function Penjualan() {
 
       {/* Rekap Summary (Moved to Top) */}
       {filtered && filtered.length > 0 && (
-        <div className="bg-white p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
               <ReceiptIcon className="w-5 h-5" />
@@ -893,28 +893,28 @@ export default function Penjualan() {
             </div>
           </div>
           
-          <div className="w-full md:w-auto flex flex-col sm:flex-row gap-4 sm:gap-8 justify-end">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sub Total</span>
+          <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-row gap-3 md:gap-8 md:justify-end">
+            <div className="flex flex-col p-2 bg-slate-50/50 rounded-xl md:bg-transparent md:p-0">
+              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sub Total</span>
               <span className="font-bold text-slate-800">{formatRupiah(summaryData.subTotal)}</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Di Bayar</span>
+            <div className="flex flex-col p-2 bg-slate-50/50 rounded-xl md:bg-transparent md:p-0">
+              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Di Bayar</span>
               <span className="font-bold text-slate-800">{formatRupiah(summaryData.diBayar)}</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
+            <div className="flex flex-col p-2 bg-rose-50/50 rounded-xl md:bg-transparent md:p-0">
+              <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
               <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
             </div>
             {summaryData.totalRefund > 0 && (
-              <div className="flex flex-col border-l border-slate-200 pl-4 sm:pl-8 ml-0 sm:ml-0">
-                <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund Kas</span>
+              <div className="flex flex-col p-2 bg-emerald-50/50 rounded-xl md:bg-transparent md:p-0 md:border-l md:border-slate-200 md:pl-8">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund</span>
                 <span className="font-bold text-emerald-600">{formatRupiah(summaryData.totalRefund)}</span>
               </div>
             )}
             {summaryData.kembalian > 0 && (
-              <div className="flex flex-col border-l border-slate-200 pl-4 sm:pl-8 ml-0 sm:ml-0">
-                <span className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
+              <div className="flex flex-col p-2 bg-emerald-50/50 rounded-xl md:bg-transparent md:p-0 md:border-l md:border-slate-200 md:pl-8">
+                <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
                 <span className="font-bold text-emerald-600">{formatRupiah(summaryData.kembalian)}</span>
               </div>
             )}

@@ -14,7 +14,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-100 bg-background border-t border-border/50 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+    <div className="md:hidden flex-none w-full z-50 bg-background border-t border-border/50 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));

@@ -22,11 +22,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           theme={theme}
           onThemeToggle={toggle}
         />
-        <main className={`flex-1 overflow-y-auto overscroll-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:p-4 md:pt-4 lg:p-5 lg:pt-5 pb-[max(5rem,calc(4.5rem+env(safe-area-inset-bottom)))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}>
+        <main className={`flex-1 overflow-y-auto overscroll-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:p-4 md:pt-4 lg:p-5 lg:pt-5 pb-[max(1rem,env(safe-area-inset-bottom))]`}>
           {children}
         </main>
+        <BottomNav />
       </div>
-      <BottomNav />
     </div>
   );
 }

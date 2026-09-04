@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListSales, useCreateSale, useListCustomers, useListProducts, useListPaymentMethods, useGetProductRolls, useListCategories, useGetSale, getListSalesQueryKey, getListCustomersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getGetProductRollsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
@@ -976,9 +976,8 @@ export default function Penjualan() {
                   else if (isCancelled) { badgeCls = "bg-red-100 text-red-600"; badgeLabel = "Batal"; }
 
                   return (
-                    <>
+                    <React.Fragment key={s.id}>
                       <tr
-                        key={s.id}
                         className={`hover:bg-slate-50/80 transition-colors ${isCancelled ? 'opacity-50' : ''}`}
                       >
                         {/* No */}
@@ -1110,7 +1109,7 @@ export default function Penjualan() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>

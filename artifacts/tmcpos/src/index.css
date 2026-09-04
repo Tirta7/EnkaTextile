@@ -153,8 +153,7 @@
   }
   html, body, #root {
     @apply h-full w-full m-0 p-0;
-    position: fixed;
-    overflow: hidden;
+    overscroll-behavior: none;
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;

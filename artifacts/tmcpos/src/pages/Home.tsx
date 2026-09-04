@@ -85,7 +85,7 @@ export default function Home() {
   const primaryMenuItems = allMenuItems.filter(item => item.name !== "Mutasi").slice(0, 7);
 
   return (
-    <div className="w-[calc(100%+2rem)] md:w-full bg-slate-50 min-h-screen pb-14 -mt-4 md:-mt-6 lg:-mt-8 -mx-4 md:mx-0 overflow-x-hidden">
+    <div className="bg-slate-50 min-h-screen pb-14 -mt-[max(0.75rem,env(safe-area-inset-top))] md:-mt-4 lg:-mt-5 -mx-3 md:-mx-4 lg:-mx-5 overflow-x-hidden">
       
       {/* Gojek-style Top Banner */}
       <div 

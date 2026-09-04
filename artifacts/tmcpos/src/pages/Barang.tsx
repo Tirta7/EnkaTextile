@@ -272,7 +272,7 @@ export default function Barang() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{p.barcode || p.lotNumber || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{p.barcode || p.lotNumber || <span className="text-slate-300">â€”</span>}</td>
                       <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah(p.pricePerMeter)}</td>
                       <td className={`py-2.5 px-3 text-right font-bold ${p.isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</td>
                       <td className="py-2.5 px-3 text-right text-slate-600">{formatNumber(p.rollStock)}</td>
@@ -300,7 +300,7 @@ export default function Barang() {
       {/* Pagination Bar */}
       {filtered && filtered.length > 20 && (
         <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
-          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} barang</span>
+          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}â€“{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} barang</span>
           <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
         </div>
       )}
@@ -309,170 +309,182 @@ export default function Barang() {
         open={isOpen} 
         onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}
       >
-        <DrawerContent 
-          className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2"
-        >
-          <DrawerHeader>
-            <DrawerTitle>{editingId ? "Edit Barang" : "Tambah Barang"}</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pb-4">
-              
-              {/* Informasi Dasar */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold tracking-tight uppercase text-muted-foreground">Informasi Dasar</h3>
+        <DrawerContent className="max-h-[95vh] mx-auto w-full max-w-4xl p-0 overflow-hidden">
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Package className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">
+                {editingId ? "Edit Barang" : "Tambah Barang Baru"}
+              </h2>
+              <p className="text-violet-200 text-xs">
+                {editingId ? "Perbarui informasi produk" : "Masukkan detail produk inventaris"}
+              </p>
+            </div>
+          </div>
 
-                {/* Upload Foto Produk */}
-                <div className="flex items-start gap-4 p-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 hover:border-primary/50 transition-colors">
-                  <div className="relative flex-shrink-0">
+          {/* Scrollable Body */}
+          <div className="overflow-y-auto flex-1" style={{ maxHeight: 'calc(95vh - 9rem)' }}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="divide-y divide-slate-100">
+              
+              {/* â”€â”€ INFORMASI DASAR â”€â”€ */}
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-1.5 h-5 rounded-full bg-violet-500 inline-block"></span>
+                  <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Informasi Dasar</h3>
+                </div>
+
+                {/* Upload Foto */}
+                <div className="flex items-center gap-4 p-3.5 bg-gradient-to-r from-slate-50 to-violet-50/30 border border-slate-200 rounded-2xl">
+                  <div className="shrink-0">
                     {imageUrl ? (
-                      <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-slate-100">
-                        <img 
-                          src={imageUrl.startsWith("http") ? imageUrl : (imageUrl.startsWith("/uploads/") ? `${API_BASE}/api${imageUrl}` : `${API_BASE}${imageUrl}`)} 
-                          alt="Preview" 
-                          className="w-full h-full object-cover" 
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shadow-sm">
+                        <img
+                          src={imageUrl.startsWith("http") ? imageUrl : (imageUrl.startsWith("/uploads/") ? `${API_BASE}/api${imageUrl}` : `${API_BASE}${imageUrl}`)}
+                          alt="Preview" className="w-full h-full object-cover"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setImageUrl(null)}
-                          className="absolute top-1 right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow text-slate-500 hover:text-red-500"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                        <button type="button" onClick={() => setImageUrl(null)}
+                          className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white shadow">
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     ) : (
-                      <label className="w-24 h-24 rounded-xl bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors gap-1">
+                      <label className="w-16 h-16 rounded-xl bg-white border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-colors gap-1 group">
                         {uploadingImage ? (
-                          <svg className="w-6 h-6 text-slate-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                          <svg className="w-5 h-5 text-violet-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         ) : (
-                          <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                          <svg className="w-6 h-6 text-slate-300 group-hover:text-violet-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         )}
-                        <span className="text-[10px] text-slate-400 font-medium">Upload Foto</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
-                          disabled={uploadingImage}
-                        />
+                        <span className="text-[9px] text-slate-400 font-semibold group-hover:text-violet-400">FOTO</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }} disabled={uploadingImage} />
                       </label>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700">Foto Produk</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Akan ditampilkan di katalog online. Format JPG/PNG, max 5MB.</p>
-                    {imageUrl && <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Foto berhasil diupload</p>}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Foto Produk <span className="text-slate-400 font-normal">(opsional)</span></p>
+                    <p className="text-xs text-slate-400 mt-0.5">Format JPG/PNG, maks 5MB</p>
+                    {imageUrl && <p className="text-xs text-emerald-600 mt-1 font-semibold">âœ“ Berhasil diupload</p>}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem className="md:col-span-2 tour-name">
-                      <FormLabel>Nama Barang (Beda Warna = Beda Barang)</FormLabel>
-                      <FormControl><Input placeholder="Contoh: Rayon Twill Abu Tua" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+
+                {/* Nama Barang full-width */}
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold text-slate-600">Nama Barang <span className="text-slate-400 font-normal">(Beda Warna = Beda Barang)</span></FormLabel>
+                    <FormControl>
+                      <Input placeholder="Contoh: Rayon Twill Abu Tua" className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Grid 2 kolom */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField control={form.control} name="categoryId" render={({ field }) => (
-                    <FormItem className="tour-category">
-                      <FormLabel>Kategori</FormLabel>
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Kategori <span className="text-red-400">*</span></FormLabel>
                       <Select onValueChange={(v: string) => field.onChange(parseInt(v))} value={field.value?.toString()}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger className="h-10 bg-white border-slate-200 rounded-xl"><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectGroup className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                            {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()} className="border shadow-sm hover:border-primary/50 text-center justify-center break-words h-auto py-3">{c.name} {c.description ? `- ${c.description}` : ''}</SelectItem>)}
-                          </SelectGroup>
+                          {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="barcode" render={({ field }) => (
-                    <FormItem className="tour-barcode">
-                      <FormLabel>Kode / Barcode</FormLabel>
-                      <FormControl><Input placeholder="Opsional (Otomatis jika kosong)" {...field} /></FormControl>
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Kode / Barcode</FormLabel>
+                      <FormControl><Input placeholder="Otomatis jika kosong" className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="lotNumber" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>No. Lot</FormLabel>
-                      <FormControl><Input placeholder="Opsional" {...field} /></FormControl>
+                      <FormLabel className="text-xs font-semibold text-slate-600">No. Lot</FormLabel>
+                      <FormControl><Input placeholder="Opsional" className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="rackLocation" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lokasi Rak</FormLabel>
-                      <FormControl><Input placeholder="Contoh: A-12" {...field} /></FormControl>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Lokasi Rak</FormLabel>
+                      <FormControl><Input placeholder="Contoh: A-12" className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                 </div>
               </div>
 
-              <div className="border-t border-border" />
-
-              {/* Satuan & Harga */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold tracking-tight uppercase text-muted-foreground">Satuan & Harga</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  {/* Kolom Ecer */}
-                  <div className="space-y-4 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900 tour-ecer">
-                    <h4 className="font-medium text-sm text-center mb-2">Eceran (Potongan)</h4>
+              {/* â”€â”€ SATUAN & HARGA â”€â”€ */}
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-1.5 h-5 rounded-full bg-emerald-500 inline-block"></span>
+                  <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Satuan & Harga</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Eceran */}
+                  <div className="bg-gradient-to-b from-violet-50 to-white border border-violet-100 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest bg-violet-600 text-white px-2 py-0.5 rounded-full">Eceran</span>
+                      <span className="text-[10px] text-slate-400">(Per Potongan)</span>
+                    </div>
                     <FormField control={form.control} name="primaryUnit" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Satuan Utama</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Satuan Utama</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                          </SelectContent>
+                          <FormControl><SelectTrigger className="h-9 bg-white border-slate-200 rounded-xl text-sm"><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
+                          <SelectContent>{units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="costPricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Beli / Satuan Utama (Rp)</FormLabel>
-                        <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Beli (Rp)</FormLabel>
+                        <FormControl><Input type="number" step="any" min={0} className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="pricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Jual / Satuan Utama (Rp)</FormLabel>
-                        <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Jual (Rp)</FormLabel>
+                        <FormControl><Input type="number" step="any" min={0} className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                   </div>
-                  {/* Kolom Gulungan */}
-                  <div className="space-y-4 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900 tour-grosir">
-                    <h4 className="font-medium text-sm text-center mb-2">Grosir (Gulungan utuh)</h4>
+
+                  {/* Grosir */}
+                  <div className="bg-gradient-to-b from-indigo-50 to-white border border-indigo-100 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest bg-indigo-600 text-white px-2 py-0.5 rounded-full">Grosir</span>
+                      <span className="text-[10px] text-slate-400">(Gulungan Utuh)</span>
+                    </div>
                     <FormField control={form.control} name="secondaryUnit" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Satuan Tambahan</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Satuan Tambahan</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}
-                          </SelectContent>
+                          <FormControl><SelectTrigger className="h-9 bg-white border-slate-200 rounded-xl text-sm"><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
+                          <SelectContent>{units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="costPricePerRoll" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Beli Grosir / Satuan Utama (Rp)</FormLabel>
-                        <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Beli Grosir (Rp)</FormLabel>
+                        <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="pricePerRoll" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Harga Jual Grosir / Satuan Utama (Rp)</FormLabel>
-                        <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
+                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Jual Grosir (Rp)</FormLabel>
+                        <FormControl><Input type="number" step="any" min={0} placeholder="Opsional" className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -480,23 +492,22 @@ export default function Barang() {
                 </div>
               </div>
 
-              <div className="border-t border-border" />
-
-              {/* Pengaturan Stok */}
-              <div className="space-y-4 tour-stok">
-                <h3 className="text-sm font-semibold tracking-tight uppercase text-muted-foreground">Pengaturan Stok Awal</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+              {/* â”€â”€ STOK AWAL â”€â”€ */}
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-1.5 h-5 rounded-full bg-amber-500 inline-block"></span>
+                  <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Pengaturan Stok Awal</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <FormField control={form.control} name="rollStock" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Jumlah Roll Fisik</FormLabel>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Jumlah Roll Fisik</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" step="1" min={0} 
-                          {...field} 
+                        <Input type="number" step="1" min={0} className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+                          {...field}
                           onChange={e => {
                             const val = parseInt(e.target.value) || 0;
                             field.onChange(val);
-                            // Adjust rollLengths array size
                             const currentLengths = form.getValues('rollLengths') || [];
                             const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] !== undefined ? currentLengths[i] : "");
                             form.setValue('rollLengths', newLengths);
@@ -505,7 +516,7 @@ export default function Barang() {
                               return a + (bNum || 0);
                             }, 0);
                             form.setValue('meterStock', parseFloat(total.toFixed(3)));
-                          }} 
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -514,61 +525,79 @@ export default function Barang() {
 
                   <FormField control={form.control} name="meterStock" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Total Stok Ecer (Yard/Meter)</FormLabel>
-                      <FormControl><Input type="number" step="any" min={0} {...field} readOnly className="bg-slate-50 cursor-not-allowed font-semibold text-primary" /></FormControl>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Total Stok Ecer (Yard/Meter)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" min={0} readOnly
+                          className="h-10 bg-violet-50 border-violet-200 rounded-xl font-bold text-violet-700 cursor-not-allowed"
+                          {...field}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
 
-                  {/* Dynamic inputs for roll lengths */}
-                  {(form.watch('rollStock') || 0) > 0 && !editingId && (() => {
-                    const currentLengths = form.watch('rollLengths') || [];
-                    return (
-                      <div className="md:col-span-3 bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                        <label className="text-sm font-semibold text-slate-700 block border-b pb-2">Detail Panjang Tiap Roll (Yard/Meter)</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                          {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
-                            <div key={i} className="space-y-1.5">
-                              <label className="text-xs font-medium text-slate-500">Roll #{i + 1}</label>
-                              <Input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="Panjang..."
-                                className="h-8 text-sm"
-                                value={currentLengths[i] !== undefined ? currentLengths[i] : ''}
-                                onChange={e => {
-                                  const val = e.target.value;
-                                  const newLengths = [...(form.getValues('rollLengths') || [])];
-                                  newLengths[i] = val;
-                                  form.setValue('rollLengths', newLengths, { shouldValidate: true, shouldDirty: true });
-                                  const total = newLengths.reduce((a, b) => {
-                                    const bNum = typeof b === 'string' ? parseFloat(b.replace(',', '.')) : b;
-                                    return a + (bNum || 0);
-                                  }, 0);
-                                  form.setValue('meterStock', parseFloat(total.toFixed(3)), { shouldValidate: true, shouldDirty: true });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-
                   <FormField control={form.control} name="minStock" render={({ field }) => (
-                    <FormItem className="md:col-span-3">
-                      <FormLabel>Peringatan Min. Stok (Ecer)</FormLabel>
-                      <FormControl><Input type="number" step="any" min={0} {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Min. Stok Peringatan</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="any" min={0} className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
+                          {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
                 </div>
+
+                {/* Roll lengths grid */}
+                {(form.watch('rollStock') || 0) > 0 && !editingId && (() => {
+                  const currentLengths = form.watch('rollLengths') || [];
+                  return (
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-3">
+                      <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Detail Panjang Tiap Roll (Yard/Meter)</p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
+                          <div key={i} className="space-y-1">
+                            <label className="text-[10px] font-bold text-amber-600">Roll #{i + 1}</label>
+                            <Input
+                              type="text" inputMode="decimal" placeholder="0"
+                              className="h-8 text-sm text-center bg-white border-amber-200 rounded-lg focus-visible:ring-amber-400"
+                              value={currentLengths[i] !== undefined ? currentLengths[i] : ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                const newLengths = [...(form.getValues('rollLengths') || [])];
+                                newLengths[i] = val;
+                                form.setValue('rollLengths', newLengths, { shouldValidate: true, shouldDirty: true });
+                                const total = newLengths.reduce((a, b) => {
+                                  const bNum = typeof b === 'string' ? parseFloat(b.replace(',', '.')) : b;
+                                  return a + (bNum || 0);
+                                }, 0);
+                                form.setValue('meterStock', parseFloat(total.toFixed(3)), { shouldValidate: true, shouldDirty: true });
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-                <DrawerFooter className="px-0 pt-4 flex-row gap-2">
-                  <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); setEditingId(null); }}>Batal</Button>
-                  <Button type="submit" className="tour-submit w-full" disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>Simpan</Button>
-                </DrawerFooter>
+              {/* Sticky Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-3 flex gap-3">
+                <Button type="button" variant="ghost"
+                  className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  onClick={() => { setIsOpen(false); setEditingId(null); }}>
+                  Batal
+                </Button>
+                <Button type="submit"
+                  className="flex-[2] h-11 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold shadow-sm"
+                  disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>
+                  {(form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending)
+                    ? <><svg className="animate-spin w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Menyimpan...</>
+                    : (editingId ? "Simpan Perubahan" : "Tambah Barang")}
+                </Button>
+              </div>
             </form>
           </Form>
           </div>
@@ -584,3 +613,4 @@ export default function Barang() {
     </div>
   );
 }
+

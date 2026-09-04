@@ -1155,152 +1155,198 @@ export default function Penjualan() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle className="text-xl">{editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}</DrawerTitle></DrawerHeader>
-          <div id="drawer-portal-target" />
-          <div className="overflow-y-auto max-h-[calc(96vh-6rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4 bg-muted/50 p-3 rounded-md">
-              <span className="text-sm font-medium text-muted-foreground">No. Invoice:</span>
+        <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl p-0 overflow-hidden">
+
+          {/* ── Gradient Header ── */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-white" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white leading-tight">
+                  {editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}
+                </h2>
+                <p className="text-violet-200 text-xs">
+                  {editingSaleId ? "Perbarui data transaksi penjualan" : "Catat transaksi penjualan baru"}
+                </p>
+              </div>
+            </div>
+            {/* Invoice number badge */}
+            <div className="hidden sm:block text-right">
               {editingSaleId ? (
-                <span className="text-base font-mono font-bold break-all">{invoiceNumber}</span>
+                <span className="font-mono text-sm font-bold text-white bg-white/20 px-3 py-1 rounded-lg">{invoiceNumber}</span>
               ) : (
-                <span className="text-sm text-slate-400 italic">Akan ditetapkan saat pembayaran dikonfirmasi</span>
+                <span className="text-xs text-violet-200 italic">No. invoice ditetapkan saat bayar</span>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium mb-1 block">Pelanggan</label>
-                <Combobox
-                  items={[
-                    { value: "0", label: "Pelanggan Umum" },
-                    ...(customers?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
-                  ]}
-                  value={customerId}
-                  onValueChange={setCustomerId}
-                  placeholder="Pilih pelanggan (opsional)"
-                  searchPlaceholder="Cari pelanggan..."
-                />
+          </div>
+
+          <div id="drawer-portal-target" />
+
+          {/* ── Scrollable Body ── */}
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-100" style={{ maxHeight: 'calc(96vh - 9rem)' }}>
+
+            {/* Section: Info Transaksi */}
+            <div className="px-6 py-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-5 rounded-full bg-violet-500 inline-block"></span>
+                <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Info Transaksi</h3>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
-                <Combobox
-                  items={paymentMethods.filter(m => m.isActive).length > 0
-                    ? paymentMethods.filter(m => m.isActive).map(m => ({ value: m.code, label: m.name }))
-                    : [
-                        { value: "tunai", label: "Tunai" },
-                        { value: "transfer", label: "Transfer" },
-                        { value: "kredit", label: "Kredit" },
-                      ]
-                  }
-                  value={paymentType}
-                  onValueChange={setPaymentType}
-                  placeholder="Pilih metode"
-                  searchPlaceholder="Cari..."
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Pelanggan</label>
+                  <Combobox
+                    items={[
+                      { value: "0", label: "Pelanggan Umum" },
+                      ...(customers?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
+                    ]}
+                    value={customerId}
+                    onValueChange={setCustomerId}
+                    placeholder="Pilih pelanggan (opsional)"
+                    searchPlaceholder="Cari pelanggan..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-600">Metode Pembayaran</label>
+                  <Combobox
+                    items={paymentMethods.filter(m => m.isActive).length > 0
+                      ? paymentMethods.filter(m => m.isActive).map(m => ({ value: m.code, label: m.name }))
+                      : [
+                          { value: "tunai", label: "Tunai" },
+                          { value: "transfer", label: "Transfer" },
+                          { value: "kredit", label: "Kredit" },
+                        ]
+                    }
+                    value={paymentType}
+                    onValueChange={setPaymentType}
+                    placeholder="Pilih metode"
+                    searchPlaceholder="Cari..."
+                  />
+                </div>
+                {paymentType === "kredit" && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600">Jatuh Tempo</label>
+                    <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                      className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" />
+                  </div>
+                )}
+                <div className={`space-y-1.5 ${paymentType === "kredit" ? "" : "md:col-span-2"}`}>
+                  <label className="text-xs font-semibold text-slate-600">Catatan</label>
+                  <Input placeholder="Catatan opsional" value={notes} onChange={e => setNotes(e.target.value)}
+                    className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" />
+                </div>
               </div>
-              {paymentType === "kredit" && (
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Jatuh Tempo</label>
-                  <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+            </div>
+
+            {/* Section: Item Barang */}
+            <div className="px-6 py-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-5 rounded-full bg-emerald-500 inline-block"></span>
+                  <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Item Barang</h3>
+                  {items.length > 0 && (
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{items.length} item</span>
+                  )}
+                </div>
+                <Button type="button" size="sm" onClick={addItem}
+                  className="h-8 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-bold px-3 shadow-sm">
+                  <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Tambah Item
+                </Button>
+              </div>
+
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/60">
+                  <ShoppingCart className="w-8 h-8 text-slate-300 mb-2" strokeWidth={1.5} />
+                  <p className="text-sm text-slate-400 font-medium">Belum ada item</p>
+                  <p className="text-xs text-slate-300 mt-0.5">Klik "Tambah Item" untuk memulai</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {items.map((item, index) => (
+                    <SaleItemRow
+                      key={`item-${index}`}
+                      item={item}
+                      index={index}
+                      products={products}
+                      categories={categories}
+                      updateItem={updateItem}
+                      updateItemFields={updateItemFields}
+                      removeItem={removeItem}
+                      allItems={items}
+                    />
+                  ))}
                 </div>
               )}
-              <div className={paymentType === "kredit" ? "" : "md:col-span-2"}>
-                <label className="text-sm font-medium mb-1 block">Catatan</label>
-                <Input placeholder="Catatan opsional" value={notes} onChange={e => setNotes(e.target.value)} />
-              </div>
             </div>
 
-            <Separator />
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">Item Barang</span>
-                <Button type="button" variant="outline" size="sm" onClick={addItem}><PlusCircle className="mr-2 h-4 w-4" /> Tambah Item</Button>
-              </div>
-              {items.length === 0 && (
-                <div className="text-center py-8 border-2 border-dashed rounded-xl text-muted-foreground text-sm font-medium">Belum ada item. Klik "Tambah Item" untuk memulai.</div>
-              )}
-              <div className="space-y-2">
-                {items.map((item, index) => (
-                  <SaleItemRow 
-                    key={`item-${index}`} 
-                    item={item} 
-                    index={index} 
-                    products={products} 
-                    categories={categories} 
-                    updateItem={updateItem} 
-                    updateItemFields={updateItemFields}
-                    removeItem={removeItem} 
-                    allItems={items} 
-                  />
-                ))}
-              </div>
-            </div>
-
+            {/* Section: Summary Total */}
             {items.length > 0 && (
-              <div className="flex justify-end pt-4 border-t mt-4">
-                <div className="text-right space-y-3 w-full sm:w-auto">
-                  <div className="flex justify-end items-center">
-                    <span className="text-muted-foreground mr-4 font-medium">Total:</span>
-                    <span className="text-xl font-bold text-slate-900">{formatRupiah(totalAmount)}</span>
+              <div className="px-6 py-4">
+                <div className="bg-gradient-to-r from-slate-50 to-indigo-50/40 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-600">Total</span>
+                    <span className="text-2xl font-black text-slate-900 tabular-nums">{formatRupiah(totalAmount)}</span>
                   </div>
-                  
-                  <div className="flex items-center justify-end gap-3">
-                    <span className="text-sm font-semibold text-slate-600">DP / Uang Muka (Opsional):</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    <span className="text-xs font-semibold text-indigo-600">DP / Uang Muka <span className="font-normal text-slate-400">(Opsional)</span></span>
                     <input
                       type="number"
                       value={dpAmount}
                       onChange={e => setDpAmount(e.target.value)}
                       placeholder="0"
-                      className="w-40 text-right font-bold h-9 border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 text-indigo-700 placeholder:text-indigo-300"
+                      className="w-40 text-right font-bold h-9 border border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 px-3 text-indigo-700 placeholder:text-indigo-200 bg-white text-sm"
                     />
                   </div>
-                  
                   {dpAmount && parseFloat(dpAmount) > 0 && (
-                    <div className="flex items-center justify-end gap-3">
-                      <span className="text-sm font-bold text-rose-600">Sisa Pembayaran:</span>
-                      <div className="w-40 text-right font-bold text-rose-600 text-lg">
+                    <div className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                      <span className="text-xs font-bold text-rose-600">Sisa Pembayaran</span>
+                      <span className="font-black text-rose-600 text-lg tabular-nums">
                         {formatRupiah(totalAmount - parseFloat(dpAmount))}
-                      </div>
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
             )}
           </div>
-          </div>
-          <DrawerFooter className="mt-4 px-0 flex flex-col gap-2">
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="icon" onClick={handlePreview} title="Preview & Cetak Nota">
-                <Printer className="h-4 w-4" />
+
+          {/* ── Sticky Footer ── */}
+          <div className="shrink-0 bg-white border-t border-slate-100 px-6 py-3 flex items-center gap-2">
+            <Button type="button" variant="outline" size="icon"
+              className="h-11 w-11 rounded-xl border-slate-200 text-slate-500 hover:bg-slate-50 shrink-0"
+              onClick={handlePreview} title="Preview & Cetak Nota">
+              <Printer className="h-4 w-4" />
+            </Button>
+            <Button type="button" variant="ghost"
+              className="h-11 rounded-xl flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50"
+              onClick={() => { setIsOpen(false); resetForm(); }}>
+              Batal
+            </Button>
+            {editingSaleId ? (
+              <Button
+                className="h-11 rounded-xl flex-[2] bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold shadow-sm"
+                onClick={() => handleSubmit(false)}
+                disabled={createMutation.isPending || items.length === 0}>
+                ✓ Simpan Perubahan
               </Button>
-              <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-              {editingSaleId ? (
-                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleSubmit(false)} disabled={createMutation.isPending || items.length === 0}>
-                  Simpan Perubahan
+            ) : (
+              <>
+                <Button
+                  className="h-11 rounded-xl flex-1 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-bold shadow-sm"
+                  onClick={() => handleSubmit(true)}
+                  disabled={createMutation.isPending || items.length === 0}>
+                  🕐 Simpan & Tahan
                 </Button>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-slate-400 text-slate-700" 
-                    onClick={() => handleSubmit(true)} 
-                    disabled={createMutation.isPending || items.length === 0}
-                  >
-                    🕐 Simpan & Tahan
-                  </Button>
-                  <Button 
-                    className="flex-1 bg-blue-600 hover:bg-blue-700" 
-                    onClick={() => handleSubmit(false)} 
-                    disabled={createMutation.isPending || items.length === 0}
-                  >
-                    💳 Simpan & Bayar
-                  </Button>
-                </>
-              )}
-            </div>
-          </DrawerFooter>
+                <Button
+                  className="h-11 rounded-xl flex-[2] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold shadow-sm"
+                  onClick={() => handleSubmit(false)}
+                  disabled={createMutation.isPending || items.length === 0}>
+                  💳 Simpan & Bayar
+                </Button>
+              </>
+            )}
+          </div>
 
         </DrawerContent>
       </Drawer>

@@ -259,35 +259,36 @@ export default function Home() {
       
       {/* Rekap Summary on Home */}
       <div className="px-4 md:px-8 mb-6 max-w-7xl mx-auto">
-        <div className="bg-white p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
-              <Receipt className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-bold text-slate-800 text-sm">Rekap Semua Penjualan</h2>
-              <p className="text-xs text-slate-500">{summaryData.count} Transaksi Ditemukan</p>
-            </div>
-          </div>
-          
-          <div className="w-full md:w-auto flex flex-wrap sm:flex-nowrap gap-4 sm:gap-8 justify-end">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Omset</span>
-              <span className="font-bold text-slate-800">{formatRupiah(summaryData.subTotal)}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Kas Diterima</span>
-              <span className="font-bold text-slate-800">{formatRupiah(summaryData.diBayar)}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Refund Kas</span>
-              <span className="font-bold text-amber-600">{formatRupiah(summaryData.totalRefund)}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Total Piutang</span>
-              <span className="font-bold text-rose-600">{formatRupiah(summaryData.sisaBayar)}</span>
-            </div>
-          </div>
+        <div className="bg-white rounded-[24px] p-5 sm:p-6 shadow-sm border border-slate-100/60 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+           
+           <div className="flex items-center gap-4 relative z-10">
+             <div className="w-12 h-12 rounded-[16px] bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0">
+               <Receipt className="w-6 h-6" strokeWidth={1.5} />
+             </div>
+             <div>
+               <h2 className="font-bold text-slate-800 text-base">Rekap Semua Penjualan</h2>
+               <p className="text-xs font-medium text-slate-400 mt-0.5">{summaryData.count} Transaksi Ditemukan</p>
+             </div>
+           </div>
+           
+           <div className="w-full md:w-auto grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-10 relative z-10">
+             <div className="flex flex-col">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Omset</span>
+               <span className="font-bold text-slate-800 text-sm sm:text-base leading-none">{formatRupiah(summaryData.subTotal)}</span>
+             </div>
+             <div className="flex flex-col">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Kas Diterima</span>
+               <span className="font-bold text-emerald-600 text-sm sm:text-base leading-none">{formatRupiah(summaryData.diBayar)}</span>
+             </div>
+             <div className="flex flex-col pt-3 border-t border-slate-100 border-dashed">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Refund Kas</span>
+               <span className="font-bold text-amber-600 text-sm sm:text-base leading-none">{formatRupiah(summaryData.totalRefund)}</span>
+             </div>
+             <div className="flex flex-col pt-3 border-t border-slate-100 border-dashed">
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Piutang</span>
+               <span className="font-bold text-rose-600 text-sm sm:text-base leading-none">{formatRupiah(summaryData.sisaBayar)}</span>
+             </div>
+           </div>
         </div>
       </div>
 

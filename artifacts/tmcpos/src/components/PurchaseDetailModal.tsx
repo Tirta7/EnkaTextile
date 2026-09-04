@@ -119,12 +119,12 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                           
                           <div className="col-span-4 md:col-span-2 flex flex-col md:items-center">
                             <span className="text-[10px] text-slate-400 md:hidden uppercase font-semibold">Roll</span>
-                            <span className="font-semibold text-slate-700">{item.rolls}</span>
+                            <span className="font-semibold text-slate-700">{Number(item.rolls)}</span>
                           </div>
                           
                           <div className="col-span-4 md:col-span-2 flex flex-col text-right">
                             <span className="text-[10px] text-slate-400 md:hidden uppercase font-semibold">Qty</span>
-                            <span className="font-semibold text-slate-700">{item.meters}</span>
+                            <span className="font-semibold text-slate-700">{Number(item.meters)}</span>
                             <span className="text-[10px] text-slate-500">@ {formatRupiah(item.pricePerMeter)}</span>
                           </div>
                           

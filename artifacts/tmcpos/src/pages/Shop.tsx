@@ -112,21 +112,21 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end"
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
       onClick={handleBackdropClick}
     >
       <div
         ref={sheetRef}
-        className="w-full bg-white rounded-t-3xl overflow-hidden"
+        className="w-full md:max-w-[420px] bg-white rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col relative"
         style={{
           maxHeight: "88vh",
-          paddingBottom: "env(safe-area-inset-bottom, 16px)",
+          paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
           animation: "slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
-        {/* Drag Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        {/* Drag Handle (Mobile Only) */}
+        <div className="flex justify-center pt-3 pb-1 md:hidden">
           <div className="w-10 h-1 rounded-full bg-slate-200" />
         </div>
 
@@ -263,25 +263,23 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () => void }) {
-  const gradientClass = "bg-gradient-to-br from-[#ffcdb2] to-[#ffb4a2]";
-  
   return (
     <button
       onClick={onClick}
-      className={`text-left ${gradientClass} rounded-[20px] overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-95 transition-all duration-200 w-full flex flex-col`}
-      style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.04)" }}
+      className="text-left bg-white rounded-[24px] border border-slate-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 w-full flex flex-col group"
+      style={{ boxShadow: "0 8px 30px rgba(0,0,0,0.03)" }}
     >
       {/* Image Half */}
-      <div className="relative aspect-square w-full overflow-hidden bg-white/60">
-        <ProductImage src={product.imageUrl} name={product.name} className="w-full h-full mix-blend-multiply object-cover" />
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-50">
+        <ProductImage src={product.imageUrl} name={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         {!product.inStock && (
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-[2px]">
-            <span className="text-white font-semibold text-xs bg-black/60 px-3 py-1.5 rounded-full">Stok Habis</span>
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center backdrop-blur-sm">
+            <span className="text-white font-bold text-xs bg-black/50 px-4 py-2 rounded-full backdrop-blur-md">Stok Habis</span>
           </div>
         )}
         {product.categoryName && (
-          <div className="absolute top-3 left-3">
-            <span className="bg-[#2a9d8f] text-white shadow-sm text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+          <div className="absolute top-3 left-3 z-10">
+            <span className="bg-white/90 text-slate-800 shadow-sm text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest backdrop-blur-md">
               {product.categoryName}
             </span>
           </div>
@@ -289,35 +287,33 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
       </div>
 
       {/* Info Half */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
-        <div>
-          <h3 className="text-[17px] font-black text-slate-900 leading-tight line-clamp-2">{product.name}</h3>
-          
-          <div className="flex gap-2 mt-3">
-            <div className="flex flex-col items-center justify-center border border-white/40 rounded-lg p-1.5 min-w-[3rem] bg-white/30 backdrop-blur-sm">
-              <span className="text-xs font-black text-slate-900 leading-none">
-                {new Intl.NumberFormat('id-ID').format(product.rollStock)}
-              </span>
-              <span className="text-[9px] font-bold text-slate-700 leading-none mt-1 uppercase">Roll</span>
-            </div>
-            <div className="flex flex-col items-center justify-center border border-white/40 rounded-lg p-1.5 px-3 bg-white/30 backdrop-blur-sm">
-              <span className="text-xs font-black text-slate-900 leading-none">
-                {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(product.meterStock)}
-              </span>
-              <span className="text-[9px] font-bold text-slate-700 leading-none mt-1 uppercase">{product.primaryUnit}</span>
-            </div>
+      <div className="p-5 flex-1 flex flex-col">
+        <h3 className="text-[16px] font-bold text-slate-800 leading-snug line-clamp-2 mb-4 group-hover:text-rose-600 transition-colors">{product.name}</h3>
+        
+        <div className="mt-auto grid grid-cols-2 gap-2 mb-4">
+          <div className="bg-slate-50 rounded-xl p-2.5 flex flex-col items-center justify-center border border-slate-100/50">
+            <span className="text-xs font-black text-slate-700">
+              {new Intl.NumberFormat('id-ID').format(product.rollStock)}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Roll</span>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5 flex flex-col items-center justify-center border border-slate-100/50">
+            <span className="text-xs font-black text-slate-700">
+              {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(product.meterStock)}
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-wider">{product.primaryUnit}</span>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Price area */}
-      <div className="bg-white/40 backdrop-blur-md px-4 py-3 flex justify-between items-center border-t border-white/30">
-        <div>
-          <p className="text-[9px] text-slate-700 font-bold uppercase mb-0.5">Harga Grosir</p>
-          <p className="text-[15px] font-black text-slate-900 leading-none">{formatRupiah(product.pricePerMeter)}<span className="text-[10px] font-bold text-slate-700 ml-0.5">/{product.primaryUnit}</span></p>
-        </div>
-        <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-sm text-red-500 shrink-0 ml-2">
-          <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+        {/* Price area */}
+        <div className="flex justify-between items-end pt-3 border-t border-slate-100">
+          <div>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Grosir</p>
+            <p className="text-[15px] font-black text-rose-600 leading-none">{formatRupiah(product.pricePerMeter)}<span className="text-[10px] font-bold text-slate-400 ml-1">/{product.primaryUnit}</span></p>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+            <svg className="w-4 h-4 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+          </div>
         </div>
       </div>
     </button>
@@ -453,7 +449,10 @@ export default function Shop() {
         <div className="flex-1 flex flex-col min-w-0 h-full">
           
           {/* Header & Search */}
-          <header className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200 pt-[env(safe-area-inset-top,0px)]">
+          <header 
+            className="sticky top-0 z-20 bg-[#fafafa]/90 backdrop-blur-xl border-b border-slate-200"
+            style={{ paddingTop: "max(env(safe-area-inset-top), 16px)" }}
+          >
              <div className="flex items-center justify-between gap-2.5 lg:gap-4 px-3 lg:px-8 py-3 lg:py-4">
                 {/* Mobile menu button */}
                 <button 
@@ -630,7 +629,7 @@ export default function Shop() {
       </div>
 
       {/* ── Mobile Bottom Navigation ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
         <div className="flex items-center justify-around px-2 pt-3 pb-2">
           {([
             { key: "beranda", icon: "🏠",  label: "Beranda" },

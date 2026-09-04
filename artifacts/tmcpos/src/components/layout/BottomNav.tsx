@@ -14,7 +14,7 @@ export function BottomNav() {
   ];
 
   return (
-    <div className="md:hidden flex-none w-full z-50 bg-background border-t border-border/50 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+    <div className="md:hidden flex-none w-full z-40 bg-background border-t border-border/50 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
@@ -22,7 +22,7 @@ export function BottomNav() {
           if (item.isMain) {
             return (
               <Link key={item.name} href={item.href}>
-                <div className="relative -top-5 flex flex-col items-center justify-center cursor-pointer w-16 group z-50">
+                <div className="relative -top-5 flex flex-col items-center justify-center cursor-pointer w-16 group z-40">
                   <div className="w-14 h-14 bg-gradient-to-tr from-violet-600 to-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/40 ring-4 ring-background transform transition-transform group-hover:scale-105 group-active:scale-95">
                     <item.icon className="h-6 w-6 relative z-10" strokeWidth={2.5} />
                   </div>

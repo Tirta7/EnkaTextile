@@ -465,7 +465,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                             <div className="flex flex-wrap gap-1 mt-0 text-xs leading-none text-slate-700 items-center">
                               {item.groupedRolls.map((gr: any, gIdx: number) => (
                                  <span key={gIdx} className={`inline-flex items-center ${gr.isReturned ? 'italic text-slate-400' : ''}`}>
-                                   [{gr.meters.toFixed(2)}{gr.isReturned ? ' RETUR' : ''}]
+                                   [{Number(Number(gr.meters).toFixed(2))}{gr.isReturned ? ' RETUR' : ''}]
                                    {!gr.isReturned && saleId && (
                                      <Button 
                                        variant="ghost" size="sm" className="h-4 w-4 ml-0.5 p-0 text-orange-400 hover:text-orange-600 no-print" 
@@ -481,7 +481,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                           </div>
                         </td>
                         <td className="py-1 px-2 text-right whitespace-nowrap">
-                          <span className="font-semibold text-slate-800">{item.totalMeters.toFixed(2)} {(item as any).primaryUnit || 'M'}</span>
+                          <span className="font-semibold text-slate-800">{Number(Number(item.totalMeters).toFixed(2))} {(item as any).primaryUnit || 'M'}</span>
                           <span className="text-slate-400 ml-1 text-xs">/ {item.totalRolls} {(item as any).secondaryUnit || 'Roll'}</span>
                         </td>
                         <td className="py-1 px-2 text-right font-semibold text-slate-600">
@@ -522,7 +522,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                                   </div>
                                 </td>
                                 <td className="py-1 px-3 text-right whitespace-nowrap">
-                                  <span className="font-semibold text-slate-700">{parseFloat(exc.meters || "0").toFixed(2)} {(exc as any).primaryUnit || 'M'}</span>
+                                  <span className="font-semibold text-slate-700">{Number(parseFloat(exc.meters || "0").toFixed(2))} {(exc as any).primaryUnit || 'M'}</span>
                                   <span className="text-slate-400 ml-1 text-xs">/ {exc.rolls} {(exc as any).secondaryUnit || 'Roll'}</span>
                                 </td>
                                 <td className="py-1 px-3 text-right font-semibold text-slate-600">

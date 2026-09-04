@@ -46,102 +46,87 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{
-        background: "linear-gradient(135deg, #0d0a1f 0%, #0a0d1e 50%, #07090f 100%)",
+      className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden"
+      style={{ 
+        backgroundColor: "#000000",
+        backgroundImage: "radial-gradient(circle at 50% -20%, #222222 0%, #000000 60%)",
+        fontFamily: "'-apple-system', BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        paddingBottom: "max(env(safe-area-inset-bottom), 20px)",
+        paddingTop: "max(env(safe-area-inset-top), 20px)"
       }}
     >
-      {/* Background decoration */}
-      <div
-        className="absolute inset-0 pointer-events-none overflow-hidden"
-        aria-hidden
-      >
-        <div
-          className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full opacity-10"
-          style={{ background: "radial-gradient(circle, #8b5cf6, transparent 70%)" }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full opacity-8"
-          style={{ background: "radial-gradient(circle, #6366f1, transparent 70%)" }}
-        />
-      </div>
+      {/* Subtle ambient light */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] bg-white/[0.02] rounded-full blur-[80px] pointer-events-none" />
 
-      <div className="relative w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-10">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 shadow-xl overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
-          >
+      <div className="w-full max-w-[340px] flex flex-col items-center relative z-10">
+        {/* Logo Section */}
+        <div className="flex flex-col items-center mb-12">
+          <div className="w-[84px] h-[84px] rounded-[22px] flex items-center justify-center mb-6 overflow-hidden relative"
+               style={{
+                 background: "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%)",
+                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 20px 40px rgba(0,0,0,0.5)",
+                 backdropFilter: "blur(20px)",
+                 WebkitBackdropFilter: "blur(20px)"
+               }}>
             {appLogo ? (
               <img src={appLogo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
-              <Zap size={26} className="text-white" />
+              <Zap size={36} className="text-white drop-shadow-lg" strokeWidth={1.2} />
             )}
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">{appName}</h1>
-          <p className="text-white/35 text-xs tracking-[0.18em] uppercase mt-1">Virtual Operational Control</p>
+          <h1 className="text-[32px] font-medium text-white tracking-tight leading-none mb-2">{appName}</h1>
+          <p className="text-white/40 text-[11px] font-semibold tracking-[0.2em] uppercase">Virtual Operational Control</p>
         </div>
 
-        {/* Card */}
-        <div
-          className="rounded-2xl p-8 border"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            borderColor: "rgba(255,255,255,0.08)",
-            backdropFilter: "blur(20px)",
-          }}
-        >
-          <h2 className="text-white text-xl font-semibold mb-1">Masuk ke Sistem</h2>
-          <p className="text-white/40 text-sm mb-7">Masukkan kredensial Anda untuk melanjutkan</p>
+        {/* Login Form (Premium Glass Style) */}
+        <div className="w-full mb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div 
+              className="rounded-[20px] overflow-hidden"
+              style={{
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backdropFilter: "blur(30px)",
+                WebkitBackdropFilter: "blur(30px)",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
+              }}
+            >
+              {/* Username Field */}
+              <div className="flex items-center px-5 border-b border-white/[0.06]">
+                <Input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  autoComplete="username"
+                  required
+                  className="h-14 border-0 rounded-none px-0 shadow-none focus-visible:ring-0 bg-transparent text-[17px] text-white placeholder:text-white/30 font-light tracking-wide"
+                />
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs font-medium uppercase tracking-wider">
-                Username
-              </Label>
-              <Input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                autoComplete="username"
-                required
-                className="h-11 text-white placeholder:text-white/25 border-white/10 focus:border-violet-500/60 focus:ring-violet-500/20"
-                style={{
-                  background: "rgba(255,255,255,0.07)",
-                }}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs font-medium uppercase tracking-wider">
-                Password
-              </Label>
-              <div className="relative">
+              {/* Password Field */}
+              <div className="flex items-center px-5 relative">
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Password"
                   autoComplete="current-password"
                   required
-                  className="h-11 pr-10 text-white placeholder:text-white/25 border-white/10 focus:border-violet-500/60 focus:ring-violet-500/20"
-                  style={{ background: "rgba(255,255,255,0.07)" }}
+                  className="h-14 border-0 rounded-none px-0 shadow-none focus-visible:ring-0 bg-transparent text-[17px] text-white placeholder:text-white/30 font-light tracking-wide pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={20} strokeWidth={1} /> : <Eye size={20} strokeWidth={1} />}
                 </button>
               </div>
             </div>
 
             {error && (
-              <div className="rounded-lg px-4 py-3 text-sm text-red-300 border border-red-500/20"
-                style={{ background: "rgba(239,68,68,0.1)" }}>
+              <div className="rounded-[14px] px-4 py-3 text-[13px] text-[#ff453a] bg-[#ff453a]/10 border border-[#ff453a]/20 text-center font-medium backdrop-blur-md">
                 {error}
               </div>
             )}
@@ -149,26 +134,20 @@ export default function Login() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 font-semibold text-white shadow-lg"
-              style={{
-                background: loading
-                  ? "rgba(139,92,246,0.5)"
-                  : "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)",
-                boxShadow: "0 4px 24px rgba(139,92,246,0.35)",
-              }}
+              className="w-full h-14 rounded-[16px] bg-white hover:bg-white/90 active:scale-[0.98] transition-all text-black font-semibold text-[17px]"
+              style={{ boxShadow: "0 8px 30px rgba(255,255,255,0.12)" }}
             >
               {loading ? (
-                <><Loader2 size={16} className="mr-2 animate-spin" /> Memverifikasi...</>
+                <><Loader2 size={20} className="mr-2 animate-spin text-black" /> Memverifikasi...</>
               ) : (
-                "Masuk"
+                "Sign In"
               )}
             </Button>
           </form>
-
         </div>
 
-        <p className="text-center text-white/15 text-xs mt-6">
-          &copy; {new Date().getFullYear()} Enka Textile · {appName}
+        <p className="text-center text-white/30 text-[12px] mt-8 font-light tracking-wide">
+          &copy; {new Date().getFullYear()} Enka Textile
         </p>
       </div>
     </div>

@@ -101,7 +101,7 @@ export default function Hutang() {
     <div className="flex flex-col h-full w-full">
       {/* Static Top Strip */}
       <div className="flex-none space-y-2 pb-2">
-        <div className="flex items-center justify-between pt-1 pb-1">
+        <div className="flex items-center justify-between pt-1 pb-1 hidden md:flex">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Hutang</h1>
             <p className="text-sm text-slate-500">Kelola tagihan dari supplier</p>
@@ -136,70 +136,96 @@ export default function Hutang() {
           })}
         </div>
         {/* Filter */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
+        <div className="flex gap-2">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input placeholder="Cari supplier atau invoice..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+            <Input placeholder="Cari..." className="pl-9 bg-white border-slate-200 rounded-xl h-10 shadow-sm w-full text-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
           </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+          <div className="shrink-0">
+            <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+          </div>
         </div>
       </div>
 
       {/* Scrollable Table */}
       <div className="flex-1 overflow-auto min-h-0">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="flex flex-col gap-3 min-h-0">
           {isLoading ? (
-            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+            <div className="p-4 space-y-3 bg-white rounded-[20px] border border-slate-100">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
           ) : filtered?.length === 0 ? (
-            <div className="text-center py-16"><Receipt className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada hutang</h3></div>
+            <div className="bg-white rounded-[24px] border border-slate-100 text-center py-16 shadow-sm"><Receipt className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada hutang</h3></div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Supplier</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Terbayar</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Sisa</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Jatuh Tempo</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 whitespace-nowrap">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
-                    const isOverdue = (p as any).isOverdue && p.status !== "lunas";
-                    let badgeClass = "bg-red-100 text-red-700";
-                    if (p.status === "lunas") badgeClass = "bg-green-100 text-green-700";
-                    else if (p.status === "partial") badgeClass = "bg-blue-100 text-blue-700";
-                    return (
-                      <tr key={p.id} className={`hover:bg-slate-50/80 transition-colors ${isOverdue ? 'bg-red-50/20' : ''}`}>
-                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
-                        <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate((p as any).createdAt)}</td>
-                        <td className="py-2.5 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{(p as any).invoiceNumber || `#${p.id}`}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">{(p as any).supplierName || "—"}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah((p as any).totalAmount ?? 0)}</td>
-                        <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold whitespace-nowrap">{formatRupiah((p as any).paidAmount ?? 0)}</td>
-                        <td className={`py-2.5 px-3 text-right font-bold ${(p as any).remainingAmount > 0 ? 'text-red-600' : 'text-slate-400'}`}>{(p as any).remainingAmount > 0 ? formatRupiah((p as any).remainingAmount) : '—'}</td>
-                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>{p.status?.replace("_", " ")}</span>
-                        </td>
-                        <td className={`py-2.5 px-3 text-center text-xs ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-500'}`}>{formatDate((p as any).dueDate)}</td>
-                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          {p.status !== "lunas" && (
-                            <button className="w-7 h-7 rounded-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-colors mx-auto" title="Bayar" onClick={() => openPayment(p.id)}>
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="flex flex-col gap-3 pb-4">
+              {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                const isOverdue = (p as any).isOverdue && p.status !== "lunas";
+                let badgeClass = "bg-rose-50 text-rose-600 border-rose-100";
+                if (p.status === "lunas") badgeClass = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                else if (p.status === "partial") badgeClass = "bg-blue-50 text-blue-600 border-blue-100";
+                
+                return (
+                  <div key={p.id} className={`bg-white rounded-[20px] p-4 sm:p-5 border shadow-sm transition-all flex flex-col gap-4 ${isOverdue ? 'border-rose-200 shadow-rose-100/50' : 'border-slate-100 shadow-slate-200/40'}`}>
+                    {/* Top Section: Header */}
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">#{(currentPage - 1) * 20 + idx + 1}</span>
+                          <h3 className="font-bold text-slate-800 text-[15px] sm:text-base leading-tight">{(p as any).supplierName || "—"}</h3>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">{(p as any).invoiceNumber || `#${p.id}`}</span>
+                          <span className="text-[11px] text-slate-400">•</span>
+                          <span className="text-[11px] font-medium text-slate-500">{formatDate((p as any).createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider shrink-0 ${badgeClass}`}>
+                        {p.status?.replace("_", " ")}
+                      </div>
+                    </div>
+
+                    {/* Middle Section: Financial Summary */}
+                    <div className="grid grid-cols-2 gap-3 bg-slate-50/50 rounded-xl p-3 border border-slate-100/50">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Total Tagihan</span>
+                        <span className="font-semibold text-slate-700 text-sm">{formatRupiah((p as any).totalAmount ?? 0)}</span>
+                      </div>
+                      <div className="flex flex-col items-end text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Terbayar</span>
+                        <span className="font-semibold text-emerald-600 text-sm">{formatRupiah((p as any).paidAmount ?? 0)}</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Section: Due Date & Action */}
+                    <div className="flex items-center justify-between mt-1 pt-3 border-t border-slate-100 border-dashed">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {isOverdue ? <AlertCircle className="w-3.5 h-3.5 text-rose-500" /> : <AlertCircle className="w-3.5 h-3.5 text-slate-400" />}
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>
+                            {isOverdue ? 'TERLAMBAT' : 'JATUH TEMPO'}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-semibold ${isOverdue ? 'text-rose-600' : 'text-slate-600'}`}>
+                          {formatDate((p as any).dueDate)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end text-right mr-2">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Sisa Hutang</span>
+                          <span className={`font-bold text-sm leading-none ${(p as any).remainingAmount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                            {(p as any).remainingAmount > 0 ? formatRupiah((p as any).remainingAmount) : 'LUNAS'}
+                          </span>
+                        </div>
+                        {p.status !== "lunas" && (
+                          <Button size="sm" onClick={() => openPayment(p.id)} className="h-9 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold shadow-sm shadow-violet-200 gap-1.5 px-3">
+                            <Plus className="w-3.5 h-3.5" />
+                            Bayar
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -213,78 +239,106 @@ export default function Hutang() {
         </div>
       )}
 
-      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+      <Drawer open={isOpen} onOpenChange={(open) => { 
+        if (!open) { 
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+          window.scrollTo(0, 0);
+          setTimeout(() => { setIsOpen(false); setSelectedId(null); }, 150);
+        } else {
+          setIsOpen(true);
+        }
+      }}>
+        <DrawerContent className="max-h-[95vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
           <DrawerTitle className="sr-only">Bayar Hutang</DrawerTitle>
           <DrawerDescription className="sr-only">Form to pay debt to supplier</DrawerDescription>
           
-          {/* Gradient Header */}
-          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-white" strokeWidth={1.5} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Bayar Hutang</h2>
-              <p className="text-violet-200 text-xs">Isi formulir untuk mencatat pembayaran hutang</p>
-            </div>
-          </div>
-          
-          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
-          {selectedPay && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg text-sm space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Supplier:</span><span className="font-medium">{(selectedPay as any).supplierName}</span></div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Sisa Hutang:</span>
-                  <span 
-                    className="font-bold text-destructive cursor-pointer hover:underline hover:text-red-700 transition-colors"
-                    onClick={() => setPayAmount(String((selectedPay as any).remainingAmount))}
-                    title="Klik untuk bayar lunas"
-                  >
-                    {formatRupiah((selectedPay as any).remainingAmount)}
-                  </span>
-                </div>
+          <div className="flex flex-col h-full" style={{ maxHeight: 'calc(95vh - 5rem)' }}>
+            {/* Gradient Header */}
+            <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Jumlah Bayar (Rp)</label>
-                <Input type="number" min={0} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} className={parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) ? "border-red-500 focus-visible:ring-red-500" : ""} />
-                
-                {/* Real-time Validation and Formatting Preview */}
-                {payAmount && (
-                  <div className="mt-1.5 flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-violet-600 block bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
-                      Preview: {formatRupiah(parseFloat(payAmount) || 0)}
+                <h2 className="text-lg font-bold text-white leading-tight">Bayar Hutang</h2>
+                <p className="text-violet-200 text-xs">Isi formulir untuk mencatat pembayaran hutang</p>
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto flex-1 p-5 bg-slate-50/50">
+            {selectedPay && (
+              <div className="space-y-5 pb-6">
+                <div className="p-4 bg-white rounded-[16px] border border-slate-100 shadow-sm text-sm flex flex-col gap-3">
+                  <div className="flex justify-between items-center"><span className="text-slate-500 font-medium">Supplier:</span><span className="font-bold text-slate-800">{(selectedPay as any).supplierName}</span></div>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-100 border-dashed">
+                    <span className="text-slate-500 font-medium">Sisa Hutang:</span>
+                    <span 
+                      className="font-bold text-rose-600 text-base cursor-pointer hover:underline hover:text-rose-700 transition-colors bg-rose-50 px-2 py-0.5 rounded-md"
+                      onClick={() => setPayAmount(String(Math.round(Number((selectedPay as any).remainingAmount || 0))))}
+                      title="Klik untuk bayar lunas"
+                    >
+                      {formatRupiah((selectedPay as any).remainingAmount)}
                     </span>
-                    {parseFloat(payAmount) <= 0 && (
-                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Harus lebih dari 0</span>
-                    )}
-                    {parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) && (
-                      <span className="text-xs text-red-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Melebihi sisa hutang ({formatRupiah((selectedPay as any).remainingAmount)})</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 mb-1.5 block">Jumlah Bayar (Rp)</label>
+                    <Input type="number" min={0} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} className={`h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500 text-base font-semibold ${parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) ? "border-rose-500 focus-visible:ring-rose-500 bg-rose-50" : ""}`} />
+                    
+                    {/* Real-time Validation and Formatting Preview */}
+                    {payAmount && (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        <span className="text-[11px] font-bold text-violet-700 block bg-violet-100/50 px-2.5 py-1.5 rounded-lg border border-violet-100">
+                          Preview: {formatRupiah(parseFloat(payAmount) || 0)}
+                        </span>
+                        {parseFloat(payAmount) <= 0 && (
+                          <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1 uppercase tracking-wider"><AlertTriangle className="h-3 w-3" /> Harus lebih dari 0</span>
+                        )}
+                        {parseFloat(payAmount) > ((selectedPay as any).remainingAmount || 0) && (
+                          <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1 uppercase tracking-wider"><AlertTriangle className="h-3 w-3" /> Melebihi sisa hutang</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 mb-1.5 block">Metode Pembayaran</label>
+                    <Select value={payMethod} onValueChange={setPayMethod}>
+                      <SelectTrigger className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500 font-medium text-slate-700"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                        <SelectItem value="tunai" className="font-medium">Tunai</SelectItem>
+                        <SelectItem value="transfer" className="font-medium">Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 mb-1.5 block">Catatan</label>
+                    <Input placeholder="Catatan opsional..." value={payNotes} onChange={e => setPayNotes(e.target.value)} className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500" />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Metode Pembayaran</label>
-                <Select value={payMethod} onValueChange={setPayMethod}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tunai">Tunai</SelectItem>
-                    <SelectItem value="transfer">Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Catatan</label>
-                <Input placeholder="Catatan opsional" value={payNotes} onChange={e => setPayNotes(e.target.value)} />
-              </div>
+            )}
             </div>
-          )}
+
+            {/* Fixed Footer */}
+            <div className="flex-none bg-white border-t border-slate-100 px-5 py-4 flex gap-3 z-10 shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+              <Button type="button" variant="ghost" className="flex-1 h-12 rounded-[14px] font-bold border border-slate-200 text-slate-600 hover:bg-slate-50" 
+                onClick={() => { 
+                  if (document.activeElement instanceof HTMLElement) { document.activeElement.blur(); }
+                  window.scrollTo(0, 0);
+                  setTimeout(() => { setIsOpen(false); setSelectedId(null); }, 150);
+                }}>
+                Batal
+              </Button>
+              <Button className="flex-[2] h-12 rounded-[14px] font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm" onClick={handlePay} disabled={!payAmount || payMutation.isPending}>
+                {payMutation.isPending ? "Memproses..." : "Simpan Pembayaran"}
+              </Button>
+            </div>
           </div>
-          <DrawerFooter className="px-0 pt-4 flex-row gap-2">
-            <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); setSelectedId(null); }}>Batal</Button>
-            <Button className="flex-1" onClick={handlePay} disabled={!payAmount || payMutation.isPending}>Simpan Pembayaran</Button>
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
     </div>

@@ -58,82 +58,115 @@ export default function Pelanggan() {
 
   const filtered = customers?.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search)));
 
+  const totalPelanggan = customers?.length ?? 0;
+  const totalHutang = customers?.reduce((acc, c) => acc + (c.currentDebt ?? 0), 0) ?? 0;
+  const overLimitCount = customers?.filter(c => c.isOverLimit).length ?? 0;
+
   return (
     <div className="flex flex-col h-full w-full">
       {/* ── Static Top Strip ── */}
-      <div className="flex-none space-y-2 pb-2">
-        <div className="flex items-center justify-between pt-1 pb-2">
+      <div className="flex-none space-y-4 pb-3">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Pelanggan</h1>
-            <p className="text-sm text-slate-500">Daftar buku tamu dan limit</p>
+            <p className="text-[13px] font-medium text-slate-500 mt-0.5">Kelola daftar pelanggan dan batas kredit</p>
           </div>
-          <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-            <Plus className="mr-2 h-4 w-4" /> Tambah
-          </Button>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input placeholder="Cari nama atau telepon..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+
+        {/* Premium Summary Card (iOS Wallet Style) - Compact Version */}
+        <div className="bg-slate-900 rounded-[20px] p-4 text-white shadow-lg shadow-slate-900/10 relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500 rounded-full blur-[50px] opacity-20 -mr-8 -mt-8 pointer-events-none"></div>
+           <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500 rounded-full blur-[40px] opacity-20 -ml-6 -mb-6 pointer-events-none"></div>
+           
+           <div className="relative z-10 flex flex-col">
+             <span className="text-white/60 text-[9px] font-bold uppercase tracking-widest mb-0.5">Total Tagihan Pelanggan</span>
+             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{formatRupiah(totalHutang)}</h2>
+           </div>
+           
+           <div className="relative z-10 grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/10">
+             <div>
+               <span className="text-white/50 text-[9px] font-bold uppercase tracking-widest block mb-0.5">Total Pelanggan</span>
+               <span className="text-xs font-semibold text-white">{totalPelanggan} Orang</span>
+             </div>
+             <div>
+               <span className="text-white/50 text-[9px] font-bold uppercase tracking-widest block mb-0.5">Over Limit</span>
+               <div className="flex items-center gap-1.5">
+                 {overLimitCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>}
+                 <span className={`text-xs font-semibold ${overLimitCount > 0 ? "text-rose-400" : "text-white"}`}>{overLimitCount} Orang</span>
+               </div>
+             </div>
+           </div>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Input placeholder="Cari nama atau telepon..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+          </div>
+          <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700 shrink-0 h-10 px-5">
+            <Plus className="mr-1.5 h-4 w-4" /> Tambah
+          </Button>
         </div>
       </div>
 
-      {/* ── Scrollable Table ── */}
-      <div className="flex-1 overflow-auto min-h-0">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {isLoading ? (
-            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
-          ) : filtered?.length === 0 ? (
-            <div className="text-center py-16"><Users className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada pelanggan</h3></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Telepon</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">Alamat</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Hutang / Limit</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-20">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c, idx) => (
-                    <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${c.isOverLimit ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
-                            <User className={`w-3.5 h-3.5 ${c.isOverLimit ? 'text-red-400' : 'text-violet-400'}`} strokeWidth={1.5} />
-                          </div>
-                          <span className="font-semibold text-slate-800">{c.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{c.phone || <span className="text-slate-300">—</span>}</td>
-                      <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[200px] truncate">{c.address || <span className="text-slate-300">—</span>}</td>
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <span className={`text-sm font-bold block ${c.isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>{formatRupiah(c.currentDebt ?? 0)}</span>
-                        <span className="text-[10px] text-slate-400">Limit: {formatRupiah(c.creditLimit)}</span>
-                      </td>
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${c.isOverLimit ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
-                          {c.isOverLimit ? 'Over Limit' : 'Aman'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1 justify-center">
-                          <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></button>
-                          <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus pelanggan ini?')) deleteMutation.mutate({ id: c.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {/* ── Scrollable List (iOS Style Cards) ── */}
+      <div className="flex-1 overflow-auto min-h-0 pb-4">
+        {isLoading ? (
+          <div className="space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}</div>
+        ) : filtered?.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-100 text-center py-20 shadow-sm"><Users className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada pelanggan</h3></div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c, idx) => {
+              const badgeClass = c.isOverLimit ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100';
+              
+              return (
+                <div key={c.id} className={`bg-white rounded-[20px] p-4 sm:p-5 border shadow-sm transition-all flex flex-col gap-4 ${c.isOverLimit ? 'border-rose-200 shadow-rose-100/50' : 'border-slate-100 shadow-slate-200/40'}`}>
+                  {/* Top Section: Header */}
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border shrink-0 ${c.isOverLimit ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-200'}`}>
+                        <User className={`w-5 h-5 ${c.isOverLimit ? 'text-rose-400' : 'text-slate-400'}`} strokeWidth={1.5} />
+                      </div>
+                      <div className="flex flex-col">
+                        <h3 className="font-bold text-slate-800 text-[15px] sm:text-base leading-tight">{c.name}</h3>
+                        <p className="text-slate-500 text-[11px] sm:text-xs font-medium mt-0.5">{c.phone || "Tidak ada no. telp"}</p>
+                      </div>
+                    </div>
+                    <div className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border shrink-0 ${badgeClass}`}>
+                      {c.isOverLimit ? 'Over Limit' : 'Aman'}
+                    </div>
+                  </div>
+                  
+                  {/* Middle Section: Amounts */}
+                  <div className="flex items-center justify-between bg-slate-50/50 rounded-xl p-3 border border-slate-50">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Limit Kredit</span>
+                      <span className="font-bold text-slate-800 text-sm sm:text-[15px]">{formatRupiah(c.creditLimit)}</span>
+                    </div>
+                    <div className="w-px h-8 bg-slate-200 mx-2"></div>
+                    <div className="flex flex-col text-right">
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Tagihan Berjalan</span>
+                      <span className={`font-bold text-sm sm:text-[15px] ${(c.currentDebt ?? 0) > 0 ? (c.isOverLimit ? 'text-rose-600' : 'text-amber-600') : 'text-slate-400'}`}>
+                        {(c.currentDebt ?? 0) > 0 ? formatRupiah(c.currentDebt ?? 0) : 'Rp 0'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2.5 mt-0.5">
+                    <button className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[12px] font-bold flex justify-center items-center gap-1.5 transition-colors" onClick={() => openEdit(c)}>
+                      <Pencil className="w-4 h-4"/> Edit Profil
+                    </button>
+                    <button className="flex-none w-12 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 text-[12px] font-bold flex justify-center items-center gap-1.5 transition-colors" onClick={() => { if (confirm('Hapus pelanggan ini?')) deleteMutation.mutate({ id: c.id }); }}>
+                      <Trash2 className="w-4 h-4"/>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Pagination Bar ── */}

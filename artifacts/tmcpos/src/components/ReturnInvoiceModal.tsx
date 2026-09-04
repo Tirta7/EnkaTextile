@@ -150,104 +150,108 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
       <DrawerContent className="h-[95vh] max-h-screen bg-slate-100 flex flex-col p-0">
         <DrawerTitle className="sr-only">Preview Nota Retur</DrawerTitle>
         
-        <div className="flex justify-between items-center p-4 bg-white border-b shadow-sm sticky top-0 z-20">
-          <h2 className="font-bold text-lg">Preview Nota Retur</h2>
-          <div className="flex gap-2">
-            <Button onClick={handlePrint} className="gap-2 rounded-full px-6 shadow-md"><Printer className="w-4 h-4" /> Cetak Sekarang</Button>
+        {/* Gradient Header */}
+        <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center justify-between gap-3 shrink-0 sticky top-0 z-20 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Printer className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Preview Nota Retur</h2>
+              <p className="text-violet-200 text-[11px] sm:text-xs">Periksa kembali nota retur sebelum dicetak</p>
+            </div>
           </div>
+          <Button onClick={handlePrint} className="hidden sm:flex gap-2 rounded-[12px] px-6 shadow-sm bg-white text-violet-700 hover:bg-violet-50 hover:text-violet-800 font-bold"><Printer className="w-4 h-4" /> Cetak Sekarang</Button>
+          <Button size="icon" onClick={handlePrint} className="sm:hidden rounded-xl bg-white text-violet-700 hover:bg-violet-50 shadow-sm"><Printer className="w-4 h-4" /></Button>
         </div>
 
-        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 flex justify-center" ref={containerRef}>
+        <div className="flex-1 overflow-y-auto w-full p-4 md:p-8 bg-slate-50/50 block" ref={containerRef}>
           {isLoading ? (
-            <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+            <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div>
           ) : (
             <div 
               ref={invoiceRef}
-              className="bg-white shadow-2xl relative"
-              style={{
-                width: "800px",
-                minHeight: "1000px",
-                transform: `scale(${scale})`,
-                transformOrigin: "top center",
-                marginBottom: scale < 1 ? `-${Math.max(0, 1000 - (scaledHeight === "auto" ? 1000 : scaledHeight))}px` : "0"
-              }}
+              className="bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-xl relative overflow-hidden w-full max-w-4xl mx-auto mb-8"
             >
-              <div id="printable-return" className="p-12 h-full flex flex-col relative bg-white" style={{ position: "relative" }}>
-                <div className="watermark" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-30deg)", fontSize: "8rem", fontWeight: 900, color: "rgba(220, 38, 38, 0.05)", zIndex: 0, textTransform: "uppercase", letterSpacing: "0.2em", pointerEvents: "none", whiteSpace: "nowrap" }}>
+              <div id="printable-return" className="p-6 sm:p-8 md:p-12 h-full flex flex-col relative bg-white">
+                <div className="watermark" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(-30deg)", fontSize: "clamp(3rem, 10vw, 8rem)", fontWeight: 900, color: "rgba(220, 38, 38, 0.05)", zIndex: 0, textTransform: "uppercase", letterSpacing: "0.2em", pointerEvents: "none", whiteSpace: "nowrap" }}>
                   RETUR {returnDoc?.paymentStatus === "lunas" ? "LUNAS" : "TEMPO"}
                 </div>
                 
                 <div className="relative z-10 flex-1">
                   {/* Header */}
-                  <div className="flex justify-between items-start border-b-2 border-red-500 pb-6 mb-8">
-                    <div>
-                      <div className="inline-flex flex-col items-center text-center mb-2">
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase">{appName}</h1>
+                  <div className="flex flex-col sm:flex-row justify-between items-start border-b-2 border-red-500 pb-6 mb-6 gap-6">
+                    <div className="w-full sm:w-auto text-center sm:text-left">
+                      <div className="inline-flex flex-col items-center sm:items-start mb-2">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">{appName}</h1>
                         <div className="text-xs font-bold text-slate-800 tracking-tight mt-0.5 uppercase">PT. Spectra Jaya Fashion</div>
                       </div>
-                      <div className="text-sm text-slate-500 mt-2 max-w-[280px] leading-relaxed">{appAddress}</div>
+                      <div className="text-sm text-slate-500 mt-2 max-w-[280px] mx-auto sm:mx-0 leading-relaxed">{appAddress}</div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-red-600 uppercase tracking-widest mb-2 border-2 border-red-600 px-4 py-1 inline-block rounded-md">NOTA RETUR</div>
-                      <div className="text-2xl font-black text-slate-800 tracking-tight">{returnDoc?.returnNumber}</div>
-                      <div className="text-sm text-slate-500 mt-2">Tanggal: {formatDateTime(returnDoc?.createdAt || new Date().toISOString())}</div>
-                      <div className="text-sm text-slate-700 font-medium mt-1 uppercase">Tipe: {isSaleReturn ? "Penjualan" : "Pembelian"}</div>
+                    <div className="w-full sm:w-auto text-center sm:text-right">
+                      <div className="text-lg sm:text-xl font-bold text-red-600 uppercase tracking-widest mb-2 border-2 border-red-600 px-4 py-1 inline-block rounded-md">NOTA RETUR</div>
+                      <div className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">{returnDoc?.returnNumber}</div>
+                      <div className="text-xs sm:text-sm text-slate-500 mt-2">Tanggal: {formatDateTime(returnDoc?.createdAt || new Date().toISOString())}</div>
+                      <div className="text-xs sm:text-sm text-slate-700 font-medium mt-1 uppercase">Tipe: {isSaleReturn ? "Penjualan" : "Pembelian"}</div>
                     </div>
                   </div>
 
                   {/* Customer Info */}
-                  <div className="flex justify-between mb-8">
-                    <div className="bg-slate-50 p-4 rounded-lg flex-1 mr-4 border border-slate-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex-1">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{isSaleReturn ? "Pelanggan" : "Supplier"}</div>
-                      <div className="text-lg font-bold text-slate-800">{partnerName || "Umum"}</div>
+                      <div className="text-base sm:text-lg font-bold text-slate-800">{partnerName || "Umum"}</div>
                     </div>
-                    <div className="bg-slate-50 p-4 rounded-lg flex-1 ml-4 border border-slate-100">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex-1">
                       <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status Penyelesaian</div>
-                      <div className="text-lg font-bold text-slate-800 uppercase">{returnDoc?.paymentStatus === "lunas" ? "Kas Tunai" : "Potong Saldo"}</div>
+                      <div className="text-base sm:text-lg font-bold text-slate-800 uppercase">{returnDoc?.paymentStatus === "lunas" ? "Kas Tunai" : "Potong Saldo"}</div>
                     </div>
                   </div>
 
                   {/* Items Tables */}
                   {(returnDoc?.returnedItems?.length || 0) > 0 && (
-                    <div className="mb-8">
+                    <div className="mb-8 overflow-hidden">
                       <h3 className="font-bold text-red-600 mb-2 uppercase text-sm tracking-wider">Barang Dikembalikan (Masuk Toko)</h3>
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                          <tr>
-                            <th style={{ borderBottom: "2px solid #000", textAlign: "left", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Nama Barang</th>
-                            <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Kuantitas</th>
-                            <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Harga</th>
-                            <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Subtotal</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {returnDoc?.returnedItems?.map((item: any, i: number) => (
-                            <tr key={i}>
-                              <td style={{ padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
-                                <div className="font-bold">{item.productName}</div>
-                              </td>
-                              <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
-                                {Number(item.meters) > 0 ? `${item.meters} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} ${item.secondaryUnit || 'Roll'})` : ""}
-                              </td>
-                              <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>{formatRupiah(Number(item.pricePerMeter))}</td>
-                              <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee", fontWeight: "bold" }}>{formatRupiah(Number(item.subtotal))}</td>
+                      <div className="overflow-x-auto pb-2">
+                        <table style={{ width: "100%", minWidth: "600px", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr>
+                              <th style={{ borderBottom: "2px solid #000", textAlign: "left", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Nama Barang</th>
+                              <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Kuantitas</th>
+                              <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Harga</th>
+                              <th style={{ borderBottom: "2px solid #000", textAlign: "right", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Subtotal</th>
                             </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr>
-                            <td colSpan={3} style={{ textAlign: "right", padding: "12px 8px", fontSize: "13px", fontWeight: "bold" }}>Nilai Barang Kembali:</td>
-                            <td style={{ textAlign: "right", padding: "12px 8px", fontSize: "14px", fontWeight: "900", color: "#dc2626" }}>{formatRupiah(Number(returnDoc?.totalReturnedValue))}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {returnDoc?.returnedItems?.map((item: any, i: number) => (
+                              <tr key={i}>
+                                <td style={{ padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
+                                  <div className="font-bold">{item.productName}</div>
+                                </td>
+                                <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
+                                  {Number(item.meters) > 0 ? `${Number(item.meters)} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${Number(item.rolls)} ${item.secondaryUnit || 'Roll'})` : ""}
+                                </td>
+                                <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>{formatRupiah(Number(item.pricePerMeter))}</td>
+                                <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee", fontWeight: "bold" }}>{formatRupiah(Number(item.subtotal))}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr>
+                              <td colSpan={3} style={{ textAlign: "right", padding: "12px 8px", fontSize: "13px", fontWeight: "bold" }}>Nilai Barang Kembali:</td>
+                              <td style={{ textAlign: "right", padding: "12px 8px", fontSize: "14px", fontWeight: "900", color: "#dc2626" }}>{formatRupiah(Number(returnDoc?.totalReturnedValue))}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
                     </div>
                   )}
 
                   {(returnDoc?.exchangedItems?.length || 0) > 0 && (
-                    <div className="mb-8">
+                    <div className="mb-8 overflow-hidden">
                       <h3 className="font-bold text-blue-600 mb-2 uppercase text-sm tracking-wider">Barang Pengganti (Keluar Toko)</h3>
-                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <div className="overflow-x-auto pb-2">
+                        <table style={{ width: "100%", minWidth: "600px", borderCollapse: "collapse" }}>
                         <thead>
                           <tr>
                             <th style={{ borderBottom: "2px solid #000", textAlign: "left", padding: "8px", fontSize: "12px", textTransform: "uppercase" }}>Nama Barang</th>
@@ -263,7 +267,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                                 <div className="font-bold">{item.productName}</div>
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>
-                                {Number(item.meters) > 0 ? `${item.meters} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${item.rolls} ${item.secondaryUnit || 'Roll'})` : ""}
+                                {Number(item.meters) > 0 ? `${Number(item.meters)} ${item.primaryUnit || 'M'}` : ""} {Number(item.rolls) > 0 ? `(${Number(item.rolls)} ${item.secondaryUnit || 'Roll'})` : ""}
                               </td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee" }}>{formatRupiah(Number(item.pricePerMeter))}</td>
                               <td style={{ textAlign: "right", padding: "8px", fontSize: "13px", borderBottom: "1px solid #eee", fontWeight: "bold" }}>{formatRupiah(Number(item.subtotal))}</td>
@@ -276,13 +280,14 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
                             <td style={{ textAlign: "right", padding: "12px 8px", fontSize: "14px", fontWeight: "900", color: "#2563eb" }}>{formatRupiah(Number(returnDoc?.totalExchangedValue))}</td>
                           </tr>
                         </tfoot>
-                      </table>
+                        </table>
+                      </div>
                     </div>
                   )}
 
                   {/* Summary */}
                   <div className="flex justify-end pt-6 border-t-2 border-slate-200 mt-auto">
-                    <div className="w-[350px] bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="w-full sm:w-[350px] bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-slate-500 font-medium uppercase text-xs">Nilai Barang Kembali</span>
                         <span className="font-bold text-slate-800">{formatRupiah(Number(returnDoc?.totalReturnedValue))}</span>

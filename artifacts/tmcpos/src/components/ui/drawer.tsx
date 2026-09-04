@@ -4,11 +4,13 @@ import { Drawer as DrawerPrimitive } from "vaul"
 import { cn } from "@/lib/utils"
 
 const Drawer = ({
-  shouldScaleBackground = true,
+  shouldScaleBackground = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
+    repositionInputs={false}
+    disablePreventScroll={true}
     {...props}
   />
 )

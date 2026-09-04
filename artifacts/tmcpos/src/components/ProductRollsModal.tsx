@@ -91,8 +91,8 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   const startEdit = (roll: Roll) => {
     setEditingRollId(roll.id);
-    setEditOriginalLength(String(roll.originalLength));
-    setEditCurrentLength(String(roll.currentLength));
+    setEditOriginalLength(Number(roll.originalLength).toString());
+    setEditCurrentLength(Number(roll.currentLength).toString());
   };
 
   const cancelEdit = () => setEditingRollId(null);

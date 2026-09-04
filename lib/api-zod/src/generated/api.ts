@@ -212,8 +212,7 @@ export const CreateProductBody = zod.object({
   "pricePerRoll": zod.number().optional(),
   "rollStock": zod.number().optional(),
   "meterStock": zod.number().optional(),
-  "minStock": zod.number().optional(),
-  "rollLengths": zod.array(zod.number()).optional()
+  "minStock": zod.number().optional()
 })
 
 export const CreateProductResponse = zod.object({
@@ -369,8 +368,7 @@ export const UpdateProductBody = zod.object({
   "pricePerRoll": zod.number().optional(),
   "minStock": zod.number().optional(),
   "rollStock": zod.number().optional(),
-  "meterStock": zod.number().optional(),
-  "rollLengths": zod.array(zod.number()).optional()
+  "meterStock": zod.number().optional()
 })
 
 export const UpdateProductResponse = zod.object({
@@ -649,7 +647,6 @@ export const CreateSaleBody = zod.object({
   "paymentType": zod.string(),
   "dueDate": zod.string().optional(),
   "notes": zod.string().optional(),
-  "dpAmount": zod.number().optional(),
   "items": zod.array(zod.object({
   "productId": zod.number(),
   "rollId": zod.number().optional(),
@@ -724,7 +721,6 @@ export const UpdateSaleBody = zod.object({
   "paymentType": zod.string(),
   "dueDate": zod.string().optional(),
   "notes": zod.string().optional(),
-  "dpAmount": zod.number().optional(),
   "items": zod.array(zod.object({
   "productId": zod.number(),
   "rollId": zod.number().optional(),
@@ -835,7 +831,6 @@ export const CreatePurchaseBody = zod.object({
   "paymentType": zod.string(),
   "dueDate": zod.string().optional(),
   "notes": zod.string().optional(),
-  "dpAmount": zod.number().optional(),
   "items": zod.array(zod.object({
   "productId": zod.number(),
   "rollId": zod.number().optional(),
@@ -1010,7 +1005,8 @@ export const AddReceivablePaymentParams = zod.object({
 export const AddReceivablePaymentBody = zod.object({
   "amount": zod.number(),
   "paymentMethod": zod.string(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "paidAt": zod.coerce.date().optional()
 })
 
 export const AddReceivablePaymentResponse = zod.object({
@@ -1057,7 +1053,8 @@ export const AddPayablePaymentParams = zod.object({
 export const AddPayablePaymentBody = zod.object({
   "amount": zod.number(),
   "paymentMethod": zod.string(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "paidAt": zod.coerce.date().optional()
 })
 
 export const AddPayablePaymentResponse = zod.object({
@@ -1541,6 +1538,5 @@ export const GetReturnResponse = zod.object({
   "subtotal": zod.string().optional()
 })).optional()
 }))
-
 
 

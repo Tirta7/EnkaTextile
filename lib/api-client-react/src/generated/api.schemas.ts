@@ -472,6 +472,7 @@ export interface PaymentInput {
   amount: number;
   paymentMethod: string;
   notes?: string;
+  paidAt?: string;
 }
 
 export interface CashEntry {

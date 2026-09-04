@@ -24,6 +24,7 @@ export default function Piutang() {
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("tunai");
   const [payNotes, setPayNotes] = useState("");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [expandedDetailMap, setExpandedDetailMap] = useState<Record<number, any>>({});
 
@@ -62,7 +63,7 @@ export default function Piutang() {
           refreshExpandedDetail(selectedId);
           setExpandedIds(prev => new Set([...prev, selectedId]));
         }
-        setIsOpen(false); setSelectedId(null); setPayAmount(""); setPayNotes("");
+        setIsOpen(false); setSelectedId(null); setPayAmount(""); setPayNotes(""); setPayDate(new Date().toISOString().split("T")[0]);
         toast({ title: "Pembayaran cicilan berhasil dicatat" });
       }
     }
@@ -77,7 +78,7 @@ export default function Piutang() {
     const remaining = (selectedRec as any).remainingAmount || 0;
     if (amount <= 0) { toast({ title: "Jumlah tidak valid", description: "Harus lebih dari 0", variant: "destructive" }); return; }
     if (amount > remaining) { toast({ title: "Jumlah terlalu besar", description: `Maks: ${formatRupiah(remaining)}`, variant: "destructive" }); return; }
-    payMutation.mutate({ id: selectedId, data: { amount, paymentMethod: payMethod as any, notes: payNotes || undefined } });
+    payMutation.mutate({ id: selectedId, data: { amount, paymentMethod: payMethod as any, notes: payNotes || undefined, paidAt: payDate ? new Date(payDate).toISOString() : undefined } });
   };
 
   const filtered = filterByDateRange(
@@ -306,6 +307,10 @@ export default function Piutang() {
                 </div>
               )}
 
+              <div>
+                <label className="text-sm font-medium mb-1 block">Tanggal Pembayaran</label>
+                <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} max={new Date().toISOString().split("T")[0]} />
+              </div>
               <div>
                 <label className="text-sm font-medium mb-1 block">Jumlah Bayar Cicilan (Rp)</label>
                 <Input type="number" min={0} max={(selectedRec as any).remainingAmount} placeholder="0" value={payAmount} onChange={e => setPayAmount(e.target.value)} className={parseFloat(payAmount) > ((selectedRec as any).remainingAmount || 0) ? "border-red-500 focus-visible:ring-red-500" : ""} />

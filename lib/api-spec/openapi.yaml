@@ -2197,6 +2197,9 @@ components:
           type: string
         notes:
           type: string
+        paidAt:
+          type: string
+          format: date-time
 
     CashEntry:
       type: object

@@ -107,6 +107,7 @@ router.post("/receivables/:id/payments", async (req, res): Promise<void> => {
     amount: parsed.data.amount.toString(),
     paymentMethod: parsed.data.paymentMethod,
     notes: parsed.data.notes ?? null,
+    paidAt: parsed.data.paidAt ? new Date(parsed.data.paidAt) : new Date(),
   }).returning();
 
   const newPaidAmount = numStr(rec.paidAmount) + parsed.data.amount;

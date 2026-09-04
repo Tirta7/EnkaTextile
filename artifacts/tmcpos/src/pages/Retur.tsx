@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, RefreshCcw, Trash2, Search, Printer } from "lucide-react";
 import { OtpDialog } from "../components/OtpDialog";
@@ -298,7 +299,7 @@ export default function Retur() {
           
           <div className="flex flex-col h-full" style={{ maxHeight: 'calc(95vh - 5rem)' }}>
             {/* Gradient Header */}
-            <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="bg-linear-to-r from-violet-600 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
               <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                 <RefreshCcw className="w-5 h-5 text-white" strokeWidth={1.5} />
               </div>
@@ -410,7 +411,7 @@ export default function Retur() {
                   }}>
                   Batal
                 </Button>
-                <Button className="flex-[2] md:flex-none h-12 px-8 rounded-[14px] font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm" onClick={handleOpenOtp} disabled={createReturn.isPending}>
+                <Button className="flex-2 md:flex-none h-12 px-8 rounded-[14px] font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm" onClick={handleOpenOtp} disabled={createReturn.isPending}>
                   {createReturn.isPending ? "Memproses..." : "Simpan Retur"}
                 </Button>
               </div>

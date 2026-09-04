@@ -347,17 +347,17 @@ export default function Laporan() {
                       <Table>
                         <TableHeader className="bg-slate-50">
                           <TableRow className="border-slate-100">
-                            <TableHead className="font-semibold text-slate-600 h-10">Produk</TableHead>
-                            <TableHead className="text-right font-semibold text-slate-600 h-10">Qty (Meter)</TableHead>
-                            <TableHead className="text-right font-semibold text-slate-600 h-10">Revenue</TableHead>
+                            <TableHead className="font-semibold text-slate-600 h-10 whitespace-nowrap">Produk</TableHead>
+                            <TableHead className="text-right font-semibold text-slate-600 h-10 whitespace-nowrap">Qty (Meter)</TableHead>
+                            <TableHead className="text-right font-semibold text-slate-600 h-10 whitespace-nowrap">Revenue</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {(salesReport as any).byProduct?.slice((currentSalesPage - 1) * PAGE_SIZE, currentSalesPage * PAGE_SIZE).map((p: any) => (
                             <TableRow key={p.productId} className="border-slate-50 hover:bg-slate-50/50">
-                              <TableCell className="font-medium text-slate-800 text-sm">{p.productName}</TableCell>
-                              <TableCell className="text-right text-sm text-slate-600">{formatNumber(p.totalMeters)} m</TableCell>
-                              <TableCell className="text-right font-bold text-slate-900 text-sm">{formatRupiah(p.totalRevenue)}</TableCell>
+                              <TableCell className="font-medium text-slate-800 text-sm whitespace-nowrap">{p.productName}</TableCell>
+                              <TableCell className="text-right text-sm text-slate-600 whitespace-nowrap">{formatNumber(p.totalMeters)} m</TableCell>
+                              <TableCell className="text-right font-bold text-slate-900 text-sm whitespace-nowrap">{formatRupiah(p.totalRevenue)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -449,34 +449,34 @@ export default function Laporan() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow className="border-slate-100">
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">No. Nota</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Tanggal</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Pelanggan</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Jenis</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center">Status</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Total</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Dibayar</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Sisa</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">No. Nota</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Tanggal</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Pelanggan</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Jenis</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">Status</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Dibayar</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Sisa</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredTransactions.slice((currentDetailPage - 1) * PAGE_SIZE, currentDetailPage * PAGE_SIZE).map((t: any) => (
                         <TableRow key={t.id} className="border-slate-50 hover:bg-violet-50/20">
-                          <TableCell className="font-mono text-xs text-violet-700 font-semibold">{t.invoiceNumber}</TableCell>
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="font-mono text-xs text-violet-700 font-semibold whitespace-nowrap">{t.invoiceNumber}</TableCell>
+                          <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                             {new Date(t.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                           </TableCell>
                           <TableCell className="text-sm font-medium text-slate-800 max-w-[150px] truncate">{t.customerName}</TableCell>
-                          <TableCell className="text-xs text-slate-500 capitalize">{t.paymentType}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-xs text-slate-500 capitalize whitespace-nowrap">{t.paymentType}</TableCell>
+                          <TableCell className="text-center whitespace-nowrap">
                             <StatusBadge status={t.status} />
                             {t.hasReturns && (
                               <span className="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200 text-amber-600 bg-amber-50 uppercase">Retur</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-semibold text-slate-900 text-sm">{formatRupiah(t.totalAmount)}</TableCell>
-                          <TableCell className="text-right text-sm text-emerald-700 font-semibold">{formatRupiah(t.paidAmount)}</TableCell>
-                          <TableCell className="text-right text-sm">
+                          <TableCell className="text-right font-semibold text-slate-900 text-sm whitespace-nowrap">{formatRupiah(t.totalAmount)}</TableCell>
+                          <TableCell className="text-right text-sm text-emerald-700 font-semibold whitespace-nowrap">{formatRupiah(t.paidAmount)}</TableCell>
+                          <TableCell className="text-right text-sm whitespace-nowrap">
                             <span className={t.remainingAmount > 0 ? "text-rose-600 font-bold" : "text-slate-400"}>
                               {formatRupiah(t.remainingAmount)}
                             </span>
@@ -559,29 +559,29 @@ export default function Laporan() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow className="border-slate-100">
-                        <TableHead className="h-10 w-10 font-semibold text-slate-600 text-xs text-center">No</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">No. Faktur</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Tanggal</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Nama Pembeli</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center">Status</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">DPP</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">PPN {taxReport.ppnRate}%</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Total Tagihan</TableHead>
+                        <TableHead className="h-10 w-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">No</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">No. Faktur</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Tanggal</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Nama Pembeli</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">Status</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">DPP</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">PPN {taxReport.ppnRate}%</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Total Tagihan</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredTaxRows.slice((currentTaxPage - 1) * PAGE_SIZE, currentTaxPage * PAGE_SIZE).map((r: any) => (
                         <TableRow key={r.id} className="border-slate-50 hover:bg-slate-50/50">
-                          <TableCell className="text-center text-xs text-slate-400">{r.no}</TableCell>
-                          <TableCell className="font-mono text-xs text-violet-700 font-semibold">{r.invoiceNumber}</TableCell>
-                          <TableCell className="text-xs text-slate-500">
+                          <TableCell className="text-center text-xs text-slate-400 whitespace-nowrap">{r.no}</TableCell>
+                          <TableCell className="font-mono text-xs text-violet-700 font-semibold whitespace-nowrap">{r.invoiceNumber}</TableCell>
+                          <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                             {new Date(r.tanggal).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                           </TableCell>
                           <TableCell className="text-sm font-medium text-slate-800 max-w-[160px] truncate">{r.customerName}</TableCell>
-                          <TableCell className="text-center"><StatusBadge status={r.status} /></TableCell>
-                          <TableCell className="text-right text-sm text-slate-700">{formatRupiah(r.dpp)}</TableCell>
-                          <TableCell className="text-right text-sm text-blue-700 font-semibold">{formatRupiah(r.ppn)}</TableCell>
-                          <TableCell className="text-right text-sm font-black text-slate-900">{formatRupiah(r.total)}</TableCell>
+                          <TableCell className="text-center whitespace-nowrap"><StatusBadge status={r.status} /></TableCell>
+                          <TableCell className="text-right text-sm text-slate-700 whitespace-nowrap">{formatRupiah(r.dpp)}</TableCell>
+                          <TableCell className="text-right text-sm text-blue-700 font-semibold whitespace-nowrap">{formatRupiah(r.ppn)}</TableCell>
+                          <TableCell className="text-right text-sm font-black text-slate-900 whitespace-nowrap">{formatRupiah(r.total)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -704,23 +704,23 @@ export default function Laporan() {
                   <Table>
                     <TableHeader className="bg-slate-50">
                       <TableRow className="border-slate-100">
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Nama Barang</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs">Kategori</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Stok Meter</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Stok Roll</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Nilai Stok</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center">Status</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Nama Barang</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Kategori</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Stok Meter</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Stok Roll</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Nilai Stok</TableHead>
+                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(stockReport as any).products?.slice((currentStockPage - 1) * PAGE_SIZE, currentStockPage * PAGE_SIZE).map((p: any) => (
                         <TableRow key={p.id} className={`border-slate-50 hover:bg-slate-50/50 ${p.isLowStock ? "bg-red-50/20" : ""}`}>
-                          <TableCell className="font-medium text-slate-800 text-sm">{p.name}</TableCell>
-                          <TableCell className="text-slate-500 text-sm">{p.categoryName || "—"}</TableCell>
-                          <TableCell className="text-right font-semibold text-slate-800 text-sm">{formatNumber(p.meterStock)} m</TableCell>
-                          <TableCell className="text-right text-slate-600 text-sm">{formatNumber(p.rollStock)}</TableCell>
-                          <TableCell className="text-right font-bold text-slate-900 text-sm">{formatRupiah(p.stockValue)}</TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="font-medium text-slate-800 text-sm whitespace-nowrap">{p.name}</TableCell>
+                          <TableCell className="text-slate-500 text-sm whitespace-nowrap">{p.categoryName || "—"}</TableCell>
+                          <TableCell className="text-right font-semibold text-slate-800 text-sm whitespace-nowrap">{formatNumber(p.meterStock)} m</TableCell>
+                          <TableCell className="text-right text-slate-600 text-sm whitespace-nowrap">{formatNumber(p.rollStock)}</TableCell>
+                          <TableCell className="text-right font-bold text-slate-900 text-sm whitespace-nowrap">{formatRupiah(p.stockValue)}</TableCell>
+                          <TableCell className="text-center whitespace-nowrap">
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${p.isLowStock ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
                               {p.isLowStock ? "Rendah" : "OK"}
                             </span>
@@ -786,12 +786,12 @@ export default function Laporan() {
                 <Table>
                   <TableHeader className="bg-slate-50">
                     <TableRow className="border-slate-100">
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">No. Retur</TableHead>
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">Tanggal</TableHead>
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs">Pelanggan</TableHead>
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Nilai Refund</TableHead>
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right">Ditransfer/Tunai</TableHead>
-                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center">Status</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">No. Retur</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Tanggal</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Pelanggan</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Nilai Refund</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Ditransfer/Tunai</TableHead>
+                      <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -803,13 +803,13 @@ export default function Laporan() {
                             <span className="text-[10px] text-slate-400">Inv: {r.invoiceNumber}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-500">
+                        <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                           {new Date(r.tanggal).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                         </TableCell>
-                        <TableCell className="text-sm font-medium text-slate-800">{r.customerName}</TableCell>
-                        <TableCell className="text-right font-semibold text-rose-600 text-sm">{formatRupiah(r.totalRefund)}</TableCell>
-                        <TableCell className="text-right text-sm text-emerald-700 font-bold">{formatRupiah(r.cashRefunded)}</TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-sm font-medium text-slate-800 whitespace-nowrap">{r.customerName}</TableCell>
+                        <TableCell className="text-right font-semibold text-rose-600 text-sm whitespace-nowrap">{formatRupiah(r.totalRefund)}</TableCell>
+                        <TableCell className="text-right text-sm text-emerald-700 font-bold whitespace-nowrap">{formatRupiah(r.cashRefunded)}</TableCell>
+                        <TableCell className="text-center whitespace-nowrap">
                           <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${r.cashRefunded > 0 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
                             {r.statusRefund}
                           </span>

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListMutations, useCreateMutation, useListProducts, getListMutationsQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, ArrowLeftRight, ArrowUpFromLine, ArrowDownToLine, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -134,15 +134,15 @@ export default function Mutasi() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
                     <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Produk</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tipe</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Produk</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tipe</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Meter/Yd</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Roll</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Keterangan</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Roll</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Keterangan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -155,15 +155,15 @@ export default function Mutasi() {
                     const sign = m.type === 'keluar' ? '-' : '+';
                     return (
                       <tr key={m.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
                         <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(m.createdAt)}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">{(m as any).productName || <span className="text-slate-400 italic">Dihapus</span>}</td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">{(m as any).productName || <span className="text-slate-400 italic">Dihapus</span>}</td>
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeCls}`}>{cfg?.label}</span>
                         </td>
                         <td className={`py-2.5 px-3 text-right font-bold text-sm ${m.type === 'keluar' ? 'text-rose-600' : 'text-emerald-600'}`}>{sign}{formatNumber(m.meters)}</td>
                         <td className={`py-2.5 px-3 text-right text-xs font-medium ${m.type === 'keluar' ? 'text-rose-500' : 'text-emerald-500'}`}>{m.rolls > 0 ? `${sign}${formatNumber(m.rolls)}` : <span className="text-slate-300">—</span>}</td>
-                        <td className="py-2.5 px-3 text-xs text-slate-500 italic">{m.description || <span className="text-slate-300">—</span>}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-500 italic whitespace-nowrap">{m.description || <span className="text-slate-300">—</span>}</td>
                       </tr>
                     );
                   })}
@@ -183,9 +183,22 @@ export default function Mutasi() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>Catat Mutasi Stok</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">Catat Mutasi Stok</DrawerTitle>
+          <DrawerDescription className="sr-only">Form to record a stock mutation</DrawerDescription>
+          
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Package className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Catat Mutasi Stok</h2>
+              <p className="text-violet-200 text-xs">Isi formulir untuk mencatat mutasi stok barang</p>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="productId" render={({ field }) => (

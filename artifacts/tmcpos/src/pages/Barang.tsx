@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListProducts, useListCategories, useListUnits, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, getListCategoriesQueryKey, getListUnitsQueryKey } from "@workspace/api-client-react";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -247,21 +247,21 @@ export default function Barang() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama Barang</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Barcode / Lot</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama Barang</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Barcode / Lot</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Harga Jual</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Stok Meter</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Stok Roll</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24">Aksi</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => (
                     <tr key={p.id} className={`hover:bg-slate-50/80 transition-colors ${p.isLowStock ? 'bg-amber-50/20' : ''}`}>
-                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${p.isLowStock ? 'bg-amber-50 border-amber-100' : 'bg-violet-50 border-violet-100'}`}>
                             <Package className={`w-3.5 h-3.5 ${p.isLowStock ? 'text-amber-400' : 'text-violet-400'}`} strokeWidth={1.5} />
@@ -272,16 +272,16 @@ export default function Barang() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono">{p.barcode || p.lotNumber || <span className="text-slate-300">â€”</span>}</td>
-                      <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah(p.pricePerMeter)}</td>
+                      <td className="py-2.5 px-3 text-xs text-slate-500 font-mono whitespace-nowrap">{p.barcode || p.lotNumber || <span className="text-slate-300">â€”</span>}</td>
+                      <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah(p.pricePerMeter)}</td>
                       <td className={`py-2.5 px-3 text-right font-bold ${p.isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</td>
-                      <td className="py-2.5 px-3 text-right text-slate-600">{formatNumber(p.rollStock)}</td>
-                      <td className="py-2.5 px-3 text-center">
+                      <td className="py-2.5 px-3 text-right text-slate-600 whitespace-nowrap">{formatNumber(p.rollStock)}</td>
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${p.isLowStock ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
                           {p.isLowStock ? 'Stok Rendah' : 'Aman'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-1 justify-center">
                           <button title="Lihat Roll" className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-colors" onClick={() => openViewRolls(p)}><Package className="w-3.5 h-3.5" /></button>
                           <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(p)}><Pencil className="w-3.5 h-3.5" /></button>
@@ -310,6 +310,8 @@ export default function Barang() {
         onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}
       >
         <DrawerContent className="max-h-[95vh] mx-auto w-full max-w-4xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">{editingId ? "Edit Barang" : "Tambah Barang Baru"}</DrawerTitle>
+          <DrawerDescription className="sr-only">Form for adding or editing a product</DrawerDescription>
           {/* Gradient Header */}
           <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
             <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">

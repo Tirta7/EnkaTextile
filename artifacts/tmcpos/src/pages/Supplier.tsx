@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier, getListSuppliersQueryKey } from "@workspace/api-client-react";
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { SupplierDebtDrawer } from "@/components/SupplierDebtDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Truck, Store, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -87,16 +87,16 @@ export default function Supplier() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kontak</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Telepon</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Alamat</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Kontak</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Telepon</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Alamat</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total Hutang</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20">Aksi</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -105,8 +105,8 @@ export default function Supplier() {
                     const hasDebt = currentDebt > 0;
                     return (
                       <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${hasDebt ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
                               <Store className={`w-3.5 h-3.5 ${hasDebt ? 'text-red-400' : 'text-violet-400'}`} strokeWidth={1.5} />
@@ -114,21 +114,21 @@ export default function Supplier() {
                             <span className="font-semibold text-slate-800">{s.name}</span>
                           </div>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-500 text-xs">{(s as any).contactPerson || <span className="text-slate-300">—</span>}</td>
-                        <td className="py-2.5 px-3 text-slate-500 text-xs">{s.phone || <span className="text-slate-300">—</span>}</td>
+                        <td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{(s as any).contactPerson || <span className="text-slate-300">—</span>}</td>
+                        <td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{s.phone || <span className="text-slate-300">—</span>}</td>
                         <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[140px] truncate">{s.address || <span className="text-slate-300">—</span>}</td>
-                        <td className="py-2.5 px-3 text-right">
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
                           <span
                             className={`text-sm font-bold ${hasDebt ? 'text-red-600 cursor-pointer hover:underline' : 'text-slate-800'}`}
                             onClick={() => { if (hasDebt) setViewDebtSupplierId(s.id); }}
                           >{formatRupiah(currentDebt)}</span>
                         </td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${hasDebt ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                             {hasDebt ? 'Ada Hutang' : 'Lunas'}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1 justify-center">
                             <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(s)}><Pencil className="w-3.5 h-3.5" /></button>
                             <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus supplier ini?')) deleteMutation.mutate({ id: s.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
@@ -153,9 +153,22 @@ export default function Supplier() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>{editingId ? "Edit Supplier" : "Tambah Supplier"}</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">{editingId ? "Edit Supplier" : "Tambah Supplier"}</DrawerTitle>
+          <DrawerDescription className="sr-only">Form to create or edit supplier</DrawerDescription>
+          
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Store className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">{editingId ? "Edit Supplier" : "Tambah Supplier"}</h2>
+              <p className="text-violet-200 text-xs">Kelola data mitra penyuplai</p>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="name" render={({ field }) => (

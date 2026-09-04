@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, getListCustomersQueryKey } from "@workspace/api-client-react";
@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Users, User, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -87,22 +87,22 @@ export default function Pelanggan() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nama</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Telepon</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Alamat</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Nama</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Telepon</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">Alamat</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Hutang / Limit</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20">Aksi</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-20">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((c, idx) => (
                     <tr key={c.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${c.isOverLimit ? 'bg-red-50 border-red-100' : 'bg-violet-50 border-violet-100'}`}>
                             <User className={`w-3.5 h-3.5 ${c.isOverLimit ? 'text-red-400' : 'text-violet-400'}`} strokeWidth={1.5} />
@@ -110,18 +110,18 @@ export default function Pelanggan() {
                           <span className="font-semibold text-slate-800">{c.name}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-500 text-xs">{c.phone || <span className="text-slate-300">—</span>}</td>
-                      <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[160px] truncate">{c.address || <span className="text-slate-300">—</span>}</td>
-                      <td className="py-2.5 px-3 text-right">
+                      <td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{c.phone || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[200px] truncate">{c.address || <span className="text-slate-300">—</span>}</td>
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
                         <span className={`text-sm font-bold block ${c.isOverLimit ? 'text-red-600' : 'text-slate-800'}`}>{formatRupiah(c.currentDebt ?? 0)}</span>
                         <span className="text-[10px] text-slate-400">Limit: {formatRupiah(c.creditLimit)}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-center">
+                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${c.isOverLimit ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                           {c.isOverLimit ? 'Over Limit' : 'Aman'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-1 justify-center">
                           <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></button>
                           <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus pelanggan ini?')) deleteMutation.mutate({ id: c.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
@@ -146,9 +146,24 @@ export default function Pelanggan() {
 
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setEditingId(null); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>{editingId ? "Edit Pelanggan" : "Tambah Pelanggan"}</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">{editingId ? "Edit Pelanggan" : "Tambah Pelanggan"}</DrawerTitle>
+          <DrawerDescription className="sr-only">Form for adding or editing a customer</DrawerDescription>
+          
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">
+                {editingId ? "Edit Pelanggan" : "Tambah Pelanggan"}
+              </h2>
+              <p className="text-violet-200 text-xs">Isi formulir di bawah untuk menyimpan data pelanggan</p>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="name" render={({ field }) => (

@@ -1,4 +1,4 @@
-﻿import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
@@ -123,7 +123,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         const containerWidth = containerRef.current.clientWidth;
         const invoiceWidth = 800;
         if (containerWidth > 0 && containerWidth < invoiceWidth) {
-          const newScale = containerWidth / invoiceWidth;
+          // Limit minimum scale so it stays readable on mobile and allows scrolling
+          const minScale = window.innerWidth < 640 ? 0.8 : 0.5;
+          const newScale = Math.max(containerWidth / invoiceWidth, minScale);
           setScale(newScale);
           setScaledHeight(invoiceRef.current.offsetHeight * newScale);
         } else {
@@ -206,7 +208,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
         quality: 0.95,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
-        style: { transform: 'scale(1)', transformOrigin: 'top left' }
+        skipFonts: true,
+        width: 800,
+        height: element.offsetHeight,
+        style: { transform: 'none', margin: '0' }
       });
       const link = document.createElement("a");
       link.href = dataUrl;
@@ -352,23 +357,43 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTitle className="sr-only">Preview Invoice</DrawerTitle>
         <DrawerContent className="max-w-4xl mx-auto w-full max-h-[90vh] overflow-y-auto p-0 bg-white">
-          <div className="sticky top-0 bg-white/90 backdrop-blur-sm p-4 pt-6 sm:pt-4 border-b flex flex-col sm:flex-row gap-4 sm:gap-2 justify-between items-center z-50">
-            <h2 className="text-lg font-semibold text-black">Preview Invoice</h2>
-            <div className="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
-              <Button onClick={handleDownloadJPG} variant="outline" disabled={isDownloading} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
-                {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          <DrawerTitle className="sr-only">Preview Invoice</DrawerTitle>
+          <DrawerDescription className="sr-only">Preview of your invoice</DrawerDescription>
+          {/* ── Gradient Header ── */}
+          <div className="sticky top-0 z-50 bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-5 py-3.5 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center shrink-0">
+                <Printer className="w-4 h-4 text-white" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white leading-tight">Preview Invoice</h2>
+                {displayData?.invoiceNumber && (
+                  <p className="text-[11px] text-violet-200 font-mono">{displayData.invoiceNumber}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <Button
+                onClick={handleDownloadJPG}
+                disabled={isDownloading}
+                className="h-9 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur text-xs font-semibold px-3"
+              >
+                {isDownloading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
                 Download JPG
               </Button>
-              <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                <Printer className="w-4 h-4 mr-2" /> Cetak Sekarang
+              <Button
+                onClick={handlePrint}
+                autoFocus
+                className="h-9 rounded-xl bg-white text-violet-700 hover:bg-violet-50 font-bold text-xs px-4 shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5 mr-1.5" /> Cetak Sekarang
               </Button>
             </div>
           </div>
           
-          <div ref={containerRef} className="flex-1 p-2 overflow-y-auto overflow-x-auto w-full pb-24" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
-            <div id="printable-invoice" ref={invoiceRef} className="p-2 text-slate-800 bg-white origin-top-left" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
+          <div ref={containerRef} className="flex-1 p-2 overflow-y-auto overflow-x-auto w-full pb-24 flex flex-col items-center sm:items-center items-start" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
+            <div id="printable-invoice" ref={invoiceRef} className="p-2 text-slate-800 bg-white origin-top-left sm:origin-top mx-0 sm:mx-auto" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
               {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -389,19 +414,19 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               )}
 
               {/* Header */}
-              <div className="flex justify-between items-start mb-1 pb-1 border-b-[1.5px] border-indigo-100 relative z-10">
+              <div className="flex justify-between items-start mb-1 pb-1 relative z-10">
                 <div className="w-[35%]">
                   <h1 className="font-bold text-xl text-indigo-900 uppercase tracking-tight">{appName}</h1>
                   <p className="whitespace-pre-line text-xs text-slate-500 uppercase leading-snug">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
                 <div className="w-[30%] text-center flex flex-col items-center justify-start">
-                  <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest border border-indigo-100 shadow-xs mb-1">Nota Penjualan</div>
+                  <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest shadow-xs mb-1">Nota Penjualan</div>
                   <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
                     <QrCode className="w-4 h-4 text-indigo-400 no-print" /> No. {displayData.invoiceNumber || "DRAFT"}
                   </div>
-                  {isPaid && <div className="lunas-stamp mt-1 inline-block border-[1.5px] border-green-600 text-green-600 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">LUNAS</div>}
-                  {isDraft && <div className="lunas-stamp mt-1 inline-block border-[1.5px] border-slate-500 text-slate-500 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">DRAFT</div>}
+                  {isPaid && <div className="lunas-stamp mt-1 inline-block text-green-600 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">LUNAS</div>}
+                  {isDraft && <div className="lunas-stamp mt-1 inline-block text-slate-500 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">DRAFT</div>}
                 </div>
                 
                 <div className="w-[35%] text-right text-xs flex flex-col items-end">
@@ -414,7 +439,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
               {/* Table */}
               <div className="w-full rounded-lg overflow-hidden mb-2 relative z-10">
                 <table className="w-full text-left border-collapse text-sm">
-                  <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-b border-indigo-100">
+                  <thead className="bg-linear-to-r from-indigo-50 to-indigo-50/30 border-y-[1.5px] border-slate-800">
                     <tr>
                       <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest w-8 text-center text-xs">No</th>
                       <th className="py-1 px-2 font-bold text-indigo-800 uppercase tracking-widest text-xs">Nama Barang</th>
@@ -524,7 +549,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                               <tr className="align-top border-0 bg-slate-50/50">
                                 <td className="py-1 px-2"></td>
                                 <td colSpan={saleId ? 5 : 4} className="py-1 px-3">
-                                  <div className="flex items-center gap-1.5 justify-end border-t border-slate-200/60 pt-1 mt-0.5">
+                                  <div className="flex items-center gap-1.5 justify-end pt-1 mt-0.5">
                                     <span className={`text-[11px] font-bold uppercase tracking-wider ${diffColor}`}>{diffText}</span>
                                   </div>
                                 </td>
@@ -552,19 +577,19 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     <p className="text-indigo-800 font-medium font-mono tracking-wider mt-0.5 text-xs">{invoiceBankAccount}</p>
                     <p className="text-indigo-600 text-xs font-medium leading-none mt-1">{invoiceBankName}</p>
                     {invoiceNotes && (
-                      <p className="text-slate-600 text-xs mt-1 italic pt-1 border-t border-indigo-200/50">Catatan: {invoiceNotes}</p>
+                      <p className="text-slate-600 text-xs mt-1 italic pt-1">Catatan: {invoiceNotes}</p>
                     )}
                   </div>
 
                   <div className="flex text-center w-full justify-between font-medium">
                     <div className="w-[45%] flex flex-col items-center">
                       <p className="mb-8 text-slate-500 text-xs">Tanda Terima,</p>
-                      <div className="border-b border-slate-400 w-full mb-0.5"></div>
+                      <div className="w-full mb-0.5"></div>
                       <p className="text-xs text-slate-400 uppercase tracking-widest">Pelanggan</p>
                     </div>
                     <div className="w-[45%] flex flex-col items-center">
                       <p className="mb-8 text-slate-500 text-xs">Hormat Kami,</p>
-                      <div className="border-b border-slate-400 w-full mb-0.5"></div>
+                      <div className="w-full mb-0.5"></div>
                       <p className="text-xs font-medium text-slate-800 uppercase tracking-tight">{appName}</p>
                     </div>
                   </div>
@@ -647,7 +672,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                 const history = (displayData as any).paymentHistory;
                 if (!history || history.length === 0) return null;
                 return (
-                  <div className="mt-3 relative z-10 border-t border-indigo-100 pt-2">
+                  <div className="mt-3 relative z-10 pt-2">
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <div className="w-4 h-4 rounded bg-indigo-100 flex items-center justify-center">
                         <Clock className="w-2.5 h-2.5 text-indigo-600" />
@@ -656,7 +681,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                     </div>
                     <table className="w-full text-xs border-collapse">
                       <thead>
-                        <tr className="bg-indigo-50 border-b border-indigo-100">
+                        <tr className="bg-indigo-50 border-y-[1.5px] border-slate-800">
                           <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider w-6">No</th>
                           <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Tanggal &amp; Waktu</th>
                           <th className="py-0.5 px-2 text-left font-bold text-indigo-700 text-[10px] uppercase tracking-wider">Metode</th>
@@ -688,7 +713,7 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                             </tr>
                           );
                         })}
-                        <tr className="bg-emerald-50 border-t border-emerald-200">
+                        <tr className="bg-emerald-50">
                           <td colSpan={3} className="py-0.5 px-2 text-right font-bold text-emerald-700 text-[10px] uppercase tracking-wider">Total Terbayar (Cicilan)</td>
                           <td className="py-0.5 px-2 text-right font-bold text-emerald-700">
                             Rp {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(history.reduce((s: number, p: any) => s + p.amount, 0))}
@@ -709,10 +734,11 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
       {/* Exchange / Retur Dialog */}
       <Dialog open={exchangeOpen} onOpenChange={setExchangeOpen}>
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle>Tukar Barang (Retur)</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden border-0 shadow-2xl" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Retur Barang</DialogTitle>
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3">
+            <span className="text-white font-semibold">Tukar Barang (Retur)</span>
+          </div>
           <div className="space-y-4 pt-4 px-6 pb-6">
             <div className="bg-orange-50 border border-orange-100 p-3 rounded-lg flex flex-col gap-1">
               <span className="text-xs font-semibold text-orange-800 uppercase tracking-wider">Barang yang dikembalikan</span>

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
 import { Combobox, ComboboxItem } from "@/components/ui/combobox";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban, DollarSign } from "lucide-react";
@@ -268,7 +268,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {paginatedRolls.map((r: any) => {
-                          const isChecked = item.selectedRolls?.some((sr: any) => sr.id === r.id);
+                          const isChecked = !!item.selectedRolls?.some((sr: any) => sr.id === r.id);
                           return (
                             <label key={r.id} className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 border cursor-pointer transition-colors shadow-sm ${isChecked ? 'bg-primary/10 border-primary' : 'bg-white hover:border-primary/50'}`} title={r.barcode || r.id}>
                               <Checkbox 
@@ -944,7 +944,7 @@ export default function Penjualan() {
                   <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap w-8">#</th>
                   <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
                   <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
-                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pelanggan</th>
+                  <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Pelanggan</th>
                   <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                   <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
                   <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">DP / Terbayar</th>
@@ -981,7 +981,7 @@ export default function Penjualan() {
                         className={`hover:bg-slate-50/80 transition-colors ${isCancelled ? 'opacity-50' : ''}`}
                       >
                         {/* No */}
-                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">
                           {(currentPage - 1) * 20 + idx + 1}
                         </td>
                         {/* Tanggal */}
@@ -996,14 +996,14 @@ export default function Penjualan() {
                           </div>
                         </td>
                         {/* Pelanggan */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className="text-sm font-semibold text-slate-800">{customerName}</span>
                           {hasRetur && (
                             <span className="ml-1.5 text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full uppercase">Retur</span>
                           )}
                         </td>
                         {/* Status */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeCls}`}>
                             {badgeLabel}
                           </span>
@@ -1029,7 +1029,7 @@ export default function Penjualan() {
                           )}
                         </td>
                         {/* Aksi */}
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1 justify-center">
                             {isCancelled ? (
                               <span className="text-[10px] text-red-400 font-semibold px-2 py-1 bg-red-50 rounded-full">Dibatalkan</span>
@@ -1156,6 +1156,8 @@ export default function Penjualan() {
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
         <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">{editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}</DrawerTitle>
+          <DrawerDescription className="sr-only">Form for adding or editing a sale</DrawerDescription>
 
           {/* ── Gradient Header ── */}
           <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center justify-between shrink-0">

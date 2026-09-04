@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import React, { useState } from "react";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListReceivables, useGetReceivable, useAddReceivablePayment, getListReceivablesQueryKey, getGetReceivableQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Wallet, Plus, AlertTriangle, CheckCircle2, AlertCircle, DollarSign, ChevronDown, ChevronUp, Clock, CreditCard, Banknote, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -156,17 +156,17 @@ export default function Piutang() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
                     <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Invoice</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pelanggan</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terbayar</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sisa</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-28">Aksi</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Pelanggan</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Terbayar</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Sisa</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-28 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -179,19 +179,19 @@ export default function Piutang() {
                     if (r.status === "lunas") badgeClass = "bg-green-100 text-green-700";
                     else if (r.status === "partial") badgeClass = "bg-blue-100 text-blue-700";
                     return (
-                      <>
-                        <tr key={r.id} className={`hover:bg-slate-50/80 transition-colors ${isOverdue ? 'bg-red-50/30' : ''}`}>
-                          <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                      <React.Fragment key={r.id}>
+                        <tr className={`hover:bg-slate-50/80 transition-colors ${isOverdue ? 'bg-red-50/30' : ''}`}>
+                          <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
                           <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(r.createdAt)}</td>
-                          <td className="py-2.5 px-3 text-xs font-mono text-slate-500">{(r as any).invoiceNumber || `#${r.id}`}</td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-800">{(r as any).customerName || "—"}</td>
-                          <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah((r as any).totalAmount)}</td>
-                          <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold">{formatRupiah((r as any).paidAmount)}</td>
+                          <td className="py-2.5 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{(r as any).invoiceNumber || `#${r.id}`}</td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">{(r as any).customerName || "—"}</td>
+                          <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah((r as any).totalAmount)}</td>
+                          <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold whitespace-nowrap">{formatRupiah((r as any).paidAmount)}</td>
                           <td className={`py-2.5 px-3 text-right font-bold ${(r as any).remainingAmount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{(r as any).remainingAmount > 0 ? formatRupiah((r as any).remainingAmount) : '—'}</td>
-                          <td className="py-2.5 px-3 text-center">
+                          <td className="py-2.5 px-3 text-center whitespace-nowrap">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>{r.status?.replace("_", " ")}</span>
                           </td>
-                          <td className="py-2.5 px-3">
+                          <td className="py-2.5 px-3 whitespace-nowrap">
                             <div className="flex items-center gap-1 justify-center">
                               {(r as any).paidAmount > 0 && (
                                 <button title={isExpanded ? "Sembunyikan cicilan" : "Lihat cicilan"} className="w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 flex items-center justify-center transition-colors" onClick={() => toggleExpand(r.id)}>
@@ -216,7 +216,7 @@ export default function Piutang() {
                               ) : (
                                 <div className="overflow-x-auto">
                                   <table className="w-full text-xs border-collapse">
-                                    <thead><tr className="border-b border-slate-200"><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase w-8">Thn</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase">Tanggal</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase">Metode</th><th className="text-right py-1.5 px-2 font-bold text-slate-500 uppercase">Nominal</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase">Catatan</th></tr></thead>
+                                    <thead><tr className="border-b border-slate-200"><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase w-8 whitespace-nowrap">Thn</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase whitespace-nowrap">Tanggal</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase whitespace-nowrap">Metode</th><th className="text-right py-1.5 px-2 font-bold text-slate-500 uppercase whitespace-nowrap">Nominal</th><th className="text-left py-1.5 px-2 font-bold text-slate-500 uppercase whitespace-nowrap">Catatan</th></tr></thead>
                                     <tbody className="divide-y divide-slate-100">
                                       {detail.payments.map((p: any, pidx: number) => {
                                         const dt = new Date(p.paidAt);
@@ -237,7 +237,7 @@ export default function Piutang() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -256,9 +256,22 @@ export default function Piutang() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
-        <DrawerContent className="max-h-[92vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>Catat Pembayaran Cicilan</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(92vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[92vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">Catat Pembayaran Cicilan</DrawerTitle>
+          <DrawerDescription className="sr-only">Form to record an installment payment</DrawerDescription>
+          
+          {/* Gradient Header */}
+          <div className="bg-linear-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <Wallet className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Catat Pembayaran Cicilan</h2>
+              <p className="text-violet-200 text-xs">Isi formulir untuk mencatat pembayaran piutang pelanggan</p>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[calc(92vh-5rem)] p-6">
           {selectedRec && (
             <div className="space-y-4">
               <div className="p-3 bg-slate-50 rounded-xl text-sm space-y-2 border border-slate-100">

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPayables, useAddPayablePayment, getListPayablesQueryKey } from "@workspace/api-client-react";
@@ -11,7 +11,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Receipt, Plus, AlertTriangle, CheckCircle2, AlertCircle, ArrowRightCircle, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -155,18 +155,18 @@ export default function Hutang() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50 border-b border-slate-200 shadow-sm">
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-8 whitespace-nowrap">#</th>
                     <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Tanggal</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Invoice</th>
-                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supplier</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Terbayar</th>
-                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sisa</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Invoice</th>
+                    <th className="text-left py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Supplier</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Terbayar</th>
+                    <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Sisa</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                     <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Jatuh Tempo</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20">Aksi</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -177,18 +177,18 @@ export default function Hutang() {
                     else if (p.status === "partial") badgeClass = "bg-blue-100 text-blue-700";
                     return (
                       <tr key={p.id} className={`hover:bg-slate-50/80 transition-colors ${isOverdue ? 'bg-red-50/20' : ''}`}>
-                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
                         <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate((p as any).createdAt)}</td>
-                        <td className="py-2.5 px-3 text-xs font-mono text-slate-500">{(p as any).invoiceNumber || `#${p.id}`}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">{(p as any).supplierName || "—"}</td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-800">{formatRupiah((p as any).totalAmount ?? 0)}</td>
-                        <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold">{formatRupiah((p as any).paidAmount ?? 0)}</td>
+                        <td className="py-2.5 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{(p as any).invoiceNumber || `#${p.id}`}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">{(p as any).supplierName || "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah((p as any).totalAmount ?? 0)}</td>
+                        <td className="py-2.5 px-3 text-right text-emerald-600 font-semibold whitespace-nowrap">{formatRupiah((p as any).paidAmount ?? 0)}</td>
                         <td className={`py-2.5 px-3 text-right font-bold ${(p as any).remainingAmount > 0 ? 'text-red-600' : 'text-slate-400'}`}>{(p as any).remainingAmount > 0 ? formatRupiah((p as any).remainingAmount) : '—'}</td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeClass}`}>{p.status?.replace("_", " ")}</span>
                         </td>
                         <td className={`py-2.5 px-3 text-center text-xs ${isOverdue ? 'text-red-600 font-bold' : 'text-slate-500'}`}>{formatDate((p as any).dueDate)}</td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           {p.status !== "lunas" && (
                             <button className="w-7 h-7 rounded-lg bg-violet-600 hover:bg-violet-700 text-white flex items-center justify-center transition-colors mx-auto" title="Bayar" onClick={() => openPayment(p.id)}>
                               <Plus className="w-3.5 h-3.5" />
@@ -214,9 +214,22 @@ export default function Hutang() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); setSelectedId(null); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader><DrawerTitle>Bayar Hutang</DrawerTitle></DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+          <DrawerTitle className="sr-only">Bayar Hutang</DrawerTitle>
+          <DrawerDescription className="sr-only">Form to pay debt to supplier</DrawerDescription>
+          
+          {/* Gradient Header */}
+          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-white" strokeWidth={1.5} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white leading-tight">Bayar Hutang</h2>
+              <p className="text-violet-200 text-xs">Isi formulir untuk mencatat pembayaran hutang</p>
+            </div>
+          </div>
+          
+          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
           {selectedPay && (
             <div className="space-y-4">
               <div className="p-3 bg-muted rounded-lg text-sm space-y-1">

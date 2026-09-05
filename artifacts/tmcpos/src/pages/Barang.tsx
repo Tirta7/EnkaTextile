@@ -173,154 +173,173 @@ export default function Barang() {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Static Top Strip */}
-      <div className="flex-none space-y-4 pb-3">
-        <div className="flex items-center justify-between hidden md:flex">
+      <div className="flex-none space-y-3 pb-3 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Barang</h1>
-            <p className="text-[13px] font-medium text-slate-500 mt-0.5">Kelola inventaris dan stok gudang</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">Barang</h1>
+            <p className="text-xs font-medium text-slate-500 mt-1">Kelola inventaris dan stok gudang</p>
+          </div>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+              <Input 
+                placeholder="Cari barang / lot..." 
+                className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
+                value={search} 
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+              />
+            </div>
+            
+            <Button onClick={openCreate} className="h-8 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
+              <Plus className="mr-1.5 h-3 w-3" /> Tambah
+            </Button>
           </div>
         </div>
 
-        {/* Ultra-Compact Premium Summary Card */}
-        <div className="bg-slate-900 rounded-[14px] p-3 text-white shadow-md relative overflow-hidden mb-1 flex items-center justify-between">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500 rounded-full blur-2xl opacity-20 -mr-8 -mt-8 pointer-events-none"></div>
-           
-           <div className="relative z-10 flex flex-col">
-             <span className="text-white/60 text-[9px] font-bold uppercase tracking-widest">Total Barang</span>
-             <h2 className="text-xl sm:text-2xl font-bold tracking-tight leading-none mt-0.5">{totalBarang} <span className="text-xs font-medium text-white/70">Item</span></h2>
-           </div>
-           
-           <div className="relative z-10 flex gap-4 text-right">
-             <div className="flex flex-col">
-               <span className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Kategori</span>
-               <span className="text-xs font-semibold text-white leading-none mt-1">{categories?.length ?? 0}</span>
-             </div>
-             {lowStockCount > 0 && (
-             <div className="flex flex-col">
-               <span className="text-white/50 text-[9px] font-bold uppercase tracking-widest">Stok Tipis</span>
-               <span className="text-xs font-semibold text-amber-400 leading-none mt-1">{lowStockCount}</span>
-             </div>
-             )}
-           </div>
-        </div>
-
-
-
-        {/* Alphabet Filter */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-          <button onClick={() => setCategoryAlphabetFilter(null)}
-            className={`shrink-0 flex items-center justify-center h-8 px-3 rounded-[10px] text-[11px] font-bold transition-colors border ${categoryAlphabetFilter === null ? "bg-slate-800 text-white border-slate-800 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}>
-            Semua
-          </button>
-          {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
-            const has = categories?.some(c => c.name.toUpperCase().startsWith(letter));
-            if (!has && categoryAlphabetFilter !== letter) return null;
-            return (
-              <button key={letter} onClick={() => setCategoryAlphabetFilter(categoryAlphabetFilter === letter ? null : letter)}
-                className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-[10px] text-[11px] font-bold transition-all border ${categoryAlphabetFilter === letter ? "bg-violet-600 text-white border-violet-600 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200"}`}>
-                {letter}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Category Grid */}
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-1">
-          {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
-            const count = products?.filter(p => p.categoryId === c.id).length || 0;
-            const isActive = selectedCategoryId === c.id;
-            return (
-              <button key={c.id} onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
-                className={`shrink-0 group inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[12px] text-[11px] sm:text-xs font-bold tracking-wide transition-all duration-200 border ${isActive ? "bg-violet-600 text-white border-violet-600 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50"}`}>
-                <span className="whitespace-nowrap">{c.name}</span>
-                <span className={`shrink-0 rounded-full text-[9px] px-1.5 py-0.5 font-black ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search & Add Action */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input placeholder="Cari nama barang atau no lot..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
-          </div>
-          <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700 shrink-0 h-10 px-5">
-            <Plus className="mr-1.5 h-4 w-4" /> Tambah
-          </Button>
-        </div>
-      </div>
-
-      {/* Scrollable List (iOS Style Cards) */}
-      <div className="flex-1 overflow-auto min-h-0 pb-4">
-        {selectedCategoryId === null ? (
-          <div className="bg-white rounded-3xl border border-slate-100 text-center py-20 shadow-sm"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3><p className="text-[13px] text-slate-500 mt-1">Pilih kategori di atas untuk melihat barang.</p></div>
-        ) : isLoading ? (
-          <div className="space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}</div>
-        ) : filtered?.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-slate-100 text-center py-20 shadow-sm"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3><p className="text-[13px] text-slate-500 mt-1">Belum ada barang pada kategori ini.</p></div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
-              const badgeClass = p.isLowStock ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100';
-              
+        {/* Category & Alphabet Filters */}
+        <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center bg-slate-100/50 p-0.5 rounded-lg border border-slate-200/60 shrink-0">
+            <button onClick={() => setCategoryAlphabetFilter(null)} className={`flex items-center rounded-md px-2.5 text-[10px] font-bold h-6 whitespace-nowrap transition-all ${categoryAlphabetFilter === null ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Semua</button>
+            {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
+              const has = categories?.some(c => c.name.toUpperCase().startsWith(letter));
+              if (!has && categoryAlphabetFilter !== letter) return null;
               return (
-                <div key={p.id} className={`bg-white rounded-[20px] p-4 sm:p-5 border shadow-sm transition-all flex flex-col gap-4 ${p.isLowStock ? 'border-amber-200 shadow-amber-100/50' : 'border-slate-100 shadow-slate-200/40'}`}>
-                  {/* Top Section: Header */}
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border shrink-0 ${p.isLowStock ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-200'}`}>
-                        <Package className={`w-5 h-5 ${p.isLowStock ? 'text-amber-400' : 'text-slate-400'}`} strokeWidth={1.5} />
-                      </div>
-                      <div className="flex flex-col">
-                        <h3 className="font-bold text-slate-800 text-[15px] sm:text-base leading-tight">{p.name}</h3>
-                        <p className="text-slate-500 text-[11px] sm:text-xs font-medium mt-0.5">{p.barcode || p.lotNumber || "Tanpa Barcode/Lot"}</p>
-                      </div>
-                    </div>
-                    <div className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border shrink-0 ${badgeClass}`}>
-                      {p.isLowStock ? 'Stok Rendah' : 'Aman'}
-                    </div>
-                  </div>
-                  
-                  {/* Middle Section: Amounts */}
-                  <div className="flex items-center justify-between bg-slate-50/50 rounded-xl p-3 border border-slate-50">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Harga Jual</span>
-                      <span className="font-bold text-slate-800 text-sm sm:text-[15px]">{formatRupiah(p.pricePerMeter)}</span>
-                    </div>
-                    <div className="w-px h-8 bg-slate-200 mx-2"></div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Stok Fisik</span>
-                      <span className={`font-bold text-sm sm:text-[15px] ${p.isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
-                        {formatNumber(p.meterStock)} <span className="text-[10px] font-medium text-slate-400 uppercase">({formatNumber(p.rollStock)} Roll)</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Actions */}
-                  <div className="flex items-center gap-2.5 mt-0.5">
-                    <button className="flex-1 py-2.5 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 text-[12px] font-bold flex justify-center items-center gap-1.5 transition-colors" onClick={() => openViewRolls(p)}>
-                      <Package className="w-4 h-4"/> Detail Roll
-                    </button>
-                    <button className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[12px] font-bold flex justify-center items-center gap-1.5 transition-colors" onClick={() => openEdit(p)}>
-                      <Pencil className="w-4 h-4"/> Edit Barang
-                    </button>
-                    <button className="flex-none w-12 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-500 text-[12px] font-bold flex justify-center items-center gap-1.5 transition-colors" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}>
-                      <Trash2 className="w-4 h-4"/>
-                    </button>
-                  </div>
-                </div>
+                <button key={letter} onClick={() => setCategoryAlphabetFilter(categoryAlphabetFilter === letter ? null : letter)} className={`flex items-center rounded-md px-2 text-[10px] font-bold h-6 transition-all ${categoryAlphabetFilter === letter ? 'bg-white shadow-sm text-violet-700' : 'text-slate-500 hover:text-slate-700'}`}>
+                  {letter}
+                </button>
               );
             })}
+          </div>
+
+          <div className="w-px h-4 bg-slate-200 shrink-0"></div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
+              const count = products?.filter(p => p.categoryId === c.id).length || 0;
+              const isActive = selectedCategoryId === c.id;
+              return (
+                <button key={c.id} onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 h-6 text-[10px] font-bold whitespace-nowrap transition-all border ${isActive ? "bg-violet-50 text-violet-700 border-violet-200 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}>
+                  {c.name}
+                  <span className={`text-[8px] px-1 py-0.5 rounded-full ${isActive ? 'bg-violet-200/50 text-violet-700' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Rekap Summary (Ultra Compact Strip) */}
+        {selectedCategoryId !== null && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
+                  <Package className="w-3 h-3" strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col justify-center">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Barang</span>
+                  <span className="text-xs font-black text-slate-900 leading-tight">{filtered?.length || 0} Item</span>
+                </div>
+              </div>
+              <div className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center ${lowStockCount > 0 ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
+                <span className={`text-[9px] font-semibold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Stok Tipis</span>
+                <span className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} Item</span>
+              </div>
           </div>
         )}
       </div>
 
+      {/* Scrollable List */}
+      <div className="flex-1 overflow-auto min-h-0 pb-10">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
+          {selectedCategoryId === null ? (
+            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3><p className="text-[13px] text-slate-500 mt-1">Pilih kategori di atas untuk melihat barang.</p></div>
+          ) : isLoading ? (
+            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
+          ) : filtered?.length === 0 ? (
+            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3><p className="text-[13px] text-slate-500 mt-1">Belum ada barang pada kategori ini atau kata kunci tidak cocok.</p></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                  <tr>
+                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100 w-10">#</th>
+                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Barang</th>
+                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Harga Jual</th>
+                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Harga Beli</th>
+                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Stok</th>
+                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Status</th>
+                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                    const isLowStock = p.isLowStock;
+                    const badgeClass = isLowStock ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200';
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle text-[11px] text-slate-400 font-medium whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-7 h-7 rounded-md flex items-center justify-center border shrink-0 ${isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                              <Package className="w-3.5 h-3.5" strokeWidth={1.5} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-slate-800 text-[12px]">{p.name}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">{p.barcode || p.lotNumber || "-"}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
+                          <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
+                          <span className="text-[9px] text-slate-400 ml-1">/{p.primaryUnit}</span>
+                        </td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
+                          <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
+                        </td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
+                          <div className="flex flex-col items-center">
+                            <span className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</span>
+                            <span className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>
+                            {isLowStock ? 'Stok Rendah' : 'Aman'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-1 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-md" onClick={() => openViewRolls(p)} title="Detail Roll">
+                              <LayoutGrid className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md" onClick={() => openEdit(p)} title="Edit Barang">
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }} title="Hapus Barang">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Pagination Bar */}
       {filtered && filtered.length > 20 && (
-        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
-          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}â€“{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} barang</span>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-3 py-0.5 flex items-center justify-center gap-3 pointer-events-auto">
+            <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
+              {filtered.length} barang
+            </span>
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
         </div>
       )}
 
@@ -373,7 +392,7 @@ export default function Barang() {
                 
                 <div className="bg-white rounded-[20px] p-4 sm:p-5 border border-slate-100 shadow-sm space-y-5">
                   {/* Upload Foto */}
-                  <div className="flex items-center gap-4 p-3.5 bg-gradient-to-r from-slate-50 to-violet-50/30 border border-slate-200 rounded-2xl">
+                  <div className="flex items-center gap-4 p-3.5 bg-linear-to-r from-slate-50 to-violet-50/30 border border-slate-200 rounded-2xl">
                     <div className="shrink-0">
                       {imageUrl ? (
                         <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shadow-sm">
@@ -461,7 +480,7 @@ export default function Barang() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Eceran */}
-                  <div className="bg-gradient-to-b from-violet-50 to-white border border-violet-100 rounded-2xl p-4 space-y-3">
+                  <div className="bg-linear-to-b from-violet-50 to-white border border-violet-100 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold uppercase tracking-widest bg-violet-600 text-white px-2 py-0.5 rounded-full">Eceran</span>
                       <span className="text-[10px] text-slate-400">(Per Potongan)</span>
@@ -586,9 +605,9 @@ export default function Barang() {
                 {(form.watch('rollStock') || 0) > 0 && !editingId && (() => {
                   const currentLengths = form.watch('rollLengths') || [];
                   return (
-                    <div className="bg-amber-50 border border-amber-100 rounded-[16px] p-4 flex flex-col gap-3">
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex flex-col gap-3">
                       <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider shrink-0">Detail Panjang Tiap Roll (Yard/Meter)</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-[180px] overflow-y-auto pr-1.5">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-45 overflow-y-auto pr-1.5">
                         {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
                           <div key={i} className="space-y-1">
                             <label className="text-[10px] font-bold text-amber-600">Roll #{i + 1}</label>
@@ -637,7 +656,7 @@ export default function Barang() {
                   Batal
                 </Button>
                 <Button type="submit"
-                  className="flex-[2] h-12 rounded-[14px] font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
+                  className="flex-2 md:flex-none h-12 rounded-[14px] px-8 font-bold bg-violet-600 hover:bg-violet-700 text-white shadow-sm"
                   disabled={form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending}>
                   {(form.formState.isSubmitting || createMutation.isPending || updateMutation.isPending)
                     ? <><svg className="animate-spin w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Menyimpan...</>

@@ -91,36 +91,46 @@ export default function Mutasi() {
   return (
     <div className="flex flex-col h-full w-full">
       {/* Static Top Strip */}
-      <div className="flex-none space-y-2 pb-2">
-        <div className="flex items-center justify-between pt-1 pb-2">
+      {/* Static Top Strip */}
+      <div className="flex-none space-y-3 pb-3 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Mutasi Stok</h1>
-            <p className="text-sm text-slate-500">Riwayat barang masuk & keluar</p>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">Mutasi Stok</h1>
+            <p className="text-xs font-medium text-slate-500 mt-1">Riwayat barang masuk & keluar</p>
           </div>
-          <Button onClick={() => { form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-            <Plus className="mr-2 h-4 w-4" /> Baru
-          </Button>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+              <Input 
+                placeholder="Cari barang atau referensi..." 
+                className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
+                value={search} 
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+              />
+            </div>
+            <div className="shrink-0 h-8">
+              <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
+            </div>
+            
+            <Button onClick={() => { form.reset({ type: "in", rolls: 0, meters: 0, description: "", reference: "" }); setIsOpen(true); }} className="h-8 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
+              <Plus className="mr-1.5 h-3 w-3" /> Baru
+            </Button>
+          </div>
         </div>
-        {/* Tabs */}
-        <div className="flex gap-3 border-b border-slate-200">
+
+        {/* Tabs Filter */}
+        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
           {(['semua', 'masuk', 'keluar', 'penyesuaian'] as const).map((tab) => {
             const label = tab === 'masuk' ? 'Masuk' : tab === 'keluar' ? 'Keluar' : tab === 'penyesuaian' ? 'Penyesuaian' : 'Semua';
+            const isActive = activeTab === tab;
             return (
               <button key={tab} onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-                className={`pb-2.5 text-sm font-semibold whitespace-nowrap transition-colors relative ${activeTab === tab ? 'text-violet-700' : 'text-slate-500 hover:text-slate-800'}`}>
+                className={`shrink-0 flex items-center justify-center h-7 px-3.5 rounded-[8px] text-[11px] font-bold transition-all border ${isActive ? "bg-violet-600 text-white border-violet-600 shadow-sm" : "bg-white text-slate-500 border-slate-200 hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200"}`}>
                 {label}
-                {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-violet-600" />}
               </button>
             );
           })}
-        </div>
-        {/* Filter */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input placeholder="Cari barang atau referensi..." className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm" value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
-          </div>
-          <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); setCurrentPage(1); }} />
         </div>
       </div>
 
@@ -176,9 +186,13 @@ export default function Mutasi() {
 
       {/* Pagination Bar */}
       {tabFiltered && tabFiltered.length > 20 && (
-        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
-          <span className="text-xs text-slate-400">Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, tabFiltered.length)} dari {tabFiltered.length} mutasi</span>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(tabFiltered.length / 20)} onPageChange={setCurrentPage} />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-3 py-0.5 flex items-center justify-center gap-3 pointer-events-auto">
+            <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
+              {tabFiltered.length} mutasi
+            </span>
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(tabFiltered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
         </div>
       )}
 

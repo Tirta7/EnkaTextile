@@ -89,6 +89,26 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
+  const [selectedRollIds, setSelectedRollIds] = useState<number[]>([]);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
+  const handleBulkDelete = async () => {
+    if (!productId || selectedRollIds.length === 0) return;
+    if (!confirm(`Hapus ${selectedRollIds.length} roll terpilih?`)) return;
+    
+    setIsDeletingBulk(true);
+    try {
+      for (const rollId of selectedRollIds) {
+        await deleteMutation.mutateAsync({ id: productId, rollId });
+      }
+      setSelectedRollIds([]);
+    } catch (error) {
+      console.error("Gagal menghapus beberapa roll", error);
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
+
   const startEdit = (roll: Roll) => {
     setEditingRollId(roll.id);
     setEditOriginalLength(Number(roll.originalLength).toString());
@@ -190,6 +210,18 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
           {/* Sort & Filter toolbar */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {selectedRollIds.length > 0 ? (
+              <div className="flex items-center gap-2 w-full mb-1 bg-red-50 text-red-700 px-3 py-1.5 rounded-lg border border-red-200">
+                <span className="text-xs font-semibold">{selectedRollIds.length} roll terpilih</span>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-red-700 hover:text-red-800 hover:bg-red-100 ml-auto" onClick={handleBulkDelete} disabled={isDeletingBulk}>
+                  {isDeletingBulk ? <span className="h-3 w-3 rounded-full border-2 border-red-600 border-t-transparent animate-spin mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />} Hapus
+                </Button>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setSelectedRollIds([])} disabled={isDeletingBulk}>
+                  Batal
+                </Button>
+              </div>
+            ) : null}
+
             {/* Sort toggle */}
             <button
               onClick={cycleSortOrder}
@@ -225,6 +257,19 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                 </button>
               ))}
             </div>
+
+            {rolls && rolls.length > 0 && (
+              <button
+                onClick={() => setSelectedRollIds(
+                  selectedRollIds.length === sortedRolls.length 
+                    ? [] 
+                    : sortedRolls.map(r => r.id)
+                )}
+                className="px-2.5 py-1 rounded-full text-xs font-medium border bg-background text-muted-foreground border-border hover:border-primary/40 hover:text-primary transition-all ml-1"
+              >
+                {selectedRollIds.length === sortedRolls.length && sortedRolls.length > 0 ? "Batal Pilih" : "Pilih Semua"}
+              </button>
+            )}
 
             {/* Tampilkan jumlah hasil filter */}
             {(sortOrder !== "default" || statusFilter !== "all") && (
@@ -417,16 +462,29 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                         isEditing
                           ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-inset ring-blue-400"
                           : "",
+                        selectedRollIds.includes(r.id) ? "bg-red-50/50" : "",
                       ].join(" ")}
                     >
                       {/* Row 1: Nomor + Status badge */}
                       <div className="flex items-center justify-between w-full">
-                        <span className={[
-                          "font-bold text-[11px]",
-                          isEditing ? "text-blue-600" : isAvailable ? "text-primary" : "text-muted-foreground",
-                        ].join(" ")}>
-                          Roll #{idx + 1}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            className="w-3 h-3 cursor-pointer accent-red-600"
+                            checked={selectedRollIds.includes(r.id)}
+                            onChange={() => {}}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedRollIds(prev => prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]);
+                            }}
+                          />
+                          <span className={[
+                            "font-bold text-[11px]",
+                            isEditing ? "text-blue-600" : isAvailable ? "text-primary" : "text-muted-foreground",
+                          ].join(" ")}>
+                            Roll #{idx + 1}
+                          </span>
+                        </div>
                         <span className={[
                           "text-[9px] font-semibold px-1 py-0.5 rounded-full leading-none",
                           isAvailable

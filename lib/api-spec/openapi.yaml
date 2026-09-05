@@ -1902,6 +1902,8 @@ components:
           type: string
         notes:
           type: string
+        dpAmount:
+          type: number
         items:
           type: array
           items:

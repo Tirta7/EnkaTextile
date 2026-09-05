@@ -126,12 +126,60 @@ function KpiCard({ label, value, sub, color = "slate" }: { label: string; value:
   );
 }
 
+// ─── Filter Bar (defined OUTSIDE Laporan to prevent remount on every keystroke) ─
+interface LaporanFilterBarProps {
+  startDate: string; setStartDate: (v: string) => void;
+  endDate: string; setEndDate: (v: string) => void;
+  showStatus?: boolean; statusFilter?: string; setStatusFilter?: (v: string) => void;
+  showSearch?: boolean; search?: string; setSearch?: (v: string) => void;
+}
+function LaporanFilterBar({
+  startDate, setStartDate, endDate, setEndDate,
+  showStatus, statusFilter, setStatusFilter,
+  showSearch, search, setSearch,
+}: LaporanFilterBarProps) {
+  return (
+    <div className="flex gap-2 items-center flex-wrap">
+      <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+        className="w-34 rounded-lg border-slate-200 h-8 text-xs bg-slate-50 focus-visible:ring-violet-500" />
+      <span className="text-slate-400 text-xs">—</span>
+      <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+        className="w-34 rounded-lg border-slate-200 h-8 text-xs bg-slate-50 focus-visible:ring-violet-500" />
+      {showStatus && setStatusFilter && (
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-28 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua</SelectItem>
+            <SelectItem value="lunas">Lunas</SelectItem>
+            <SelectItem value="tempo">Tempo</SelectItem>
+            <SelectItem value="partial">Partial</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+      {showSearch && setSearch !== undefined && (
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+          <Input
+            value={search ?? ""}
+            onChange={e => setSearch!(e.target.value)}
+            placeholder="Cari nota / pelanggan..."
+            className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function Laporan() {
   const today = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toLocaleDateString("en-CA");
   const todayStr = today.toLocaleDateString("en-CA");
 
+  const [activeTab, setActiveTab] = useState("penjualan");
   const [startDate, setStartDate] = useState(firstOfMonth);
   const [endDate, setEndDate] = useState(todayStr);
   const [statusFilter, setStatusFilter] = useState("semua");
@@ -190,80 +238,61 @@ export default function Laporan() {
     );
   }, [taxReport, search]);
 
-  // ─── Shared Filter Bar ────────────────────────────────────────────────────
-  const FilterBar = ({ showStatus = false, showSearch = false }: { showStatus?: boolean; showSearch?: boolean }) => (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between flex-wrap">
-      <div>
-        <h3 className="font-bold text-slate-800 text-sm">Filter Periode</h3>
-        <p className="text-xs text-slate-400 mt-0.5">Pilih rentang laporan</p>
-      </div>
-      <div className="flex gap-2 items-center flex-wrap">
-        <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-          className="w-36 rounded-xl border-slate-200 h-9 text-sm bg-slate-50 focus-visible:ring-violet-500" />
-        <span className="text-slate-400">—</span>
-        <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-          className="w-36 rounded-xl border-slate-200 h-9 text-sm bg-slate-50 focus-visible:ring-violet-500" />
-        {showStatus && (
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32 h-9 rounded-xl border-slate-200 bg-slate-50 text-sm">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="semua">Semua</SelectItem>
-              <SelectItem value="lunas">Lunas</SelectItem>
-              <SelectItem value="tempo">Tempo</SelectItem>
-              <SelectItem value="partial">Partial</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-        {showSearch && (
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Cari nota / pelanggan..."
-              className="pl-8 w-52 h-9 rounded-xl border-slate-200 bg-slate-50 text-sm focus-visible:ring-violet-500" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  // ─── Filtered summary (computed from filteredTransactions, not global) ──────
+  const filteredSummary = useMemo(() => ({
+    totalTransactions: filteredTransactions.length,
+    totalGross: filteredTransactions.reduce((s: number, t: any) => s + (Number(t.totalAmount) || 0), 0),
+    totalPaid: filteredTransactions.reduce((s: number, t: any) => s + (Number(t.paidAmount) || 0), 0),
+    totalRemaining: filteredTransactions.reduce((s: number, t: any) => s + (Number(t.remainingAmount) || 0), 0),
+  }), [filteredTransactions]);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-auto">
-      {/* Header */}
-      <div className="flex-none flex items-end justify-between pt-1 pb-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Laporan</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Analisa performa bisnis Anda</p>
-        </div>
-      </div>
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
+        
+        {/* SINGLE ROW HEADER (Desktop) */}
+        <div className="flex-none flex flex-col xl:flex-row gap-3 xl:items-center justify-between pb-3 mb-2 border-b border-slate-100">
+          
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="shrink-0 mr-2">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-tight">Laporan</h1>
+              <p className="text-[11px] text-slate-400">Analisa performa bisnis</p>
+            </div>
+            
+            <TabsList className="flex h-9 w-fit justify-start rounded-xl bg-slate-100 p-1 gap-1">
+              <TabsTrigger value="penjualan" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+                <TrendingUp className="h-3.5 w-3.5" /> Ringkasan
+              </TabsTrigger>
+              <TabsTrigger value="detail" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+                <FileText className="h-3.5 w-3.5" /> Detail Transaksi
+              </TabsTrigger>
+              <TabsTrigger value="pajak" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+                <Receipt className="h-3.5 w-3.5" /> Laporan PPN
+              </TabsTrigger>
+              <TabsTrigger value="stok" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+                <Package className="h-3.5 w-3.5" /> Stok
+              </TabsTrigger>
+              <TabsTrigger value="refunds" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+                <ArrowDownToLine className="h-3.5 w-3.5" /> Refund
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-      <Tabs defaultValue="penjualan" className="w-full flex-1">
-        {/* Tab List */}
-        <div className="flex-none overflow-x-auto hide-scrollbar mb-4">
-          <TabsList className="flex h-10 w-full min-w-max justify-start rounded-xl bg-slate-100 p-1 gap-1">
-            <TabsTrigger value="penjualan" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
-              <TrendingUp className="h-4 w-4" /> Ringkasan
-            </TabsTrigger>
-            <TabsTrigger value="detail" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
-              <FileText className="h-4 w-4" /> Detail Transaksi
-            </TabsTrigger>
-            <TabsTrigger value="pajak" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
-              <Receipt className="h-4 w-4" /> Laporan PPN
-            </TabsTrigger>
-            <TabsTrigger value="stok" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
-              <Package className="h-4 w-4" /> Stok
-            </TabsTrigger>
-            <TabsTrigger value="refunds" className="flex items-center gap-1.5 rounded-lg px-4 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-sm font-semibold text-slate-500 h-8 whitespace-nowrap">
-              <ArrowDownToLine className="h-4 w-4" /> Refund
-            </TabsTrigger>
-          </TabsList>
+          {/* Global Filter Bar */}
+          {activeTab !== "stok" && activeTab !== "refunds" && (
+            <LaporanFilterBar
+              startDate={startDate} setStartDate={setStartDate}
+              endDate={endDate} setEndDate={setEndDate}
+              showStatus={activeTab === "detail"}
+              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+              showSearch={activeTab === "detail" || activeTab === "pajak"}
+              search={search} setSearch={setSearch}
+            />
+          )}
         </div>
 
         {/* ══════════════════════ TAB: RINGKASAN ══════════════════════ */}
-        <TabsContent value="penjualan" className="space-y-5 outline-none">
-          <FilterBar />
-
+        <TabsContent value="penjualan" className="space-y-4 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
           {loadingSales ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
@@ -365,7 +394,9 @@ export default function Laporan() {
                     </div>
                     {(salesReport as any).byProduct?.length > PAGE_SIZE && (
                       <div className="flex justify-center pt-2">
-                        <PaginationControl currentPage={currentSalesPage} totalPages={Math.ceil((salesReport as any).byProduct.length / PAGE_SIZE)} onPageChange={setCurrentSalesPage} />
+                        <div className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-slate-100 rounded-full px-2 py-0.5">
+                          <PaginationControl currentPage={currentSalesPage} totalPages={Math.ceil((salesReport as any).byProduct.length / PAGE_SIZE)} onPageChange={setCurrentSalesPage} />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -408,75 +439,85 @@ export default function Laporan() {
         </TabsContent>
 
         {/* ══════════════════════ TAB: DETAIL TRANSAKSI ══════════════════════ */}
-        <TabsContent value="detail" className="space-y-5 outline-none">
-          <FilterBar showStatus showSearch />
-
+        <TabsContent value="detail" className="space-y-3 outline-none flex flex-col flex-1 min-h-0 data-[state=inactive]:hidden">
           {loadingDetail ? (
             <div className="space-y-2">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
           ) : detailReport ? (
             <>
-              {/* Summary Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <KpiCard label="Total Transaksi" value={String(detailReport.summary.totalTransactions)} />
-                <KpiCard color="violet" label="Total Penjualan" value={formatRupiah(detailReport.summary.totalGross)} />
-                <KpiCard color="emerald" label="Total Dibayar" value={formatRupiah(detailReport.summary.totalPaid)} />
-                <KpiCard color="rose" label="Sisa Piutang" value={formatRupiah(detailReport.summary.totalRemaining)} />
+              {/* Summary strip — ultra compact */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-white border border-slate-100 rounded-lg px-3 py-1 flex flex-col justify-center">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Transaksi</span>
+                  <span className="text-sm font-black text-slate-900 leading-tight">{filteredSummary.totalTransactions}</span>
+                </div>
+                <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-1 flex flex-col justify-center">
+                  <span className="text-[9px] font-semibold text-violet-400 uppercase tracking-wider">Total Penjualan</span>
+                  <span className="text-sm font-black text-violet-900 leading-tight">{formatRupiah(filteredSummary.totalGross)}</span>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1 flex flex-col justify-center">
+                  <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Total Dibayar</span>
+                  <span className="text-sm font-black text-emerald-900 leading-tight">{formatRupiah(filteredSummary.totalPaid)}</span>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1 flex flex-col justify-center">
+                  <span className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider">Sisa Piutang</span>
+                  <span className="text-sm font-black text-rose-700 leading-tight">{formatRupiah(filteredSummary.totalRemaining)}</span>
+                </div>
               </div>
 
               {/* Table */}
-              <div id="detail-print-area" className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <h3 className="font-bold text-slate-800">Daftar Transaksi Penjualan</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{filteredTransactions.length} transaksi ditemukan</p>
+              <div id="detail-print-area" className="relative bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+                <div className="p-2 px-3 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-800 text-sm">Transaksi</h3>
+                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">{filteredTransactions.length} baris</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <Button variant="outline" size="sm" onClick={() => printSection("detail-print-area")}
-                      className="rounded-xl h-8 text-xs font-semibold gap-1.5">
-                      <Printer className="h-3.5 w-3.5" /> Print
+                      className="rounded-lg h-7 px-2 text-[11px] font-semibold gap-1">
+                      <Printer className="h-3 w-3" /> Print
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => exportCSV(filteredTransactions, `detail-penjualan-${startDate}-${endDate}`, {
                       invoiceNumber: "No. Nota", createdAt: "Tanggal", customerName: "Pelanggan",
                       paymentType: "Jenis Bayar", status: "Status", totalAmount: "Total",
                       paidAmount: "Dibayar", remainingAmount: "Sisa"
                     })}
-                      className="rounded-xl h-8 text-xs font-semibold gap-1.5">
-                      <Download className="h-3.5 w-3.5" /> Export CSV
+                      className="rounded-lg h-7 px-2 text-[11px] font-semibold gap-1">
+                      <Download className="h-3 w-3" /> Export
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto flex-1">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                       <TableRow className="border-slate-100">
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">No. Nota</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Tanggal</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Pelanggan</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">Jenis</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">Status</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Total</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Dibayar</TableHead>
-                        <TableHead className="h-10 font-semibold text-slate-600 text-xs text-right whitespace-nowrap">Sisa</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] whitespace-nowrap">No. Nota</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] whitespace-nowrap">Tanggal</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] whitespace-nowrap">Pelanggan</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] whitespace-nowrap">Jenis</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] text-center whitespace-nowrap">Status</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] text-right whitespace-nowrap">Total</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] text-right whitespace-nowrap">Dibayar</TableHead>
+                        <TableHead className="h-8 font-semibold text-slate-600 text-[11px] text-right whitespace-nowrap">Sisa</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredTransactions.slice((currentDetailPage - 1) * PAGE_SIZE, currentDetailPage * PAGE_SIZE).map((t: any) => (
                         <TableRow key={t.id} className="border-slate-50 hover:bg-violet-50/20">
-                          <TableCell className="font-mono text-xs text-violet-700 font-semibold whitespace-nowrap">{t.invoiceNumber}</TableCell>
-                          <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                          <TableCell className="py-1.5 font-mono text-xs text-violet-700 font-semibold whitespace-nowrap">{t.invoiceNumber}</TableCell>
+                          <TableCell className="py-1.5 text-xs text-slate-500 whitespace-nowrap">
                             {new Date(t.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
                           </TableCell>
-                          <TableCell className="text-sm font-medium text-slate-800 max-w-[150px] truncate">{t.customerName}</TableCell>
-                          <TableCell className="text-xs text-slate-500 capitalize whitespace-nowrap">{t.paymentType}</TableCell>
-                          <TableCell className="text-center whitespace-nowrap">
+                          <TableCell className="py-1.5 text-xs font-medium text-slate-800 max-w-[150px] truncate">{t.customerName}</TableCell>
+                          <TableCell className="py-1.5 text-xs text-slate-500 capitalize whitespace-nowrap">{t.paymentType}</TableCell>
+                          <TableCell className="py-1.5 text-center whitespace-nowrap">
                             <StatusBadge status={t.status} />
                             {t.hasReturns && (
-                              <span className="ml-1 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-200 text-amber-600 bg-amber-50 uppercase">Retur</span>
+                              <span className="ml-1 text-[9px] font-bold px-1 py-0.5 rounded border border-amber-200 text-amber-600 bg-amber-50 uppercase">Retur</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-semibold text-slate-900 text-sm whitespace-nowrap">{formatRupiah(t.totalAmount)}</TableCell>
-                          <TableCell className="text-right text-sm text-emerald-700 font-semibold whitespace-nowrap">{formatRupiah(t.paidAmount)}</TableCell>
-                          <TableCell className="text-right text-sm whitespace-nowrap">
+                          <TableCell className="py-1.5 text-right font-semibold text-slate-900 text-xs whitespace-nowrap">{formatRupiah(t.totalAmount)}</TableCell>
+                          <TableCell className="py-1.5 text-right text-xs text-emerald-700 font-semibold whitespace-nowrap">{formatRupiah(t.paidAmount)}</TableCell>
+                          <TableCell className="py-1.5 text-right text-xs whitespace-nowrap">
                             <span className={t.remainingAmount > 0 ? "text-rose-600 font-bold" : "text-slate-400"}>
                               {formatRupiah(t.remainingAmount)}
                             </span>
@@ -487,25 +528,33 @@ export default function Laporan() {
                   </Table>
                 </div>
 
-                {/* Footer Total */}
-                <div className="border-t border-slate-200 bg-violet-50 p-4 flex flex-wrap justify-end gap-6">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Penjualan</p>
-                    <p className="text-base font-black text-slate-900">{formatRupiah(detailReport.summary.totalGross)}</p>
+                {/* Footer Total — reflects search/filter */}
+                <div className="border-t border-slate-200 bg-violet-50 p-2 px-4 flex flex-wrap justify-end gap-4 shrink-0 z-10 sticky bottom-0 items-center">
+                  {search.trim() && (
+                    <div className="mr-auto flex items-center gap-1.5 text-[11px] text-violet-600 font-semibold">
+                      <Search className="h-3 w-3" />
+                      Filter: "{search}" — {filteredSummary.totalTransactions} transaksi
+                    </div>
+                  )}
+                  <div className="text-right flex items-center gap-2">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Penjualan:</p>
+                    <p className="text-sm font-black text-slate-900">{formatRupiah(filteredSummary.totalGross)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Dibayar</p>
-                    <p className="text-base font-black text-emerald-700">{formatRupiah(detailReport.summary.totalPaid)}</p>
+                  <div className="text-right flex items-center gap-2">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Dibayar:</p>
+                    <p className="text-sm font-black text-emerald-700">{formatRupiah(filteredSummary.totalPaid)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Sisa Piutang</p>
-                    <p className="text-base font-black text-rose-600">{formatRupiah(detailReport.summary.totalRemaining)}</p>
+                  <div className="text-right flex items-center gap-2">
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Piutang:</p>
+                    <p className="text-sm font-black text-rose-600">{formatRupiah(filteredSummary.totalRemaining)}</p>
                   </div>
                 </div>
 
                 {filteredTransactions.length > PAGE_SIZE && (
-                  <div className="flex justify-center py-4 border-t border-slate-100">
-                    <PaginationControl currentPage={currentDetailPage} totalPages={Math.ceil(filteredTransactions.length / PAGE_SIZE)} onPageChange={setCurrentDetailPage} />
+                  <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                    <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-2 py-0.5 flex items-center justify-center pointer-events-auto">
+                      <PaginationControl currentPage={currentDetailPage} totalPages={Math.ceil(filteredTransactions.length / PAGE_SIZE)} onPageChange={setCurrentDetailPage} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -519,9 +568,7 @@ export default function Laporan() {
         </TabsContent>
 
         {/* ══════════════════════ TAB: LAPORAN PPN ══════════════════════ */}
-        <TabsContent value="pajak" className="space-y-5 outline-none">
-          <FilterBar showSearch />
-
+        <TabsContent value="pajak" className="space-y-5 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
           {loadingTax ? (
             <div className="space-y-2">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
           ) : taxReport ? (
@@ -534,7 +581,7 @@ export default function Laporan() {
               </div>
 
               {/* Accurate POS-style Tax Table */}
-              <div id="tax-print-area" className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div id="tax-print-area" className="relative bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
                 <div className="p-4 border-b border-slate-100 flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <h3 className="font-bold text-slate-800">Laporan Pajak Pertambahan Nilai (PPN)</h3>
@@ -555,9 +602,9 @@ export default function Laporan() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto flex-1">
                   <Table>
-                    <TableHeader className="bg-slate-50">
+                    <TableHeader className="bg-slate-50 sticky top-0 z-10">
                       <TableRow className="border-slate-100">
                         <TableHead className="h-10 w-10 font-semibold text-slate-600 text-xs text-center whitespace-nowrap">No</TableHead>
                         <TableHead className="h-10 font-semibold text-slate-600 text-xs whitespace-nowrap">No. Faktur</TableHead>
@@ -605,8 +652,10 @@ export default function Laporan() {
                 </div>
 
                 {filteredTaxRows.length > PAGE_SIZE && (
-                  <div className="flex justify-center py-4 border-t border-slate-100">
-                    <PaginationControl currentPage={currentTaxPage} totalPages={Math.ceil(filteredTaxRows.length / PAGE_SIZE)} onPageChange={setCurrentTaxPage} />
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                    <div className="bg-white/80 backdrop-blur-md shadow-lg border border-white/50 rounded-full px-2 py-0.5 flex items-center justify-center pointer-events-auto">
+                      <PaginationControl currentPage={currentTaxPage} totalPages={Math.ceil(filteredTaxRows.length / PAGE_SIZE)} onPageChange={setCurrentTaxPage} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -642,7 +691,7 @@ export default function Laporan() {
         </TabsContent>
 
         {/* ══════════════════════ TAB: STOK ══════════════════════ */}
-        <TabsContent value="stok" className="space-y-5 outline-none">
+        <TabsContent value="stok" className="space-y-5 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
           {loadingStock ? (
             <div className="space-y-2">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
           ) : stockReport ? (
@@ -732,8 +781,10 @@ export default function Laporan() {
                 </div>
 
                 {((stockReport as any).products?.length || 0) > PAGE_SIZE && (
-                  <div className="flex justify-center py-4 border-t border-slate-100">
-                    <PaginationControl currentPage={currentStockPage} totalPages={Math.ceil(((stockReport as any).products?.length || 0) / PAGE_SIZE)} onPageChange={setCurrentStockPage} />
+                  <div className="flex justify-center pt-2 pb-4">
+                    <div className="bg-white/80 backdrop-blur-md shadow-lg border border-white/50 rounded-full px-2 py-0.5">
+                      <PaginationControl currentPage={currentStockPage} totalPages={Math.ceil(((stockReport as any).products?.length || 0) / PAGE_SIZE)} onPageChange={setCurrentStockPage} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -746,7 +797,7 @@ export default function Laporan() {
           )}
         </TabsContent>
 
-        <TabsContent value="refunds" className="mt-0 outline-none">
+        <TabsContent value="refunds" className="mt-0 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
           {isRefundsLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-10 w-full" />

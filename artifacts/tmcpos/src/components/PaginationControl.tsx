@@ -6,6 +6,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { cn } from "@/lib/utils";
 
 export function PaginationControl({
   currentPage,
@@ -37,13 +38,13 @@ export function PaginationControl({
   const visiblePages = getVisiblePages();
 
   return (
-    <div className="py-0 sm:py-1">
+    <div className="py-0 sm:py-0">
       <Pagination>
-        <PaginationContent>
+        <PaginationContent className="gap-1">
           <PaginationItem>
             <PaginationPrevious
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={cn("h-7 px-2 text-xs", currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer")}
             />
           </PaginationItem>
 
@@ -52,7 +53,7 @@ export function PaginationControl({
               <PaginationLink
                 isActive={currentPage === p}
                 onClick={() => onPageChange(p)}
-                className="cursor-pointer"
+                className="h-7 w-7 text-xs cursor-pointer"
               >
                 {p}
               </PaginationLink>
@@ -62,7 +63,7 @@ export function PaginationControl({
           <PaginationItem>
             <PaginationNext
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              className={cn("h-7 px-2 text-xs", currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer")}
             />
           </PaginationItem>
         </PaginationContent>

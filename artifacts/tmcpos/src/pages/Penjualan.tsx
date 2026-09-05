@@ -830,95 +830,98 @@ export default function Penjualan() {
   }, [filtered]);
 
   return (
-    <div className="flex flex-col h-full gap-0 w-full">
+    <div className="flex flex-col h-full w-full relative">
       
       {/* ── Static Top Strip: judul + tab + filter + summary ── */}
       <div className="flex-none space-y-2 pb-2">
-      {/* Header */}
-      <div className="flex items-center justify-between pt-1 pb-2">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Aktivitas</h1>
-          <p className="text-sm text-slate-500">Riwayat penjualan Anda</p>
+        {/* SINGLE ROW HEADER */}
+        <div className="flex flex-col xl:flex-row xl:items-center gap-3 justify-between border-b border-slate-100 pb-2">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="shrink-0 mr-2">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-tight">Aktivitas</h1>
+              <p className="text-[11px] text-slate-400">Riwayat penjualan</p>
+            </div>
+            
+            <div className="flex h-9 w-fit justify-start rounded-xl bg-slate-100 p-1 gap-1 overflow-x-auto hide-scrollbar">
+              {["Semua", "Lunas", "Kredit", "Partial", "Draft", "Dibatalkan"].map(tab => {
+                const isActive = activeTab === tab;
+                let activeColor = "text-violet-700";
+                if (tab === "Draft") activeColor = "text-slate-700";
+                if (tab === "Dibatalkan") activeColor = "text-red-700";
+                
+                return (
+                  <button 
+                    key={tab}
+                    onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
+                    className={`flex items-center rounded-lg px-3 text-xs font-semibold h-7 whitespace-nowrap transition-all ${
+                      isActive ? `bg-white shadow-sm ${activeColor}` : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+              <Input 
+                placeholder="Cari nota / pelanggan..." 
+                className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
+                value={search} 
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+              />
+            </div>
+            <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
+            <Button onClick={() => { resetForm(); setIsOpen(true); }} className="h-8 rounded-lg shadow-sm bg-violet-600 hover:bg-violet-700 text-xs font-semibold px-3">
+              <Plus className="mr-1.5 h-3.5 w-3.5" /> Buat Nota
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => { resetForm(); setIsOpen(true); }} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-          <Plus className="mr-2 h-4 w-4" /> Buat Nota
-        </Button>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-        {["Semua", "Lunas", "Kredit", "Partial", "Draft", "Dibatalkan"].map(tab => (
-          <button 
-            key={tab}
-            onClick={() => { setActiveTab(tab); setCurrentPage(1); }}
-            className={`pb-3 text-sm font-semibold whitespace-nowrap transition-colors relative ${
-              activeTab === tab 
-                ? tab === "Draft" ? 'text-slate-600' : tab === "Dibatalkan" ? 'text-red-500' : 'text-green-600' 
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {tab}
-            {activeTab === tab && <div className={`absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full ${
-              tab === "Draft" ? 'bg-slate-500' : tab === "Dibatalkan" ? 'bg-red-500' : 'bg-green-600'
-            }`} />}
-          </button>
-        ))}
-      </div>
-
-      {/* Filter Chips & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari pelanggan atau invoice..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-green-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-          />
-        </div>
-           {/* Replace standard date filter with simpler or keep as is, but styled */}
-           <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
-      </div>
-
-      {/* Rekap Summary (Moved to Top) */}
+      {/* Rekap Summary (Ultra Compact Strip) */}
       {filtered && filtered.length > 0 && (
-        <div className="bg-white p-3 sm:p-5 rounded-3xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 border border-green-100 shrink-0">
-              <ReceiptIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 pb-2">
+          <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
+              <ReceiptIcon className="w-3 h-3" />
             </div>
-            <div>
-              <h2 className="font-bold text-slate-800 text-sm leading-tight">Rekap Penjualan</h2>
-              <p className="text-[10px] sm:text-xs text-slate-500">{filtered.length} Transaksi</p>
+            <div className="flex flex-col justify-center">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Transaksi</span>
+              <span className="text-xs font-black text-slate-900 leading-tight">{filtered.length} nota</span>
             </div>
           </div>
-          
-          <div className="w-full md:w-auto grid grid-cols-2 md:flex md:flex-row gap-x-2 gap-y-1.5 md:gap-8 md:justify-end">
-            <div className="flex flex-col md:p-0">
-              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sub Total</span>
-              <span className="font-bold text-sm sm:text-base text-slate-800 leading-tight">{formatRupiah(summaryData.subTotal)}</span>
-            </div>
-            <div className="flex flex-col md:p-0">
-              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Di Bayar</span>
-              <span className="font-bold text-sm sm:text-base text-slate-800 leading-tight">{formatRupiah(summaryData.diBayar)}</span>
-            </div>
-            <div className="flex flex-col md:p-0">
-              <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-0.5">Sisa Bayar</span>
-              <span className="font-bold text-sm sm:text-base text-rose-600 leading-tight">{formatRupiah(summaryData.sisaBayar)}</span>
-            </div>
-            {summaryData.totalRefund > 0 && (
-              <div className="flex flex-col md:p-0 md:border-l md:border-slate-200 md:pl-8">
-                <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Total Refund</span>
-                <span className="font-bold text-sm sm:text-base text-emerald-600 leading-tight">{formatRupiah(summaryData.totalRefund)}</span>
-              </div>
-            )}
-            {summaryData.kembalian > 0 && (
-              <div className="flex flex-col md:p-0 md:border-l md:border-slate-200 md:pl-8">
-                <span className="text-[9px] sm:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider mb-0.5">Lebih Bayar</span>
-                <span className="font-bold text-sm sm:text-base text-emerald-600 leading-tight">{formatRupiah(summaryData.kembalian)}</span>
-              </div>
-            )}
+          <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+            <span className="text-[9px] font-semibold text-violet-400 uppercase tracking-wider">Sub Total</span>
+            <span className="text-xs font-black text-violet-900 leading-tight">{formatRupiah(summaryData.subTotal)}</span>
           </div>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+            <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Di Bayar</span>
+            <span className="text-xs font-black text-emerald-900 leading-tight">{formatRupiah(summaryData.diBayar)}</span>
+          </div>
+          <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+            <span className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider">Sisa Bayar</span>
+            <span className="text-xs font-black text-rose-700 leading-tight">{formatRupiah(summaryData.sisaBayar)}</span>
+          </div>
+          {summaryData.totalRefund > 0 ? (
+            <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+              <span className="text-[9px] font-semibold text-amber-500 uppercase tracking-wider">Total Refund</span>
+              <span className="text-xs font-black text-amber-700 leading-tight">{formatRupiah(summaryData.totalRefund)}</span>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Status</span>
+              <span className="text-[10px] font-semibold text-slate-500 leading-tight mt-0.5">Semua data termuat</span>
+            </div>
+          )}
+          {summaryData.kembalian > 0 && (
+            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+              <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-wider">Lebih Bayar</span>
+              <span className="text-xs font-black text-blue-700 leading-tight">{formatRupiah(summaryData.kembalian)}</span>
+            </div>
+          )}
         </div>
       )}
       </div> {/* end static top strip */}
@@ -1119,13 +1122,15 @@ export default function Penjualan() {
       </div>
       </div> {/* end scrollable table container */}
 
-      {/* ── Pagination Bar (Sticky bawah, selalu terlihat) ── */}
+      {/* ── Pagination Bar (Floating Bubble) ── */}
       {filtered && filtered.length > 20 && (
-        <div className="flex-none border-t border-slate-200 bg-white px-3 sm:px-4 py-1 sm:py-2.5 flex flex-col sm:flex-row items-center justify-between rounded-b-2xl shadow-sm gap-1 sm:gap-0">
-          <span className="text-[10px] sm:text-xs text-slate-400">
-            Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)} dari {filtered.length} transaksi
-          </span>
-          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+          <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-3 py-0.5 flex items-center justify-center gap-3 pointer-events-auto">
+            <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
+              {filtered.length} transaksi
+            </span>
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+          </div>
         </div>
       )}
 

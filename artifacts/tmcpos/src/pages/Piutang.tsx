@@ -90,8 +90,8 @@ export default function Piutang() {
     }) ?? [], dateFrom, dateTo,
   );
 
-  const totalPiutang = receivables?.filter(r => r.status !== "lunas").reduce((sum, r) => sum + ((r as any).remainingAmount ?? 0), 0) ?? 0;
-  const overdueCount = receivables?.filter(r => (r as any).isOverdue).length ?? 0;
+  const totalPiutang = filtered?.filter(r => r.status !== "lunas").reduce((sum, r) => sum + ((r as any).remainingAmount ?? 0), 0) ?? 0;
+  const overdueCount = filtered?.filter(r => (r as any).isOverdue).length ?? 0;
   const methodLabel: Record<string, string> = { tunai: "Tunai", transfer: "Transfer", cashless: "Cashless/QRIS" };
   const methodIcon = (m: string) => {
     if (m === "transfer") return <CreditCard className="w-3 h-3" />;
@@ -166,7 +166,7 @@ export default function Piutang() {
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
               <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-wider">Invoice Aktif</span>
-              <span className="text-xs font-black text-blue-700 leading-tight">{receivables?.filter(r => r.status !== "lunas").length ?? 0} Tagihan</span>
+              <span className="text-xs font-black text-blue-700 leading-tight">{filtered?.filter(r => r.status !== "lunas").length ?? 0} Tagihan</span>
             </div>
             <div className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center ${overdueCount > 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
               <span className={`text-[9px] font-semibold uppercase tracking-wider ${overdueCount > 0 ? 'text-rose-500' : 'text-slate-400'}`}>Jatuh Tempo</span>

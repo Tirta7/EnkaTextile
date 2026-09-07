@@ -169,7 +169,10 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
       <div className="md:col-span-2">
         <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">Barang</label>
         <Combobox
-          items={filteredProducts?.map((p: any) => ({ value: p.id.toString(), label: p.name })) || []}
+          items={filteredProducts?.map((p: any) => ({ 
+            value: p.id.toString(), 
+            label: `${p.name} (Stok: ${Number(p.rollStock || 0)} Roll / ${Number(p.meterStock || 0)} ${p.primaryUnit || 'M'})`
+          })) || []}
           value={item.productId ? item.productId.toString() : undefined}
           onValueChange={(v) => updateItem(index, "productId", parseInt(v))}
           placeholder="Pilih barang"
@@ -698,7 +701,7 @@ export default function Penjualan() {
       const cust = customers?.find(c => c.id.toString() === customerId);
       if (cust) customerName = cust.name;
     }
-    const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+    const paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : (dpAmount ? parseFloat(dpAmount) : 0);
     
     setPreviewSaleId(undefined);
     setPreviewData({
@@ -1462,6 +1465,7 @@ export default function Penjualan() {
     </div>
   );
 }
+
 
 
 

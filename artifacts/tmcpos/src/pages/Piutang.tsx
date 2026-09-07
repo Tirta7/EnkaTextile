@@ -16,7 +16,7 @@ import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter
 export default function Piutang() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"semua" | "belum_bayar" | "partial" | "lunas">("semua");
+  const [activeTab, setActiveTab] = useState<"semua" | "belum_bayar" | "partial">("semua");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -25,6 +25,7 @@ export default function Piutang() {
   const [payMethod, setPayMethod] = useState("tunai");
   const [payNotes, setPayNotes] = useState("");
   const [payDate, setPayDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [expandedCustomerIds, setExpandedCustomerIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [expandedDetailMap, setExpandedDetailMap] = useState<Record<number, any>>({});
 
@@ -40,6 +41,15 @@ export default function Piutang() {
     fetch(`/api/receivables/${recId}`, { credentials: "include" })
       .then(r => r.json())
       .then(data => setExpandedDetailMap(prev => ({ ...prev, [recId]: data })));
+  };
+
+  const toggleCustomerExpand = (name: string) => {
+    setExpandedCustomerIds(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) { next.delete(name); }
+      else { next.add(name); }
+      return next;
+    });
   };
 
   const toggleExpand = (recId: number) => {
@@ -83,6 +93,7 @@ export default function Piutang() {
 
   const filtered = filterByDateRange(
     receivables?.filter(r => {
+      if (r.status === "lunas") return false;
       const q = search.toLowerCase();
       const matchSearch = (r as any).customerName?.toLowerCase().includes(q) || (r as any).invoiceNumber?.toLowerCase().includes(q);
       const matchStatus = activeTab === "semua" || r.status === activeTab || (activeTab === "belum_bayar" && r.status === "unpaid");
@@ -90,7 +101,31 @@ export default function Piutang() {
     }) ?? [], dateFrom, dateTo,
   );
 
-  const totalPiutang = filtered?.filter(r => r.status !== "lunas").reduce((sum, r) => sum + ((r as any).remainingAmount ?? 0), 0) ?? 0;
+  const groupedCustomers = React.useMemo(() => {
+    const map = new Map<string, {
+      customerName: string;
+      invoices: typeof filtered;
+      totalTagihan: number;
+      totalSisa: number;
+      isOverdue: boolean;
+    }>();
+    
+    filtered.forEach(r => {
+      const name = (r as any).customerName || "Anonim";
+      if (!map.has(name)) {
+        map.set(name, { customerName: name, invoices: [], totalTagihan: 0, totalSisa: 0, isOverdue: false });
+      }
+      const group = map.get(name)!;
+      group.invoices.push(r);
+      group.totalTagihan += (r as any).totalAmount || 0;
+      group.totalSisa += (r as any).remainingAmount || 0;
+      if ((r as any).isOverdue) group.isOverdue = true;
+    });
+    
+    return Array.from(map.values()).sort((a, b) => a.customerName.localeCompare(b.customerName));
+  }, [filtered]);
+
+  const totalPiutang = filtered?.reduce((sum, r) => sum + ((r as any).remainingAmount ?? 0), 0) ?? 0;
   const overdueCount = filtered?.filter(r => (r as any).isOverdue).length ?? 0;
   const methodLabel: Record<string, string> = { tunai: "Tunai", transfer: "Transfer", cashless: "Cashless/QRIS" };
   const methodIcon = (m: string) => {
@@ -112,11 +147,10 @@ export default function Piutang() {
             </div>
             
             <div className="flex h-9 w-fit justify-start rounded-xl bg-slate-100 p-1 gap-1 overflow-x-auto hide-scrollbar">
-              {(["semua", "belum_bayar", "partial", "lunas"] as const).map((tab) => {
-                const labels: Record<string, string> = { semua: "Semua", belum_bayar: "Belum Lunas", partial: "Sebagian", lunas: "Lunas" };
+              {(["semua", "belum_bayar", "partial"] as const).map((tab) => {
+                const labels: Record<string, string> = { semua: "Semua", belum_bayar: "Belum Lunas", partial: "Sebagian" };
                 const isActive = activeTab === tab;
                 let activeColor = "text-violet-700";
-                if (tab === "lunas") activeColor = "text-emerald-700";
                 if (tab === "belum_bayar") activeColor = "text-rose-700";
                 
                 return (
@@ -166,7 +200,7 @@ export default function Piutang() {
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
               <span className="text-[9px] font-semibold text-blue-500 uppercase tracking-wider">Invoice Aktif</span>
-              <span className="text-xs font-black text-blue-700 leading-tight">{filtered?.filter(r => r.status !== "lunas").length ?? 0} Tagihan</span>
+              <span className="text-xs font-black text-blue-700 leading-tight">{filtered?.length ?? 0} Tagihan</span>
             </div>
             <div className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center ${overdueCount > 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
               <span className={`text-[9px] font-semibold uppercase tracking-wider ${overdueCount > 0 ? 'text-rose-500' : 'text-slate-400'}`}>Jatuh Tempo</span>
@@ -181,7 +215,7 @@ export default function Piutang() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
           {isLoading ? (
             <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
-          ) : filtered?.length === 0 ? (
+          ) : groupedCustomers.length === 0 ? (
             <div className="text-center py-16"><Wallet className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada piutang</h3></div>
           ) : (
             <div className="overflow-x-auto">
@@ -189,123 +223,158 @@ export default function Piutang() {
                 <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                   <tr>
                     <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">#</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Tanggal</th>
                     <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Pelanggan</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Invoice</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Status</th>
+                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Jml Tagihan Aktif</th>
                     <th className="h-8 px-4 text-right align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Total Tagihan</th>
-                    <th className="h-8 px-4 text-right align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Sisa Piutang</th>
+                    <th className="h-8 px-4 text-right align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Total Sisa Piutang</th>
                     <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((r, idx) => {
-                    const isOverdue = (r as any).isOverdue && r.status !== "lunas";
-                    const isExpanded = expandedIds.has(r.id);
-                    const detail = expandedDetailMap[r.id];
-                    let badgeClass = "bg-rose-50 text-rose-600 border-rose-100";
-                    if (r.status === "lunas") badgeClass = "bg-emerald-50 text-emerald-600 border-emerald-100";
-                    else if (r.status === "partial") badgeClass = "bg-blue-50 text-blue-600 border-blue-100";
-
+                  {groupedCustomers.slice((currentPage - 1) * 20, currentPage * 20).map((group, idx) => {
+                    const isCustomerExpanded = expandedCustomerIds.has(group.customerName);
+                    
                     return (
-                      <React.Fragment key={r.id}>
-                        <tr className={`border-b border-slate-50 hover:bg-slate-50/50 group transition-colors ${isOverdue ? 'bg-rose-50/20' : ''}`}>
-                          <td className="py-2 px-4 text-[11px] text-slate-500 whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
-                          <td className="py-2 px-4 text-[11px] text-slate-500 whitespace-nowrap">{formatDate(r.createdAt)}</td>
-                          <td className="py-2 px-4 whitespace-nowrap">
-                            <span className="font-semibold text-xs text-slate-800">{(r as any).customerName || "Anonim"}</span>
-                          </td>
-                          <td className="py-2 px-4">
-                            <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">{(r as any).invoiceNumber || `#${r.id}`}</span>
-                          </td>
-                          <td className="py-2 px-4 whitespace-nowrap">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>
-                              {r.status?.replace("_", " ")}
-                            </span>
-                            {isOverdue && <span className="ml-1 text-[9px] font-bold text-rose-500 uppercase">Jatuh Tempo</span>}
-                          </td>
-                          <td className="py-2 px-4 text-right whitespace-nowrap">
-                            <span className="font-bold text-xs text-slate-800">{formatRupiah((r as any).totalAmount)}</span>
-                          </td>
-                          <td className="py-2 px-4 text-right whitespace-nowrap">
-                            <span className={`font-bold text-xs ${(r as any).remainingAmount > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                              {(r as any).remainingAmount > 0 ? formatRupiah((r as any).remainingAmount) : 'Lunas'}
-                            </span>
-                          </td>
-                          <td className="py-2 px-4 text-center whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1 transition-opacity">
-                              {(r as any).paidAmount > 0 && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" onClick={() => toggleExpand(r.id)} title="Riwayat Cicilan">
-                                  {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                                </Button>
-                              )}
-                              {r.status !== "lunas" && (
-                                <Button variant="ghost" size="icon" className="h-7 w-7 text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg" onClick={() => openPayment(r.id)} title="Bayar Cicilan">
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                              )}
+                      <React.Fragment key={group.customerName}>
+                        <tr className={`border-b border-slate-50 hover:bg-slate-50/50 group transition-colors cursor-pointer ${group.isOverdue ? 'bg-rose-50/20' : ''}`} onClick={() => toggleCustomerExpand(group.customerName)}>
+                          <td className="py-3 px-4 text-[11px] text-slate-500 whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm text-slate-800">{group.customerName}</span>
+                              {group.isOverdue && <span className="text-[9px] font-bold text-rose-500 uppercase mt-0.5">Ada yg Jatuh Tempo</span>}
                             </div>
                           </td>
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="font-semibold text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">{group.invoices.length} Nota</span>
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <span className="font-bold text-xs text-slate-800">{formatRupiah(group.totalTagihan)}</span>
+                          </td>
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            <span className="font-bold text-xs text-rose-600">{formatRupiah(group.totalSisa)}</span>
+                          </td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                            <Button variant="ghost" size="icon" className={`h-8 w-8 transition-transform ${isCustomerExpanded ? 'rotate-180' : ''}`}>
+                              <ChevronDown className="h-4 w-4 text-slate-500" />
+                            </Button>
+                          </td>
                         </tr>
-                        {isExpanded && (
-                          <tr className="bg-slate-50/50">
-                            <td colSpan={8} className="py-3 px-4 border-b border-slate-100">
-                              <div className="flex flex-col gap-2 max-w-2xl ml-auto">
-                                {!detail ? (
-                                  <div className="flex gap-2"><Skeleton className="h-8 w-full rounded-lg" /></div>
-                                ) : (
-                                  <div className="flex flex-col gap-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Riwayat Cicilan:</span>
-                                    
-                                    {(() => {
-                                      const recordedTotal = detail.payments?.reduce((acc: number, p: any) => acc + parseFloat(p.amount), 0) || 0;
-                                      const dpAmount = Math.round(parseFloat((r as any).paidAmount || 0) - recordedTotal);
-                                      const hasDP = dpAmount > 0;
-                                      const hasPayments = detail.payments && detail.payments.length > 0;
-                                      
-                                      if (!hasDP && !hasPayments) {
-                                        return <p className="text-[11px] text-slate-400 font-medium py-2 text-center">Belum ada cicilan tercatat.</p>;
-                                      }
+                        
+                        {isCustomerExpanded && (
+                          <tr className="bg-slate-50/80">
+                            <td colSpan={6} className="py-4 px-6 border-b border-slate-200">
+                              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                <table className="w-full text-xs">
+                                  <thead className="bg-slate-50/50 border-b border-slate-100">
+                                    <tr>
+                                      <th className="h-8 px-4 text-left font-semibold text-slate-600">Tanggal</th>
+                                      <th className="h-8 px-4 text-left font-semibold text-slate-600">Invoice</th>
+                                      <th className="h-8 px-4 text-left font-semibold text-slate-600">Status</th>
+                                      <th className="h-8 px-4 text-right font-semibold text-slate-600">Total Tagihan</th>
+                                      <th className="h-8 px-4 text-right font-semibold text-slate-600">Sisa Piutang</th>
+                                      <th className="h-8 px-4 text-center font-semibold text-slate-600">Aksi</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {group.invoices.map(r => {
+                                      const isOverdue = (r as any).isOverdue;
+                                      const isExpanded = expandedIds.has(r.id);
+                                      const detail = expandedDetailMap[r.id];
+                                      let badgeClass = "bg-rose-50 text-rose-600 border-rose-100";
+                                      if (r.status === "partial") badgeClass = "bg-blue-50 text-blue-600 border-blue-100";
 
                                       return (
-                                        <>
-                                          {hasDP && (
-                                            <div className="flex justify-between items-center bg-amber-50/50 border border-amber-100 shadow-sm p-2 rounded-lg">
-                                              <div className="flex items-center gap-3">
-                                                <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                                                  <Wallet className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-[10px] font-bold text-slate-700">{formatDate(r.createdAt)}</span>
-                                                  <span className="text-[9px] font-medium text-slate-400 capitalize">DP / Pembayaran Awal</span>
-                                                </div>
+                                        <React.Fragment key={r.id}>
+                                          <tr className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="py-2.5 px-4 text-slate-500 whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                                            <td className="py-2.5 px-4"><span className="font-mono font-bold text-slate-700">{(r as any).invoiceNumber || `#${r.id}`}</span></td>
+                                            <td className="py-2.5 px-4 whitespace-nowrap">
+                                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>{r.status?.replace("_", " ")}</span>
+                                              {isOverdue && <span className="ml-1 text-[9px] font-bold text-rose-500 uppercase">Jatuh Tempo</span>}
+                                            </td>
+                                            <td className="py-2.5 px-4 text-right"><span className="font-bold text-slate-800">{formatRupiah((r as any).totalAmount)}</span></td>
+                                            <td className="py-2.5 px-4 text-right"><span className="font-bold text-rose-600">{formatRupiah((r as any).remainingAmount)}</span></td>
+                                            <td className="py-2.5 px-4 text-center">
+                                              <div className="flex items-center justify-center gap-1">
+                                                {(r as any).paidAmount > 0 && (
+                                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg" onClick={(e) => { e.stopPropagation(); toggleExpand(r.id); }} title="Riwayat Cicilan">
+                                                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                                                  </Button>
+                                                )}
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg" onClick={(e) => { e.stopPropagation(); openPayment(r.id); }} title="Bayar Cicilan">
+                                                  <Plus className="h-3.5 w-3.5" />
+                                                </Button>
                                               </div>
-                                              <span className="font-bold text-amber-600 text-xs">{formatRupiah(dpAmount)}</span>
-                                            </div>
+                                            </td>
+                                          </tr>
+                                          {isExpanded && (
+                                            <tr className="bg-slate-50/30">
+                                              <td colSpan={6} className="py-3 px-4 border-b border-slate-100">
+                                                <div className="flex flex-col gap-2 ml-auto w-full max-w-xl">
+                                                  {!detail ? (
+                                                    <div className="flex gap-2"><Skeleton className="h-8 w-full rounded-lg" /></div>
+                                                  ) : (
+                                                    <div className="flex flex-col gap-1.5">
+                                                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Riwayat Cicilan:</span>
+                                                      
+                                                      {(() => {
+                                                        const recordedTotal = detail.payments?.reduce((acc: number, p: any) => acc + parseFloat(p.amount), 0) || 0;
+                                                        const dpAmount = Math.round(parseFloat((r as any).paidAmount || 0) - recordedTotal);
+                                                        const hasDP = dpAmount > 0;
+                                                        const hasPayments = detail.payments && detail.payments.length > 0;
+                                                        
+                                                        if (!hasDP && !hasPayments) {
+                                                          return <p className="text-[11px] text-slate-400 font-medium py-2 text-center">Belum ada cicilan tercatat.</p>;
+                                                        }
+
+                                                        return (
+                                                          <>
+                                                            {hasDP && (
+                                                              <div className="flex justify-between items-center bg-amber-50/50 border border-amber-100 shadow-sm p-2 rounded-lg">
+                                                                <div className="flex items-center gap-3">
+                                                                  <div className="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                                                    <Wallet className="w-3.5 h-3.5" />
+                                                                  </div>
+                                                                  <div className="flex flex-col">
+                                                                    <span className="text-[10px] font-bold text-slate-700">{formatDate(r.createdAt)}</span>
+                                                                    <span className="text-[9px] font-medium text-slate-400 capitalize">DP / Pembayaran Awal</span>
+                                                                  </div>
+                                                                </div>
+                                                                <span className="font-bold text-amber-600 text-xs">{formatRupiah(dpAmount)}</span>
+                                                              </div>
+                                                            )}
+                                                            
+                                                            {detail.payments?.map((p: any) => {
+                                                              const dt = new Date(p.paidAt);
+                                                              return (
+                                                                <div key={p.id} className="flex justify-between items-center bg-white border border-slate-100 shadow-sm p-2 rounded-lg">
+                                                                  <div className="flex items-center gap-3">
+                                                                    <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
+                                                                      {methodIcon(p.paymentMethod)}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                      <span className="text-[10px] font-bold text-slate-700">{dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                                                                      <span className="text-[9px] font-medium text-slate-400 capitalize">{methodLabel[p.paymentMethod] || p.paymentMethod} {p.notes ? `• ${p.notes}` : ''}</span>
+                                                                    </div>
+                                                                  </div>
+                                                                  <span className="font-bold text-emerald-600 text-xs">{formatRupiah(parseFloat(p.amount))}</span>
+                                                                </div>
+                                                              );
+                                                            })}
+                                                          </>
+                                                        );
+                                                      })()}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </td>
+                                            </tr>
                                           )}
-                                          
-                                          {detail.payments?.map((p: any) => {
-                                            const dt = new Date(p.paidAt);
-                                            return (
-                                              <div key={p.id} className="flex justify-between items-center bg-white border border-slate-100 shadow-sm p-2 rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                  <div className="w-6 h-6 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-                                                    {methodIcon(p.paymentMethod)}
-                                                  </div>
-                                                  <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-700">{dt.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}</span>
-                                                    <span className="text-[9px] font-medium text-slate-400 capitalize">{methodLabel[p.paymentMethod] || p.paymentMethod} {p.notes ? `• ${p.notes}` : ''}</span>
-                                                  </div>
-                                                </div>
-                                                <span className="font-bold text-emerald-600 text-xs">{formatRupiah(parseFloat(p.amount))}</span>
-                                              </div>
-                                            );
-                                          })}
-                                        </>
+                                        </React.Fragment>
                                       );
-                                    })()}
-                                  </div>
-                                )}
+                                    })}
+                                  </tbody>
+                                </table>
                               </div>
                             </td>
                           </tr>
@@ -321,13 +390,13 @@ export default function Piutang() {
       </div>
 
       {/* Pagination Bar */}
-      {filtered && filtered.length > 20 && (
+      {groupedCustomers && groupedCustomers.length > 20 && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-3 py-0.5 flex items-center justify-center gap-3 pointer-events-auto">
             <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
-              {filtered.length} piutang
+              {groupedCustomers.length} pelanggan
             </span>
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(groupedCustomers.length / 20)} onPageChange={setCurrentPage} />
           </div>
         </div>
       )}

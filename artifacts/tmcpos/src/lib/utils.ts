@@ -18,8 +18,8 @@ export function formatRupiah(amount: number | string | null | undefined): string
 
 export function formatNumber(value: number | string | null | undefined): string {
   const num = typeof value === "string" ? parseFloat(value) : (value ?? 0);
-  const rounded = Math.round(isNaN(num) ? 0 : num);
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(rounded);
+  if (isNaN(num)) return "0";
+  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(num);
 }
 
 export function formatDate(date: string | Date | null | undefined): string {

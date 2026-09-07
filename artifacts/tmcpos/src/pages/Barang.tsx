@@ -245,6 +245,12 @@ export default function Barang() {
                 <span className={`text-[9px] font-semibold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Stok Tipis</span>
                 <span className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} Item</span>
               </div>
+              <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Roll & YARD</span>
+                <span className="text-xs font-black text-slate-900 leading-tight">
+                  {formatNumber(filtered?.reduce((sum, p) => sum + (Number(p.rollStock) || 0), 0) ?? 0)} Roll <span className="text-muted-foreground font-medium">({formatNumber(filtered?.reduce((sum, p) => sum + (Number(p.meterStock) || 0), 0) ?? 0)} yds)</span>
+                </span>
+              </div>
           </div>
         )}
       </div>

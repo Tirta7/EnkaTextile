@@ -283,7 +283,11 @@ router.post("/sales", async (req, res): Promise<void> => {
       status = paidAmount > 0 ? 'partial' : 'held';
       invoiceNumber = `HOLD-${Date.now()}`;
     } else {
-      paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+      if (dpAmount !== undefined) {
+        paidAmount = dpAmount;
+      } else {
+        paidAmount = (paymentType !== "kredit" && paymentType !== "tempo") ? totalAmount : 0;
+      }
       status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
       invoiceNumber = req.body.invoiceNumber || await generateNextInvoiceNumber("INV");
     }

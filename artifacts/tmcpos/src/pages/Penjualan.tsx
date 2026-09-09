@@ -1341,20 +1341,12 @@ export default function Penjualan() {
                 ✓ Simpan Perubahan
               </Button>
             ) : (
-              <>
-                <Button
-                  className="h-11 rounded-xl flex-1 bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-bold shadow-sm"
-                  onClick={() => handleSubmit(true)}
-                  disabled={createMutation.isPending || items.length === 0}>
-                  🕐 Simpan & Tahan
-                </Button>
-                <Button
-                  className="h-11 rounded-xl flex-[2] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold shadow-sm"
-                  onClick={() => handleSubmit(false)}
-                  disabled={createMutation.isPending || items.length === 0}>
-                  💳 Simpan & Bayar
-                </Button>
-              </>
+              <Button
+                className="h-11 rounded-xl flex-[2] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-bold shadow-sm"
+                onClick={() => handleSubmit(false)}
+                disabled={createMutation.isPending || items.length === 0}>
+                💳 Simpan & Bayar
+              </Button>
             )}
           </div>
 

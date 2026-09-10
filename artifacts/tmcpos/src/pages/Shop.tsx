@@ -22,6 +22,14 @@ interface ShopProductDetail extends ShopProduct {
   totalRolls: number;
 }
 
+export interface CartItem {
+  id: string; // unique id per cart entry
+  product: ShopProductDetail;
+  size: number | null; // null means custom cut
+  customLength?: number;
+  qty: number;
+}
+
 interface ShopCategory {
   id: number;
   name: string;
@@ -91,7 +99,7 @@ function ProductImage({ src, name, className = "" }: { src: string | null; name:
 
   if (!src || error) {
     return (
-      <div className={`bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-1 ${className}`}>
+      <div className={`bg-linear-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-1 ${className}`}>
         <span className="text-3xl">🧵</span>
         <span className="text-[10px] text-slate-400 font-medium text-center px-2 leading-tight">{name}</span>
       </div>
@@ -117,24 +125,48 @@ function ProductImage({ src, name, className = "" }: { src: string | null; name:
 }
 
 // ─── Bottom Sheet ─────────────────────────────────────────────────────────────
-function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetail | null; onClose: () => void; whatsapp: string }) {
+function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDetail | null; onClose: () => void; onAddToCart: (item: Omit<CartItem, "id">) => void }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
+  const [customLengthStr, setCustomLengthStr] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    if (product) setSelectedSize(null);
+    if (product) {
+      setSelectedSize(null);
+      setCustomLengthStr("");
+      setQuantity(1);
+    }
   }, [product]);
+
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSize]);
 
   // Close on backdrop click
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
   };
 
-  const orderMessage = () => {
-    const size = selectedSize ? `${selectedSize} ${product?.primaryUnit}` : "bebas ukuran";
-    return encodeURIComponent(
-      `Halo ENKA TEXTILE! 👋\n\nSaya tertarik dengan:\n*${product?.name}*\nUkuran: ${size}\nHarga: ${formatRupiah(product?.pricePerMeter ?? 0)}/${product?.primaryUnit}\n\nApakah masih tersedia?`
-    );
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    let customLength: number | undefined;
+    if (selectedSize === null) {
+      customLength = parseFloat(customLengthStr);
+      if (isNaN(customLength) || customLength <= 0) {
+        alert("Silakan masukkan jumlah yard/meter yang valid untuk Bebas Potong.");
+        return;
+      }
+    }
+
+    onAddToCart({
+      product,
+      size: selectedSize,
+      customLength,
+      qty: quantity
+    });
+    onClose();
   };
 
   if (!product) return null;
@@ -147,7 +179,7 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
     >
       <div
         ref={sheetRef}
-        className="w-full md:max-w-[420px] bg-white rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col relative"
+        className="w-full md:max-w-105 bg-white rounded-t-3xl md:rounded-3xl overflow-hidden shadow-2xl flex flex-col relative"
         style={{
           maxHeight: "88vh",
           paddingBottom: "max(env(safe-area-inset-bottom), 16px)",
@@ -201,14 +233,26 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
                   <span className="text-sm font-medium text-slate-400">/{product.primaryUnit}</span>
                 </span>
               </div>
+              
+              {selectedSize === null && parseFloat(customLengthStr) > 0 && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 mt-1">
+                  <span className="text-sm text-slate-500">
+                    Total Eceran ({quantity > 1 ? `${quantity}x ` : ''}{customLengthStr} {product.primaryUnit})
+                  </span>
+                  <span className="text-base font-bold text-rose-600">
+                    {formatRupiah(product.pricePerMeter * parseFloat(customLengthStr) * quantity)}
+                  </span>
+                </div>
+              )}
+
               {product.pricePerRoll && (
                 <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 mt-1">
                   <span className="text-sm text-slate-500">
-                    {selectedSize ? `Total 1 Roll (${selectedSize} ${product.primaryUnit})` : "Harga Grosir (Beli Roll-an)"}
+                    {selectedSize ? `Total ${quantity} Roll (${selectedSize} ${product.primaryUnit})` : "Harga Grosir (Beli Roll-an)"}
                   </span>
                   <div className="flex flex-col items-end">
                     <span className="text-base font-bold text-violet-600">
-                      {selectedSize ? formatRupiah(product.pricePerRoll * selectedSize) : formatRupiah(product.pricePerRoll)}
+                      {selectedSize ? formatRupiah(product.pricePerRoll * selectedSize * quantity) : formatRupiah(product.pricePerRoll)}
                       {!selectedSize && <span className="text-xs font-medium text-slate-400">/{product.primaryUnit}</span>}
                     </span>
                     {selectedSize && (
@@ -250,39 +294,88 @@ function BottomSheet({ product, onClose, whatsapp }: { product: ShopProductDetai
                       }`}
                     >
                       {size.length} {product.primaryUnit}
-                      <span className="ml-1 text-xs opacity-60">×{size.count}</span>
+                      <span className="ml-1 text-[10px] opacity-70 font-normal">({size.count} stok)</span>
                     </button>
                   ))}
                 </div>
+                
+                {/* Custom Length Input Form */}
+                {selectedSize === null && (
+                  <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3 animate-[slideUp_0.2s_ease-out]">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-700 mb-1">Jumlah {product.primaryUnit}</p>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="Contoh: 5"
+                        value={customLengthStr}
+                        onChange={e => setCustomLengthStr(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-300 text-sm focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="shrink-0 w-24">
+                      <p className="text-xs font-medium text-slate-400 mb-1">Satuan</p>
+                      <div className="h-10 flex items-center justify-center bg-slate-200 rounded-lg text-sm font-semibold text-slate-600">
+                        {product.primaryUnit}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Stock Info */}
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${product.inStock ? "bg-emerald-400" : "bg-slate-300"}`} />
-              <span className="text-sm text-slate-500">
-                {product.inStock
-                  ? `${new Intl.NumberFormat('id-ID').format(product.rollStock)} roll tersedia (${new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(product.meterStock)} ${product.primaryUnit})`
-                  : "Stok habis"}
-              </span>
+            {/* Stock Info & Quantity Selector */}
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${product.inStock ? "bg-emerald-400" : "bg-slate-300"}`} />
+                <span className="text-sm text-slate-500">
+                  {product.inStock
+                    ? `${new Intl.NumberFormat('id-ID').format(product.rollStock)} roll tersedia`
+                    : "Stok habis"}
+                </span>
+              </div>
+              
+              {product.inStock && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Jumlah</span>
+                  <div className="flex items-center bg-slate-100 rounded-lg border border-slate-200">
+                    <button 
+                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      className={`w-8 h-8 flex items-center justify-center rounded-l-lg transition-colors ${quantity <= 1 ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-200 active:scale-95"}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" /></svg>
+                    </button>
+                    <div className="w-10 text-center font-bold text-slate-700 text-sm">{quantity}</div>
+                    <button 
+                      onClick={() => {
+                        const maxQty = selectedSize !== null ? (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) : 99;
+                        setQuantity(q => Math.min(maxQty, q + 1));
+                      }}
+                      disabled={selectedSize !== null && quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-r-lg transition-colors ${selectedSize !== null && quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-200 active:scale-95"}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* WhatsApp Order Button */}
-            <a
-              href={`https://wa.me/${whatsapp}?text=${orderMessage()}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            {/* Add to Cart Button */}
+            <button
+              onClick={handleAddToCart}
               className={`flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-bold text-base transition-transform active:scale-95 ${
                 product.inStock
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
+                  ? "bg-rose-500 text-white shadow-lg shadow-rose-200"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed pointer-events-none"
               }`}
             >
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              {product.inStock ? "Pesan via WhatsApp" : "Stok Habis"}
-            </a>
+              {product.inStock ? "Tambah ke Keranjang" : "Stok Habis"}
+            </button>
           </div>
         </div>
       </div>
@@ -302,7 +395,7 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
       style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.04)" }}
     >
       {/* Image / Color Swatch Half */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden">
+      <div className="relative aspect-4/3 w-full overflow-hidden">
         {product.imageUrl ? (
           <ProductImage src={product.imageUrl} name={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : fabricColor ? (
@@ -318,7 +411,7 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
             </div>
           </div>
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-1">
+          <div className="w-full h-full bg-linear-to-br from-slate-100 to-slate-200 flex flex-col items-center justify-center gap-1">
             <span className="text-3xl">🧵</span>
             <span className="text-[10px] text-slate-400 font-medium text-center px-2 leading-tight">{product.name}</span>
           </div>
@@ -376,6 +469,109 @@ function ProductCard({ product, onClick }: { product: ShopProduct; onClick: () =
   );
 }
 
+
+
+// ─── Cart Modal ───────────────────────────────────────────────────────────────
+function CartModal({
+  isOpen,
+  onClose,
+  cart,
+  setCart,
+  whatsapp
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  whatsapp: string;
+}) {
+  if (!isOpen) return null;
+
+  const handleRemove = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const calculateItemPrice = (item: CartItem) => {
+    if (item.size === null && item.customLength) {
+      return item.product.pricePerMeter * item.customLength;
+    }
+    if (item.size !== null && item.product.pricePerRoll) {
+      return item.product.pricePerRoll * item.size;
+    }
+    return 0;
+  };
+
+  const subtotal = cart.reduce((acc, item) => acc + calculateItemPrice(item) * item.qty, 0);
+
+  const handleCheckout = () => {
+    let msg = `Halo ENKA TEXTILE! 👋\nSaya ingin memesan:\n\n`;
+    cart.forEach((item, index) => {
+      const itemPrice = calculateItemPrice(item);
+      const totalItemPrice = itemPrice * item.qty;
+      
+      if (item.size === null) {
+        msg += `${index + 1}. ${item.product.name} (${item.qty}x Bebas Potong - ${item.customLength} ${item.product.primaryUnit})\n`;
+        msg += `   ${item.qty} x ${formatRupiah(item.product.pricePerMeter)} x ${item.customLength} = ${formatRupiah(totalItemPrice)}\n`;
+      } else {
+        msg += `${index + 1}. ${item.product.name} (${item.qty} Roll - ${item.size} ${item.product.primaryUnit})\n`;
+        msg += `   ${item.qty} x ${formatRupiah(item.product.pricePerRoll || 0)} x ${item.size} = ${formatRupiah(totalItemPrice)}\n`;
+      }
+    });
+    msg += `\nTotal Pesanan: ${formatRupiah(subtotal)}\nApakah stoknya masih tersedia?`;
+    
+    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  return (
+    <div className="fixed inset-0 z-60 flex items-end md:items-center justify-center md:p-4" style={{ backgroundColor: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full md:max-w-105 bg-white rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col h-[85vh] animate-[slideUp_0.35s_ease-out]">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <h2 className="text-lg font-bold text-slate-800">Keranjang Belanja</h2>
+          <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:bg-slate-200"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {cart.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <span className="text-4xl mb-2">🛒</span>
+              <p>Keranjang masih kosong</p>
+            </div>
+          ) : (
+            cart.map(item => (
+              <div key={item.id} className="flex gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-white border border-slate-100">
+                  <ProductImage src={item.product.imageUrl} name={item.product.name} className="w-full h-full" />
+                </div>
+                <div className="flex-1 flex flex-col justify-between">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-sm font-bold text-slate-800 leading-tight">{item.product.name}</h3>
+                    <button onClick={() => handleRemove(item.id)} className="text-red-400 hover:text-red-600 p-1"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    {item.qty} x {item.size === null ? `Bebas Potong (${item.customLength} ${item.product.primaryUnit})` : `Roll (${item.size} ${item.product.primaryUnit})`}
+                  </p>
+                  <p className="text-sm font-black text-rose-600 mt-1">{formatRupiah(calculateItemPrice(item) * item.qty)}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        {cart.length > 0 && (
+          <div className="p-5 border-t border-slate-100 bg-white">
+            <div className="flex justify-between items-center mb-4">
+              <span className="text-sm font-semibold text-slate-500">Total Pesanan</span>
+              <span className="text-xl font-black text-slate-900">{formatRupiah(subtotal)}</span>
+            </div>
+            <button onClick={handleCheckout} className="w-full py-4 rounded-2xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Pesan Sekarang
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Shop Page ───────────────────────────────────────────────────────────
 export default function Shop() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
@@ -388,6 +584,15 @@ export default function Shop() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [shopSettings, setShopSettings] = useState({ storeName: "ENKA TEXTILE", whatsapp: "" });
   const [activeSection, setActiveSection] = useState<"beranda" | "katalog" | "promo">("beranda");
+
+  // Cart state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
+
+  const handleAddToCart = (item: Omit<CartItem, "id">) => {
+    setCart(prev => [...prev, { ...item, id: Math.random().toString(36).substring(7) }]);
+    // We could add a toast notification here if desired
+  };
 
   const sectionRefs = {
     beranda: useRef<HTMLDivElement>(null),
@@ -467,13 +672,13 @@ export default function Shop() {
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       `}</style>
 
-      <div className="w-full max-w-[1440px] flex">
+      <div className="w-full max-w-360 flex">
         
         {/* ── Left Sidebar (Desktop) ── */}
-        <aside className="hidden lg:flex w-[240px] flex-col shrink-0 h-screen sticky top-0 border-r border-slate-200 bg-slate-50/60 py-6 px-4 z-30">
+        <aside className="hidden lg:flex w-60 flex-col shrink-0 h-screen sticky top-0 border-r border-slate-200 bg-slate-50/60 py-6 px-4 z-30">
           {/* Brand/Store Name */}
           <div className="flex items-center gap-3 mb-8 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
-             <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-rose-200">
+             <div className="w-10 h-10 bg-linear-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-rose-200">
                <span className="text-white font-black text-lg">E</span>
              </div>
              <div>
@@ -576,7 +781,7 @@ export default function Shop() {
                 )}
 
                 {/* Mobile Store Icon */}
-                <div className="lg:hidden w-9 h-9 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-rose-200">
+                <div className="lg:hidden w-9 h-9 bg-linear-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-rose-200">
                   <span className="text-white font-black text-sm">E</span>
                 </div>
              </div>
@@ -584,7 +789,7 @@ export default function Shop() {
 
           <main className="flex-1 overflow-x-hidden p-4 lg:p-8 space-y-8">
              {/* Promotional Banner */}
-             <div ref={sectionRefs.promo} className="w-full bg-gradient-to-r from-[#1a0a33] via-[#3b1560] to-[#EE4566] rounded-3xl overflow-hidden relative shadow-xl">
+             <div ref={sectionRefs.promo} className="w-full bg-linear-to-r from-[#1a0a33] via-[#3b1560] to-[#EE4566] rounded-3xl overflow-hidden relative shadow-xl">
                 {/* Dot pattern overlay */}
                 <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
                 {/* Glow blobs */}
@@ -645,7 +850,7 @@ export default function Shop() {
                <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                  <button
                    onClick={() => setSelectedCategory(null)}
-                   className={`flex-shrink-0 px-4 py-2 rounded-[10px] text-[12px] font-black transition-all border ${
+                   className={`shrink-0 px-4 py-2 rounded-[10px] text-[12px] font-black transition-all border ${
                      selectedCategory === null
                        ? "bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-200"
                        : "bg-white text-slate-600 border-slate-200 hover:border-rose-200 hover:text-rose-600"
@@ -657,7 +862,7 @@ export default function Shop() {
                    <button
                      key={cat.id}
                      onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                     className={`flex-shrink-0 px-4 py-2 rounded-[10px] text-[12px] font-black transition-all border ${
+                     className={`shrink-0 px-4 py-2 rounded-[10px] text-[12px] font-black transition-all border ${
                        selectedCategory === cat.id
                          ? "bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-200"
                          : "bg-white text-slate-600 border-slate-200 hover:border-rose-200 hover:text-rose-600"
@@ -688,7 +893,7 @@ export default function Shop() {
              {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6">
                   {[...Array(8)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-[20px] overflow-hidden border border-slate-100 animate-pulse h-[260px]">
+                    <div key={i} className="bg-white rounded-[20px] overflow-hidden border border-slate-100 animate-pulse h-65">
                       <div className="h-1/2 bg-slate-100" />
                       <div className="p-4 space-y-3">
                         <div className="h-4 bg-slate-100 rounded w-3/4" />
@@ -740,7 +945,7 @@ export default function Shop() {
                    </div>
                    <div className="col-span-2 md:col-span-2">
                       <div className="flex items-center gap-3 mb-4">
-                         <div className="w-8 h-8 bg-gradient-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm">
+                         <div className="w-8 h-8 bg-linear-to-br from-rose-500 to-pink-600 rounded-lg flex items-center justify-center shadow-sm">
                            <span className="text-white font-black text-sm">E</span>
                          </div>
                          <h4 className="font-black text-xl text-slate-900">{shopSettings.storeName}</h4>
@@ -796,10 +1001,10 @@ export default function Shop() {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative w-[280px] bg-white h-full shadow-2xl flex flex-col p-6 animate-[slideRight_0.3s_ease-out]">
+          <div className="relative w-70 bg-white h-full shadow-2xl flex flex-col p-6 animate-[slideRight_0.3s_ease-out]">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-sm">
+                 <div className="w-10 h-10 bg-linear-to-br from-rose-500 to-pink-600 rounded-xl flex items-center justify-center shadow-sm">
                    <span className="text-white font-black text-lg">E</span>
                  </div>
                  <h2 className="text-xl font-black text-slate-900">{shopSettings.storeName}</h2>
@@ -846,9 +1051,33 @@ export default function Shop() {
         <BottomSheet
           product={selectedProduct}
           onClose={() => { setSheetOpen(false); setSelectedProduct(null); }}
-          whatsapp={shopSettings.whatsapp}
+          onAddToCart={handleAddToCart}
         />
       )}
+
+      {/* ── Cart FAB ── */}
+      <button
+        onClick={() => setCartModalOpen(true)}
+        className="fixed bottom-20 lg:bottom-10 right-4 lg:right-10 z-40 bg-rose-500 text-white p-4 rounded-full shadow-2xl shadow-rose-200 hover:scale-105 active:scale-95 transition-all"
+      >
+        <div className="relative">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          {cart.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+              {cart.length}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* ── Cart Modal ── */}
+      <CartModal
+        isOpen={cartModalOpen}
+        onClose={() => setCartModalOpen(false)}
+        cart={cart}
+        setCart={setCart}
+        whatsapp={shopSettings.whatsapp}
+      />
     </div>
   );
 }

@@ -160,15 +160,20 @@ export default function Barang() {
     setViewRollsName(p.name);
   };
 
-  const filtered = selectedCategoryId === null ? [] : products?.filter(p => {
+  const baseProducts = products?.filter(p => selectedCategoryId === null ? true : p.categoryId === selectedCategoryId) || [];
+  
+  const filtered = baseProducts.filter(p => {
+    // If global and no filters applied, we return empty so the "Pilih Kategori" placeholder shows
+    if (selectedCategoryId === null && !showLowStock && !search) return false;
+    
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.lotNumber && p.lotNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesLowStock = !showLowStock || p.isLowStock;
-    const matchesCategory = p.categoryId === selectedCategoryId;
-    return matchesSearch && matchesLowStock && matchesCategory;
+    return matchesSearch && matchesLowStock;
   });
 
-  const lowStockCount = products?.filter(p => p.isLowStock).length ?? 0;
-  const totalBarang = products?.length ?? 0;
+  // Calculate summary based on current category (or global if null)
+  const summaryProducts = (selectedCategoryId === null && !showLowStock && !search) ? baseProducts : filtered;
+  const lowStockCount = baseProducts.filter(p => p.isLowStock).length;
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -230,35 +235,36 @@ export default function Barang() {
         </div>
 
         {/* Rekap Summary (Ultra Compact Strip) */}
-        {selectedCategoryId !== null && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
-                  <Package className="w-3 h-3" strokeWidth={1.5} />
-                </div>
-                <div className="flex flex-col justify-center">
-                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Barang</span>
-                  <span className="text-xs font-black text-slate-900 leading-tight">{filtered?.length || 0} Item</span>
-                </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
+                <Package className="w-3 h-3" strokeWidth={1.5} />
               </div>
-              <div className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center ${lowStockCount > 0 ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
-                <span className={`text-[9px] font-semibold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Stok Tipis</span>
-                <span className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} Item</span>
+              <div className="flex flex-col justify-center">
+                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Barang</span>
+                <span className="text-xs font-black text-slate-900 leading-tight">{summaryProducts?.length || 0} Item</span>
               </div>
-              <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Roll & YARD</span>
-                <span className="text-xs font-black text-slate-900 leading-tight">
-                  {formatNumber(filtered?.reduce((sum, p) => sum + (Number(p.rollStock) || 0), 0) ?? 0)} Roll <span className="text-muted-foreground font-medium">({formatNumber(filtered?.reduce((sum, p) => sum + (Number(p.meterStock) || 0), 0) ?? 0)} yds)</span>
-                </span>
-              </div>
-          </div>
-        )}
+            </div>
+            <button 
+              onClick={() => { setShowLowStock(!showLowStock); setCurrentPage(1); }}
+              className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center text-left transition-colors ${showLowStock ? 'bg-amber-100 border-amber-300 shadow-inner' : lowStockCount > 0 ? 'bg-amber-50 border-amber-100 hover:bg-amber-100/50' : 'bg-slate-50 border-slate-100'}`}
+            >
+              <span className={`text-[9px] font-semibold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>Stok Tipis</span>
+              <span className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} Item</span>
+            </button>
+            <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Roll & YARD</span>
+              <span className="text-xs font-black text-slate-900 leading-tight">
+                {formatNumber(summaryProducts?.reduce((sum, p) => sum + (Number(p.rollStock) || 0), 0) ?? 0)} Roll <span className="text-muted-foreground font-medium">({formatNumber(summaryProducts?.reduce((sum, p) => sum + (Number(p.meterStock) || 0), 0) ?? 0)} yds)</span>
+              </span>
+            </div>
+        </div>
       </div>
 
       {/* Scrollable List */}
       <div className="flex-1 overflow-auto min-h-0 pb-10">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
-          {selectedCategoryId === null ? (
+          {selectedCategoryId === null && !search && !showLowStock ? (
             <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3><p className="text-[13px] text-slate-500 mt-1">Pilih kategori di atas untuk melihat barang.</p></div>
           ) : isLoading ? (
             <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>

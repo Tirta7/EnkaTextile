@@ -74,7 +74,7 @@ export default function Pembelian() {
         if (!updated[index].rollLengths) updated[index].rollLengths = [];
         updated[index].rollLengths![lengthIndex] = value;
         // Auto calculate meters from rollLengths
-        updated[index].meters = parseFloat(updated[index].rollLengths!.reduce((a: number, b: number) => a + b, 0).toFixed(3));
+        updated[index].meters = parseFloat(updated[index].rollLengths!.reduce((a: number, b: any) => a + (parseFloat(String(b).replace(',', '.')) || 0), 0).toFixed(3));
       } else {
         (updated[index] as any)[field] = value;
       }
@@ -92,9 +92,9 @@ export default function Pembelian() {
       if (field === "rolls") {
         const val = parseInt(value) || 0;
         const currentLengths = updated[index].rollLengths || [];
-        const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || 0);
+        const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || "");
         updated[index].rollLengths = newLengths;
-        updated[index].meters = parseFloat(newLengths.reduce((a: number, b: number) => a + b, 0).toFixed(3));
+        updated[index].meters = parseFloat(newLengths.reduce((a: number, b: any) => a + (parseFloat(String(b).replace(',', '.')) || 0), 0).toFixed(3));
       }
       
       const item = updated[index];

@@ -49,6 +49,8 @@ set "FONNTE_TOKEN="
 set "LOCATION_NAME=%HARDCODED_LOCATION_NAME%"
 set "TIMEZONE_ZONE=WIB"
 set "GDRIVE_FOLDER_ID="
+set "GAS_WEBAPP_URL="
+set "GAS_SECRET=secret123"
 
 if exist "%INSTALL_DIR%.token" (
     echo  [OK] File .token ditemukan. Membaca konfigurasi...
@@ -59,6 +61,8 @@ if exist "%INSTALL_DIR%.token" (
         if /i "%%a"=="LOCATION_NAME"   if "!LOCATION_NAME!"=="" set "LOCATION_NAME=%%b"
         if /i "%%a"=="TIMEZONE_ZONE"   set "TIMEZONE_ZONE=%%b"
         if /i "%%a"=="GDRIVE_FOLDER_ID" set "GDRIVE_FOLDER_ID=%%b"
+        if /i "%%a"=="GAS_WEBAPP_URL"  set "GAS_WEBAPP_URL=%%b"
+        if /i "%%a"=="GAS_SECRET"      set "GAS_SECRET=%%b"
     )
 )
 
@@ -93,6 +97,19 @@ if "!GDRIVE_FOLDER_ID!"=="" (
     set /p "GDRIVE_FOLDER_ID=  Masukkan Google Drive Folder ID untuk Backup: "
     echo.
 )
+
+:: Minta GAS WebApp URL untuk sistem lisensi
+if "!GAS_WEBAPP_URL!"=="" (
+    echo.
+    echo  ============================================================
+    echo   SISTEM LISENSI: Masukkan URL Google Apps Script Cabang ini
+    echo   Dapatkan URL dari file GAS Cabang yang sudah di-deploy.
+    echo   Contoh: https://script.google.com/macros/s/AKfycb.../exec
+    echo  ============================================================
+    set /p "GAS_WEBAPP_URL=  GAS WebApp URL: "
+    echo.
+)
+if "!GAS_WEBAPP_URL!"=="" set "GAS_WEBAPP_URL=https://script.google.com/macros/s/BELUM_DIISI/exec"
 
 :: Tentukan TZ
 set "TZ_VALUE="
@@ -330,10 +347,22 @@ if not exist "!INSTALL_DIR!docker.env" (
         echo VAPID_PUBLIC_KEY="BLmRQxniwUVmZJaOZFthGgfShhVdFjgZFWQ3kC4bckWoQvjaFJZBuJgY9JMRpxGmPhu7hT2ZAICQrbsli5hWi3k"
         echo VAPID_PRIVATE_KEY="dBo3rHkJrTSPTfPzEf1TfVB1igEan7hFXxahnr_B3Uc"
         echo VAPID_SUBJECT="mailto:admin@vocpos.com"
+        echo.
+        echo # Sistem Lisensi GAS
+        echo GAS_WEBAPP_URL="!GAS_WEBAPP_URL!"
+        echo GAS_SECRET="!GAS_SECRET!"
     ) > "!INSTALL_DIR!docker.env"
-    echo  [OK] File docker.env dibuat.
+    echo  [OK] File docker.env dibuat (dengan konfigurasi lisensi).
 ) else (
     echo  [OK] File docker.env sudah ada.
+    :: Cek apakah GAS_WEBAPP_URL sudah ada, jika belum tambahkan
+    findstr /i "GAS_WEBAPP_URL" "!INSTALL_DIR!docker.env" >nul 2>&1
+    if errorlevel 1 (
+        echo.
+        echo GAS_WEBAPP_URL="!GAS_WEBAPP_URL!" >> "!INSTALL_DIR!docker.env"
+        echo GAS_SECRET="!GAS_SECRET!" >> "!INSTALL_DIR!docker.env"
+        echo  [OK] Konfigurasi lisensi ditambahkan ke docker.env.
+    )
 )
 
 

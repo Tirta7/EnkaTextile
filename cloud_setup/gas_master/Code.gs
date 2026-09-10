@@ -96,23 +96,34 @@ function updateLicenseStatus(url, secret, licenseKey, newStatus) {
 // Fungsi untuk meng-generate License Key baru (perpanjangan lisensi)
 function generateNewLicenseKey(url, secret, storeName, plan) {
   try {
-    const payload = {
-      action: "generate_key",
-      secret: secret,
-      storeName: storeName,
-      plan: plan
-    };
-
-    const options = {
-      method: "post",
-      contentType: "application/json",
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    };
-
+    const payload = { action: "generate_key", secret, storeName, plan };
+    const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
     const response = UrlFetchApp.fetch(url, options);
-    const result = JSON.parse(response.getContentText());
-    return result;
+    return JSON.parse(response.getContentText());
+  } catch (e) {
+    return { valid: false, error: e.toString() };
+  }
+}
+
+// Fungsi untuk mengedit tanggal/plan lisensi tertentu
+function editLicense(url, secret, licenseKey, expiresAt, plan) {
+  try {
+    const payload = { action: "edit_license", secret, licenseKey, expiresAt, plan };
+    const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
+    const response = UrlFetchApp.fetch(url, options);
+    return JSON.parse(response.getContentText());
+  } catch (e) {
+    return { valid: false, error: e.toString() };
+  }
+}
+
+// Fungsi untuk menghapus lisensi tertentu
+function deleteLicense(url, secret, licenseKey) {
+  try {
+    const payload = { action: "delete_license", secret, licenseKey };
+    const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
+    const response = UrlFetchApp.fetch(url, options);
+    return JSON.parse(response.getContentText());
   } catch (e) {
     return { valid: false, error: e.toString() };
   }

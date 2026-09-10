@@ -32,7 +32,6 @@ function doPost(e) {
       if (secret !== SCRIPT_SECRET) {
         return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "Unauthorized" })).setMimeType(ContentService.MimeType.JSON);
       }
-      
       const newStatus = postData.status;
       for (let i = 1; i < data.length; i++) {
         if (data[i][1] === licenseKey) {
@@ -42,6 +41,38 @@ function doPost(e) {
       }
       return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "License not found" })).setMimeType(ContentService.MimeType.JSON);
     }
+
+    // Logika untuk Master mengedit tanggal / plan lisensi
+    if (action === "edit_license") {
+      if (secret !== SCRIPT_SECRET) {
+        return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "Unauthorized" })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const newExpiresAt = postData.expiresAt; // format: "YYYY-MM-DD"
+      const newPlan = postData.plan;
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][1] === licenseKey) {
+          if (newExpiresAt) sheet.getRange(i + 1, 5).setValue(new Date(newExpiresAt));
+          if (newPlan) sheet.getRange(i + 1, 4).setValue(newPlan);
+          return ContentService.createTextOutput(JSON.stringify({ valid: true, message: "License updated" })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "License not found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Logika untuk Master menghapus baris lisensi
+    if (action === "delete_license") {
+      if (secret !== SCRIPT_SECRET) {
+        return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "Unauthorized" })).setMimeType(ContentService.MimeType.JSON);
+      }
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][1] === licenseKey) {
+          sheet.deleteRow(i + 1);
+          return ContentService.createTextOutput(JSON.stringify({ valid: true, message: "License deleted" })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "License not found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+
 
     // Logika untuk Master membuat License Key baru (perpanjangan)
     if (action === "generate_key") {
@@ -144,6 +175,39 @@ function doPost(e) {
         storeName = rowStore;
         error = null;
         break;
+      }
+    }
+
+    // === FALLBACK: Jika key tidak valid / tidak ditemukan, cari key lain yang aktif
+    // untuk Machine ID yang sama. Ini menangani kasus perpanjangan / multi-key.
+    if (!valid && machineId) {
+      for (let i = 1; i < data.length; i++) {
+        const rowMachineId = data[i][0];
+        const rowLicenseKey = data[i][1];
+        const rowStore = data[i][2];
+        const rowPlan = data[i][3];
+        const rowExpiresAt = data[i][4];
+        const rowStatus = data[i][5];
+
+        // Cari baris yang machine ID-nya sama dan statusnya aktif
+        if (rowMachineId === machineId && rowStatus.toString().toLowerCase() === "aktif") {
+          let expiredDate = rowExpiresAt ? new Date(rowExpiresAt) : null;
+          if (!expiredDate || isNaN(expiredDate.getTime())) continue; // Belum diaktifkan, skip
+
+          const now = new Date();
+          if (now > expiredDate) continue; // Sudah kedaluwarsa, skip
+
+          // Ditemukan key aktif lain! Gunakan key ini
+          const daysLeftFallback = Math.ceil((expiredDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          return ContentService.createTextOutput(JSON.stringify({
+            valid: true,
+            expiresAt: expiredDate.toISOString(),
+            daysLeft: daysLeftFallback,
+            storeName: rowStore,
+            activeKey: rowLicenseKey, // info key yang sekarang aktif
+            error: null
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
       }
     }
 

@@ -61,6 +61,11 @@ export default function Pengaturan() {
   const [invoiceBankNameInput, setInvoiceBankNameInput] = useState("");
   const [invoiceBankAccountInput, setInvoiceBankAccountInput] = useState("");
   const [invoiceNotesInput, setInvoiceNotesInput] = useState("");
+
+  // State untuk perpanjangan lisensi
+  const [renewKeyInput, setRenewKeyInput] = useState("");
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [showRenewForm, setShowRenewForm] = useState(false);
   
 
   
@@ -132,6 +137,20 @@ export default function Pengaturan() {
         onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
       }
     );
+  };
+
+  const handleRenewLicense = async () => {
+    if (!renewKeyInput.trim()) return;
+    setIsRenewing(true);
+    const result = await licenseInfo.activateLicense(renewKeyInput.trim());
+    setIsRenewing(false);
+    if (result.ok) {
+      toast({ title: "✅ Lisensi Diperpanjang!", description: "Key baru berhasil diaktifkan." });
+      setRenewKeyInput("");
+      setShowRenewForm(false);
+    } else {
+      toast({ title: "Gagal Aktivasi", description: result.error || "Key tidak valid.", variant: "destructive" });
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -534,7 +553,9 @@ export default function Pengaturan() {
           </div>
           <div>
              <Label className="text-slate-500 text-xs uppercase tracking-wider mb-1 block">Sisa Hari</Label>
-             <p className="font-semibold text-slate-800">{licenseInfo.daysLeft} Hari</p>
+             <p className={`font-semibold ${licenseInfo.daysLeft <= 7 && licenseInfo.daysLeft > 0 ? 'text-orange-600' : 'text-slate-800'}`}>
+               {licenseInfo.daysLeft} Hari
+             </p>
           </div>
           <div>
              <Label className="text-slate-500 text-xs uppercase tracking-wider mb-1 block">Masa Berlaku</Label>
@@ -542,6 +563,48 @@ export default function Pengaturan() {
                {licenseInfo.expiresAt ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(licenseInfo.expiresAt) : "-"}
              </p>
           </div>
+        </div>
+
+        {/* Form Perpanjangan / Masukkan Key Baru */}
+        <div className="border-t border-slate-100 p-4 sm:p-6">
+          {!showRenewForm ? (
+            <button
+              onClick={() => setShowRenewForm(true)}
+              className="flex items-center gap-2 text-sm text-violet-600 hover:text-violet-800 font-semibold transition-colors"
+            >
+              🔑 Masukkan License Key Baru / Perpanjang Lisensi
+            </button>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-end gap-3">
+              <div className="flex-1 space-y-1.5">
+                <Label className="text-xs font-semibold text-slate-600">License Key Baru</Label>
+                <Input
+                  value={renewKeyInput}
+                  onChange={(e) => setRenewKeyInput(e.target.value.toUpperCase())}
+                  placeholder="VOC-XXXX-YYMMDD-XXXX"
+                  className="font-mono tracking-widest text-center bg-slate-50 border-slate-200 rounded-xl focus-visible:ring-violet-500"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-400">Masukkan kode lisensi baru yang diberikan oleh Admin.</p>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="flex-1 sm:flex-none rounded-xl border-slate-200"
+                  onClick={() => { setShowRenewForm(false); setRenewKeyInput(""); }}
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={handleRenewLicense}
+                  disabled={isRenewing || !renewKeyInput.trim()}
+                  className="flex-1 sm:flex-none rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold"
+                >
+                  {isRenewing ? "Memverifikasi..." : "✓ Aktifkan Key"}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

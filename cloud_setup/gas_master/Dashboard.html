@@ -104,12 +104,26 @@
                         </select>
                       </td>
                       <td>
-                        <button 
-                          class="btn btn-sm btn-outline-success"
-                          @click="openGenerateModal(branch, lic.licenseKey)"
-                          title="Buat Key Baru untuk perpanjangan">
-                          🔑 Key Baru
-                        </button>
+                        <div class="d-flex gap-1 flex-wrap">
+                          <button 
+                            class="btn btn-sm btn-outline-success"
+                            @click="openGenerateModal(branch, lic.licenseKey)"
+                            title="Buat Key Baru">
+                            🔑 Key Baru
+                          </button>
+                          <button 
+                            class="btn btn-sm btn-outline-primary"
+                            @click="openEditModal(branch, lic)"
+                            title="Edit Tanggal Berlaku">
+                            ✏️ Edit
+                          </button>
+                          <button 
+                            class="btn btn-sm btn-outline-danger"
+                            @click="doDeleteLicense(branch, lic)"
+                            title="Hapus Lisensi ini">
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -197,7 +211,47 @@
         </button>
       </div>
     </div>
-    <!-- ===== END MODAL ===== -->
+    <!-- ===== END MODAL GENERATE ===== -->
+
+    <!-- ===== MODAL EDIT TANGGAL LISENSI ===== -->
+    <div class="modal-overlay" v-if="editModal.show" @click.self="closeEditModal">
+      <div class="modal-box">
+        <h5 class="fw-bold mb-1">✏️ Edit Tanggal Lisensi</h5>
+        <p class="text-muted small mb-1">Key: <code class="text-primary">{{ editModal.licenseKey }}</code></p>
+        <p class="text-muted small mb-3">Cabang: <strong>{{ editModal.branch?.lokasi }}</strong></p>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Tanggal Berakhir Baru</label>
+          <input type="date" class="form-control" v-model="editModal.newExpiresAt" />
+          <small class="text-muted">Isi tanggal baru. Aplikasi kasir akan otomatis sinkron dalam ~30 detik.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Plan (Opsional)</label>
+          <select class="form-select" v-model="editModal.newPlan">
+            <option value="">-- Tidak diubah --</option>
+            <option value="1month">1 Bulan</option>
+            <option value="3month">3 Bulan</option>
+            <option value="6month">6 Bulan</option>
+            <option value="1year">1 Tahun</option>
+          </select>
+        </div>
+
+        <div v-if="editModal.error" class="alert alert-danger small py-2 mb-3">{{ editModal.error }}</div>
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-secondary flex-fill" @click="closeEditModal">Batal</button>
+          <button 
+            class="btn btn-primary flex-fill"
+            @click="doEditLicense"
+            :disabled="editModal.loading || !editModal.newExpiresAt">
+            <span v-if="editModal.loading" class="spinner-border spinner-border-sm me-2"></span>
+            {{ editModal.loading ? 'Menyimpan...' : '✓ Simpan Perubahan' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- ===== END MODAL EDIT ===== -->
 
   </div>
 
@@ -225,6 +279,16 @@
           loading: false,
           error: "",
           result: null,
+        });
+
+        const editModal = reactive({
+          show: false,
+          branch: null,
+          licenseKey: "",
+          newExpiresAt: "",
+          newPlan: "",
+          loading: false,
+          error: "",
         });
 
         const loadData = () => {
@@ -334,14 +398,75 @@
           });
         };
 
+        // --- EDIT MODAL ---
+        const openEditModal = (branch, lic) => {
+          editModal.show = true;
+          editModal.branch = branch;
+          editModal.licenseKey = lic.licenseKey;
+          // Pre-fill tanggal saat ini jika ada
+          if (lic.expiresAt) {
+            const d = new Date(lic.expiresAt);
+            editModal.newExpiresAt = d.toISOString().split('T')[0];
+          } else {
+            editModal.newExpiresAt = "";
+          }
+          editModal.newPlan = "";
+          editModal.loading = false;
+          editModal.error = "";
+        };
+
+        const closeEditModal = () => {
+          editModal.show = false;
+          loadData();
+        };
+
+        const doEditLicense = () => {
+          if (!editModal.newExpiresAt) {
+            editModal.error = "Isi tanggal berakhir terlebih dahulu.";
+            return;
+          }
+          editModal.loading = true;
+          editModal.error = "";
+          google.script.run
+            .withSuccessHandler((res) => {
+              editModal.loading = false;
+              if (res.valid) {
+                closeEditModal();
+              } else {
+                editModal.error = "Gagal: " + (res.error || "Error tidak dikenal");
+              }
+            })
+            .withFailureHandler((err) => {
+              editModal.loading = false;
+              editModal.error = "Error jaringan: " + err;
+            })
+            .editLicense(editModal.branch.url, editModal.branch.secret, editModal.licenseKey, editModal.newExpiresAt, editModal.newPlan);
+        };
+
+        // --- DELETE ---
+        const doDeleteLicense = (branch, lic) => {
+          if (!confirm(`Hapus lisensi "${lic.licenseKey}" dari cabang ${branch.lokasi}?\n\nAplikasi kasir yang menggunakan key ini akan terkunci otomatis dalam ~30 detik.`)) return;
+          google.script.run
+            .withSuccessHandler((res) => {
+              if (res.valid) {
+                loadData();
+              } else {
+                alert("Gagal hapus: " + res.error);
+              }
+            })
+            .withFailureHandler((err) => alert("Error: " + err))
+            .deleteLicense(branch.url, branch.secret, lic.licenseKey);
+        };
+
         onMounted(() => {
           loadData();
         });
 
         return { 
-          branches, loading, planOptions, generateModal, copied,
+          branches, loading, planOptions, generateModal, editModal, copied,
           loadData, getDaysLeft, getDaysClass, formatDate, getStatusClass, 
-          updateStatus, openGenerateModal, closeModal, doGenerateKey, copyKey 
+          updateStatus, openGenerateModal, closeModal, doGenerateKey, copyKey,
+          openEditModal, closeEditModal, doEditLicense, doDeleteLicense
         };
       }
     }).mount('#app');

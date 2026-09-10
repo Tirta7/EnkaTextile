@@ -190,7 +190,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[95vh] h-[95vh] flex flex-col mx-auto w-full max-w-5xl px-4 sm:px-6 pb-6 pt-2">
+      <DrawerContent className="max-h-[95vh] h-[95vh] flex flex-col mx-auto w-full max-w-[95vw] px-4 sm:px-6 pb-6 pt-2">
         <DrawerHeader className="pb-2 shrink-0">
           <DrawerTitle className="text-base">Daftar Roll/Gulungan - {productName}</DrawerTitle>
           {/* Summary row */}
@@ -280,296 +280,297 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
           </div>
         </DrawerHeader>
 
-        {/* Add new roll form */}
-        {isAdding && (
-          <div className="flex flex-col gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 shrink-0">
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
-                value={newBarcode}
-                onChange={e => setNewBarcode(e.target.value)}
-                className="h-8 text-xs flex-1 min-w-20"
-                disabled={parseInt(newQty) > 1 || isCreatingMultiple}
-              />
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">Qty</span>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newQty}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setNewQty(val);
-                    const parsed = parseInt(val) || 0;
-                    const newArr = Array.from({ length: parsed }, (_, i) => newLengths[i] !== undefined ? newLengths[i] : "");
-                    setNewLengths(newArr);
-                  }}
-                  className="h-8 text-xs w-16 text-center bg-white"
-                  disabled={isCreatingMultiple}
-                />
-              </div>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 shrink-0" onClick={saveNew} disabled={isCreatingMultiple || (parseInt(newQty) > 0 && newLengths.length === 0)}>
-                {isCreatingMultiple ? <span className="h-4 w-4 rounded-full border-2 border-green-600 border-t-transparent animate-spin" /> : <Check className="h-4 w-4" />}
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground shrink-0" onClick={() => setIsAdding(false)} disabled={isCreatingMultiple}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {parseInt(newQty) > 0 && (
-              <div className="bg-white p-3 rounded-lg border border-slate-200 mt-1 shrink-0">
-                <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll (yds)</label>
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[35vh] overflow-y-auto p-1">
-                  {Array.from({ length: parseInt(newQty) || 0 }).map((_, i) => (
-                    <div key={i} className="space-y-1">
-                      <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
+        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+          
+          {/* Sidebar for Add / Edit */}
+          {(isAdding || editingRoll) && (
+            <div className="w-full lg:w-[55%] xl:w-[60%] flex flex-col gap-3 shrink-0 min-h-0 overflow-y-auto pr-1">
+              {/* Add new roll form */}
+              {isAdding && (
+                <div className="flex flex-col gap-3 p-4 rounded-xl border border-dashed border-primary/40 bg-primary/5">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
+                      value={newBarcode}
+                      onChange={e => setNewBarcode(e.target.value)}
+                      className="h-10 text-sm flex-1 min-w-20 bg-white"
+                      disabled={parseInt(newQty) > 1 || isCreatingMultiple}
+                    />
+                    <div className="flex items-center gap-2 shrink-0 bg-white px-3 py-1 rounded-md border border-slate-200">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Qty</span>
                       <Input
-                        type="text" inputMode="decimal"
-                        placeholder="Pjg (yds)"
-                        className="h-7 text-xs px-2"
-                        value={newLengths[i] ?? ''}
+                        type="number"
+                        min="1"
+                        value={newQty}
                         onChange={e => {
                           const val = e.target.value;
-                          const newArr = [...newLengths];
-                          newArr[i] = val;
+                          setNewQty(val);
+                          const parsed = parseInt(val) || 0;
+                          const newArr = Array.from({ length: parsed }, (_, i) => newLengths[i] !== undefined ? newLengths[i] : "");
                           setNewLengths(newArr);
                         }}
+                        className="h-8 text-sm w-16 border-none shadow-none focus-visible:ring-0 text-center font-bold"
                         disabled={isCreatingMultiple}
                       />
                     </div>
+                    <Button size="icon" className="h-10 w-10 shrink-0 bg-green-600 hover:bg-green-700 text-white" onClick={saveNew} disabled={isCreatingMultiple || (parseInt(newQty) > 0 && newLengths.length === 0)}>
+                      {isCreatingMultiple ? <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Check className="h-5 w-5" />}
+                    </Button>
+                    <Button size="icon" variant="outline" className="h-10 w-10 shrink-0 text-muted-foreground bg-white" onClick={() => setIsAdding(false)} disabled={isCreatingMultiple}>
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  
+                  {parseInt(newQty) > 0 && (
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 mt-1 shadow-sm">
+                      <label className="text-sm font-bold text-slate-800 block mb-3 border-b pb-2">Detail Panjang Tiap Roll (yds)</label>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[50vh] overflow-y-auto p-1">
+                        {Array.from({ length: parseInt(newQty) || 0 }).map((_, i) => (
+                          <div key={i} className="space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <label className="text-[11px] font-bold text-slate-500 block text-center uppercase tracking-wider">Roll #{i + 1}</label>
+                            <Input
+                              type="text" inputMode="decimal"
+                              placeholder="0.00"
+                              className="h-8 text-sm font-semibold text-center border-slate-300 focus-visible:ring-primary focus-visible:border-primary"
+                              value={newLengths[i] ?? ''}
+                              onChange={e => {
+                                const val = e.target.value;
+                                const newArr = [...newLengths];
+                                newArr[i] = val;
+                                setNewLengths(newArr);
+                              }}
+                              disabled={isCreatingMultiple}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Edit panel (shown when a roll is selected) */}
+              {editingRoll && (
+                <div className="flex flex-col gap-3 p-4 rounded-xl border-2 border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm relative overflow-hidden shrink-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-base font-bold text-blue-700 dark:text-blue-300">
+                      ✏️ Edit Roll #{editingRoll.id}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="h-9 px-3 bg-green-600 hover:bg-green-700 text-white font-medium" onClick={() => saveEdit(editingRoll.id)} disabled={updateMutation.isPending}>
+                        <Check className="h-4 w-4 mr-1.5" /> Simpan
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-9 w-9 p-0 text-destructive hover:bg-red-50 hover:text-red-600 border-red-200" onClick={() => {
+                        if (confirm("Hapus roll ini?")) deleteMutation.mutate({ id: productId!, rollId: editingRoll.id });
+                      }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-muted-foreground hover:bg-slate-200 dark:hover:bg-slate-800" onClick={cancelEdit}>
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-6">
+                    <div className="flex-1">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                        Pjg Awal <span className="font-normal text-muted-foreground">(yds)</span>
+                      </label>
+                      <Input
+                        type="number"
+                        value={editOriginalLength}
+                        onChange={e => setEditOriginalLength(e.target.value)}
+                        className="h-11 text-base font-medium w-full text-right bg-white dark:bg-slate-950 border-slate-300"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 block">
+                        Sisa <span className="font-normal text-muted-foreground">(yds)</span>
+                      </label>
+                      <Input
+                        type="number"
+                        value={editCurrentLength}
+                        onChange={e => setEditCurrentLength(e.target.value)}
+                        className="h-11 text-base font-bold w-full text-right bg-white dark:bg-slate-950 border-blue-400 ring-offset-blue-50 focus-visible:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Compact grid of rolls */}
+          <div className="flex-1 overflow-y-auto min-h-0 border border-primary/40 rounded-lg flex flex-col bg-slate-50/50">
+            <div className="flex-1 overflow-y-auto p-1.5">
+              {isLoading ? (
+                <div className={`grid ${isAdding || editingRoll ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1.5 p-1`}>
+                  {Array(16).fill(0).map((_, i) => (
+                    <Skeleton key={i} className="h-20 rounded-lg" />
                   ))}
                 </div>
+              ) : !rolls || rolls.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground h-full">
+                  <PackageX className="mb-2 h-10 w-10 opacity-25" />
+                  <span className="text-sm">Tidak ada roll tersedia</span>
+                </div>
+              ) : (
+                <div className={`grid ${isAdding || editingRoll ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1`}>
+                    {sortedRolls.length === 0 ? (
+                      <div className="col-span-full flex flex-col items-center justify-center py-10 text-muted-foreground h-full">
+                        <Filter className="mb-2 h-6 w-6 opacity-30" />
+                        <span className="text-xs">Tidak ada roll yang cocok dengan filter</span>
+                      </div>
+                    ) : sortedRolls.map((r: Roll, idx: number) => {
+                      const isEditing = editingRollId === r.id;
+                      const isAvailable = r.status === "available";
+                      // Shorten barcode: show last 8 chars
+                      const shortBarcode = r.barcode
+                        ? r.barcode.length > 10
+                          ? "…" + r.barcode.slice(-9)
+                          : r.barcode
+                        : "-";
+                      const tglMasuk = r.createdAt
+                        ? new Date(r.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "2-digit" })
+                        : "-";
+                      const pemakaian = r.originalLength > 0
+                        ? Math.max(0, r.originalLength - r.currentLength)
+                        : 0;
+                      const persen = r.originalLength > 0
+                        ? Math.round((r.currentLength / r.originalLength) * 100)
+                        : 100;
+
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => {
+                            if (isEditing) {
+                              cancelEdit();
+                            } else {
+                              setIsAdding(false);
+                              startEdit(r);
+                            }
+                          }}
+                          className={[
+                            "flex flex-col gap-0.5 text-left px-2.5 py-2 text-xs transition-all relative group",
+                            "hover:bg-primary/5",
+                            isEditing
+                              ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-inset ring-blue-400"
+                              : "",
+                            selectedRollIds.includes(r.id) ? "bg-red-50/50" : "",
+                          ].join(" ")}
+                        >
+                          {/* Row 1: Nomor + Status badge */}
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                className="w-3 h-3 cursor-pointer accent-red-600"
+                                checked={selectedRollIds.includes(r.id)}
+                                onChange={() => {}}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRollIds(prev => prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]);
+                                }}
+                              />
+                              <span className={[
+                                "font-bold text-[11px]",
+                                isEditing ? "text-blue-600" : isAvailable ? "text-primary" : "text-muted-foreground",
+                              ].join(" ")}>
+                                Roll #{idx + 1}
+                              </span>
+                            </div>
+                            <span className={[
+                              "text-[9px] font-semibold px-1 py-0.5 rounded-full leading-none",
+                              isAvailable
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                                : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+                            ].join(" ")}>
+                              {isAvailable ? "Ada" : "Habis"}
+                            </span>
+                          </div>
+
+                          {/* Row 2: Barcode */}
+                          <div className="flex items-center gap-1 w-full mt-0.5">
+                            <span className="text-[9px] text-muted-foreground shrink-0">Kode:</span>
+                            <code className={[
+                              "text-[9px] font-mono truncate max-w-full",
+                              isAvailable ? "text-foreground" : "text-muted-foreground line-through",
+                            ].join(" ")}>
+                              {shortBarcode}
+                            </code>
+                          </div>
+
+                          {/* Row 3: Panjang Awal */}
+                          <div className="flex items-center justify-between w-full mt-0.5">
+                            <span className="text-[9px] text-muted-foreground">Awal:</span>
+                            <span className="text-[10px] font-medium text-foreground">
+                              {formatNumber(r.originalLength)} <span className="text-muted-foreground font-normal">yds</span>
+                            </span>
+                          </div>
+
+                          {/* Row 4: Sisa saat ini — highlighted */}
+                          <div className={[
+                            "flex items-center justify-between w-full rounded px-1 -mx-1 mt-0.5",
+                            isAvailable ? "bg-primary/8" : "",
+                          ].join(" ")}>
+                            <span className="text-[9px] text-muted-foreground">Sisa:</span>
+                            <span className={[
+                              "text-[11px] font-bold",
+                              isAvailable ? "text-primary" : "text-muted-foreground line-through",
+                            ].join(" ")}>
+                              {formatNumber(r.currentLength)} <span className="text-[9px] font-normal">yds</span>
+                            </span>
+                          </div>
+
+                          {/* Row 5: Pemakaian & Tgl */}
+                          <div className="flex items-center justify-between w-full mt-1">
+                            <span className="text-[9px] text-orange-500 dark:text-orange-400 font-medium">
+                              {pemakaian > 0 ? `Terpakai: ${formatNumber(pemakaian)} yds` : "Belum terpakai"}
+                            </span>
+                            <span className="text-[9px] text-muted-foreground">{tglMasuk}</span>
+                          </div>
+
+                          {/* Progress bar sisa */}
+                          <div className="w-full h-1 rounded-full bg-muted mt-1 overflow-hidden">
+                            <div
+                              className={[
+                                "h-full rounded-full transition-all",
+                                persen > 60 ? "bg-green-500" : persen > 30 ? "bg-yellow-400" : "bg-red-400",
+                              ].join(" ")}
+                              style={{ width: `${persen}%` }}
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+              )}
+            </div>
+
+            {/* Legend */}
+            {rolls && rolls.length > 0 && (
+              <div className="flex items-center flex-wrap gap-x-4 gap-y-1 p-2 bg-slate-50 border-t border-primary/20 text-xs text-muted-foreground shrink-0 mt-auto">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />
+                  Sisa &gt; 60%
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                  Sisa 30–60%
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-400" />
+                  Sisa &lt; 30%
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-300" />
+                  Habis
+                </span>
+                <span className="ml-auto italic hidden sm:block">Klik card untuk edit / hapus</span>
               </div>
             )}
           </div>
-        )}
-
-        {/* Edit panel (shown when a roll is selected) */}
-        {editingRoll && (
-          <div className="flex flex-col gap-2 mb-3 p-3.5 rounded-xl border-2 border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm relative overflow-hidden shrink-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
-                ✏️ Edit Roll #{editingRoll.id}
-                <span className="text-xs font-normal text-muted-foreground ml-2">(Kode: {editingRoll.barcode || '-'})</span>
-              </span>
-              <div className="flex items-center gap-1 -mt-1 -mr-1">
-                <Button size="sm" variant="ghost" className="h-8 px-2 text-green-700 hover:text-green-800 hover:bg-green-100 dark:hover:bg-green-900/50 font-medium" onClick={() => saveEdit(editingRoll.id)} disabled={updateMutation.isPending}>
-                  <Check className="h-4 w-4 mr-1" /> Simpan
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/50" onClick={() => {
-                  if (confirm("Hapus roll ini?")) deleteMutation.mutate({ id: productId!, rollId: editingRoll.id });
-                }}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:bg-slate-200 dark:hover:bg-slate-800" onClick={cancelEdit}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                  Panjang Awal <span className="font-normal text-muted-foreground">(yds)</span>
-                </label>
-                <Input
-                  type="number"
-                  placeholder="Pjg. Awal"
-                  value={editOriginalLength}
-                  onChange={e => setEditOriginalLength(e.target.value)}
-                  className="h-9 text-sm font-medium w-full text-right bg-white dark:bg-slate-950 border-slate-300"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">
-                  Ukuran total utuh saat roll baru masuk ke gudang.
-                </p>
-              </div>
-              <div className="flex-1">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                  Sisa Saat Ini <span className="font-normal text-muted-foreground">(yds)</span>
-                </label>
-                <Input
-                  type="number"
-                  placeholder="Sisa Saat Ini"
-                  value={editCurrentLength}
-                  onChange={e => setEditCurrentLength(e.target.value)}
-                  className="h-9 text-sm font-bold w-full text-right bg-white dark:bg-slate-950 border-blue-300 ring-offset-blue-50 focus-visible:ring-blue-500"
-                />
-                <p className="text-[10px] text-blue-600/80 dark:text-blue-400 mt-1.5 leading-tight">
-                  Sisa ukuran aktual saat ini setelah terpotong / terjual.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Compact grid of rolls */}
-        <div className="flex-1 overflow-y-auto min-h-0 border border-primary/40 rounded-lg">
-          {isLoading ? (
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-1.5 p-2">
-              {Array(16).fill(0).map((_, i) => (
-                <Skeleton key={i} className="h-20 rounded-lg" />
-              ))}
-            </div>
-          ) : !rolls || rolls.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <PackageX className="mb-2 h-10 w-10 opacity-25" />
-              <span className="text-sm">Tidak ada roll tersedia</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 divide-x divide-y divide-border border-b border-r border-primary/20">
-                {sortedRolls.length === 0 ? (
-                  <div className="col-span-4 flex flex-col items-center justify-center py-10 text-muted-foreground">
-                    <Filter className="mb-2 h-6 w-6 opacity-30" />
-                    <span className="text-xs">Tidak ada roll yang cocok dengan filter</span>
-                  </div>
-                ) : sortedRolls.map((r: Roll, idx: number) => {
-                  const isEditing = editingRollId === r.id;
-                  const isAvailable = r.status === "available";
-                  // Shorten barcode: show last 8 chars
-                  const shortBarcode = r.barcode
-                    ? r.barcode.length > 10
-                      ? "…" + r.barcode.slice(-9)
-                      : r.barcode
-                    : "-";
-                  const tglMasuk = r.createdAt
-                    ? new Date(r.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "2-digit" })
-                    : "-";
-                  const pemakaian = r.originalLength > 0
-                    ? Math.max(0, r.originalLength - r.currentLength)
-                    : 0;
-                  const persen = r.originalLength > 0
-                    ? Math.round((r.currentLength / r.originalLength) * 100)
-                    : 100;
-
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => {
-                        if (isEditing) {
-                          cancelEdit();
-                        } else {
-                          setIsAdding(false);
-                          startEdit(r);
-                        }
-                      }}
-                      className={[
-                        "flex flex-col gap-0.5 text-left px-2.5 py-2 text-xs transition-all relative group",
-                        "hover:bg-primary/5",
-                        isEditing
-                          ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-inset ring-blue-400"
-                          : "",
-                        selectedRollIds.includes(r.id) ? "bg-red-50/50" : "",
-                      ].join(" ")}
-                    >
-                      {/* Row 1: Nomor + Status badge */}
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="checkbox"
-                            className="w-3 h-3 cursor-pointer accent-red-600"
-                            checked={selectedRollIds.includes(r.id)}
-                            onChange={() => {}}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedRollIds(prev => prev.includes(r.id) ? prev.filter(id => id !== r.id) : [...prev, r.id]);
-                            }}
-                          />
-                          <span className={[
-                            "font-bold text-[11px]",
-                            isEditing ? "text-blue-600" : isAvailable ? "text-primary" : "text-muted-foreground",
-                          ].join(" ")}>
-                            Roll #{idx + 1}
-                          </span>
-                        </div>
-                        <span className={[
-                          "text-[9px] font-semibold px-1 py-0.5 rounded-full leading-none",
-                          isAvailable
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                            : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
-                        ].join(" ")}>
-                          {isAvailable ? "Ada" : "Habis"}
-                        </span>
-                      </div>
-
-                      {/* Row 2: Barcode */}
-                      <div className="flex items-center gap-1 w-full">
-                        <span className="text-[9px] text-muted-foreground shrink-0">Kode:</span>
-                        <code className={[
-                          "text-[9px] font-mono truncate max-w-full",
-                          isAvailable ? "text-foreground" : "text-muted-foreground line-through",
-                        ].join(" ")}>
-                          {shortBarcode}
-                        </code>
-                      </div>
-
-                      {/* Row 3: Panjang Awal */}
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-[9px] text-muted-foreground">Awal:</span>
-                        <span className="text-[10px] font-medium text-foreground">
-                          {formatNumber(r.originalLength)} <span className="text-muted-foreground font-normal">yds</span>
-                        </span>
-                      </div>
-
-                      {/* Row 4: Sisa saat ini — highlighted */}
-                      <div className={[
-                        "flex items-center justify-between w-full rounded px-1 -mx-1",
-                        isAvailable ? "bg-primary/8" : "",
-                      ].join(" ")}>
-                        <span className="text-[9px] text-muted-foreground">Sisa:</span>
-                        <span className={[
-                          "text-[11px] font-bold",
-                          isAvailable ? "text-primary" : "text-muted-foreground line-through",
-                        ].join(" ")}>
-                          {formatNumber(r.currentLength)} <span className="text-[9px] font-normal">yds</span>
-                        </span>
-                      </div>
-
-                      {/* Row 5: Pemakaian & Tgl */}
-                      <div className="flex items-center justify-between w-full mt-0.5">
-                        <span className="text-[9px] text-orange-500 dark:text-orange-400 font-medium">
-                          {pemakaian > 0 ? `Terpakai: ${formatNumber(pemakaian)} yds` : "Belum terpakai"}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground">{tglMasuk}</span>
-                      </div>
-
-                      {/* Progress bar sisa */}
-                      <div className="w-full h-1 rounded-full bg-muted mt-0.5 overflow-hidden">
-                        <div
-                          className={[
-                            "h-full rounded-full transition-all",
-                            persen > 60 ? "bg-green-500" : persen > 30 ? "bg-yellow-400" : "bg-red-400",
-                          ].join(" ")}
-                          style={{ width: `${persen}%` }}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-          )}
-
-          {/* Legend */}
-          {rolls && rolls.length > 0 && (
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />
-                Sisa &gt; 60%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                Sisa 30–60%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-400" />
-                Sisa &lt; 30%
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block w-2.5 h-2.5 rounded-full bg-gray-300" />
-                Habis
-              </span>
-              <span className="ml-auto italic">Klik card untuk edit / hapus</span>
-            </div>
-          )}
         </div>
       </DrawerContent>
     </Drawer>

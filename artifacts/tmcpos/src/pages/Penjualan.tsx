@@ -200,9 +200,9 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
               <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-0 rounded-2xl shadow-2xl" onInteractOutside={(e) => { e.preventDefault(); }}>
-            <DialogHeader className="pb-2 border-b">
-              <DialogTitle className="text-center font-bold text-base">
+          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50 border-0 rounded-2xl shadow-2xl" onInteractOutside={(e) => { e.preventDefault(); }}>
+            <DialogHeader className="pb-2 border-b bg-white p-4">
+              <DialogTitle className="text-center font-bold text-lg">
                 {item.productName || "Pilih Roll / Potongan"}
               </DialogTitle>
             </DialogHeader>

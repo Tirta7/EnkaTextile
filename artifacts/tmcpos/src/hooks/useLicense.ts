@@ -24,11 +24,15 @@ export function useLicense() {
       if (response.ok) {
         const result = await response.json();
         setData(result);
-      } else {
+      } else if (response.status === 404) {
+        // Only force not_activated if explicitly not found
         setData(prev => ({ ...prev, status: "not_activated" }));
       }
+      // If 500 or other errors, we just ignore and keep current status
     } catch (error) {
-      setData(prev => ({ ...prev, status: "not_activated" }));
+      // Network error, ignore so we don't accidentally lock the user out
+      // due to a temporary network hiccup
+      console.warn("License check failed due to network error, ignoring...");
     }
   }, []);
 

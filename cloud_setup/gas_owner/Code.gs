@@ -43,6 +43,35 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "License not found" })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Logika untuk Master membuat License Key baru (perpanjangan)
+    if (action === "generate_key") {
+      if (secret !== SCRIPT_SECRET) {
+        return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "Unauthorized" })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const plan = postData.plan || "1month";
+      const storeName = postData.storeName || "";
+
+      // Generate kode acak: VOC-XXXX-YYMMDD-ZZZZ
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const rand = (n) => Array.from({length: n}, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const now = new Date();
+      const yymmdd = String(now.getFullYear()).slice(-2) + String(now.getMonth()+1).padStart(2,"0") + String(now.getDate()).padStart(2,"0");
+      const newKey = `VOC-${rand(4)}-${yymmdd}-${rand(4)}`;
+
+      // Nonaktifkan key lama yang masih aktif untuk toko yang sama (jika ada)
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][2] === storeName && data[i][5].toString().toLowerCase() === "aktif") {
+          sheet.getRange(i + 1, 6).setValue("Kedaluwarsa");
+        }
+      }
+
+      // Tambahkan baris baru: MachineID kosong, expiresAt kosong (dihitung saat aktivasi pertama)
+      sheet.appendRow(["", newKey, storeName, plan, "", "Aktif"]);
+
+      return ContentService.createTextOutput(JSON.stringify({ valid: true, newKey, plan, storeName })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // Logika validasi dari Klien
     if (!licenseKey || !machineId) {
       return ContentService.createTextOutput(JSON.stringify({ valid: false, error: "Data tidak lengkap" })).setMimeType(ContentService.MimeType.JSON);

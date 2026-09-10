@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { db } from "@workspace/db";
-import { receivablesTable, payablesTable, customersTable, suppliersTable, salesTable, purchasesTable } from "@workspace/db";
+import { receivablesTable, payablesTable, customersTable, suppliersTable, salesTable, purchasesTable, licenseCacheTable } from "@workspace/db";
 import { lte, inArray, eq, and, isNotNull } from "drizzle-orm";
 import { pushService } from "./push";
 import { logger } from "./logger";
@@ -12,6 +12,7 @@ export function startScheduler() {
     try {
       await checkDueReceivables();
       await checkDuePayables();
+      await checkLicenseExpiry();
     } catch (error) {
       logger.error(error, "Gagal menjalankan scheduler tagihan");
     }
@@ -93,5 +94,27 @@ async function checkDuePayables() {
     } catch (e) {
       logger.error(e, "Gagal kirim notif hutang due");
     }
+  }
+}
+
+// Cek masa berlaku lisensi dan kirim notifikasi push jika <= 7 hari
+async function checkLicenseExpiry() {
+  try {
+    const cache = await db.select().from(licenseCacheTable).limit(1);
+    if (cache.length === 0) return;
+
+    const license = cache[0];
+    if (!license.isValid || !license.expiresAt) return;
+
+    const now = new Date();
+    const diffMs = new Date(license.expiresAt).getTime() - now.getTime();
+    const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (daysLeft > 0 && daysLeft <= 7) {
+      logger.info({ daysLeft }, "Lisensi akan berakhir — mengirim notifikasi peringatan...");
+      await pushService.sendLicenseExpiryNotification(daysLeft, license.storeName || "Toko");
+    }
+  } catch (err) {
+    logger.error(err, "Gagal memeriksa masa berlaku lisensi");
   }
 }

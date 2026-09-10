@@ -16,6 +16,14 @@
     .branch-card { border-radius: 8px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
     .status-select { border: 1px solid transparent; outline: none; cursor: pointer; padding: 2px 20px 2px 8px; }
     .status-select:hover { border: 1px solid #cbd5e1; }
+    .days-warning { color: #b45309; font-weight: 700; }
+    .days-expired { color: #991b1b; font-weight: 700; }
+    .days-ok { color: #166534; font-weight: 700; }
+    .new-key-box { background: #f0fdf4; border: 2px dashed #16a34a; border-radius: 8px; padding: 16px; text-align: center; }
+    .new-key-code { font-family: monospace; font-size: 1.6rem; font-weight: 900; letter-spacing: 0.15em; color: #15803d; }
+    .copy-btn { cursor: pointer; padding: 2px 8px; font-size: 12px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .modal-box { background: white; border-radius: 12px; padding: 28px; max-width: 460px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.3); }
   </style>
 </head>
 <body>
@@ -23,11 +31,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h3 class="mb-0 fw-bold" style="color: #0f172a;">VOC MASTER CENTRAL COMMAND</h3>
-        <p class="text-muted mb-0">Sistem Monitoring Lisensi Terpusat</p>
+        <p class="text-muted mb-0">Sistem Monitoring & Manajemen Lisensi Terpusat</p>
       </div>
       <button class="btn btn-primary shadow-sm" @click="loadData">
         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-        Refresh Data
+        ↻ Refresh Data
       </button>
     </div>
 
@@ -43,11 +51,13 @@
           <div class="card branch-card">
             <div class="card-header d-flex justify-content-between align-items-center py-3">
               <h5 class="mb-0 fw-bold">
-                {{ branch.lokasi }} 
+                {{ branch.lokasi }}
                 <span class="badge bg-secondary ms-2 fw-normal" style="font-size: 11px;">Owner: {{ branch.owner }}</span>
               </h5>
-              <span v-if="branch.status === 'ONLINE'" class="badge bg-success">ONLINE</span>
-              <span v-else class="badge bg-danger" :title="branch.error">OFFLINE / ERROR</span>
+              <div class="d-flex align-items-center gap-2">
+                <span v-if="branch.status === 'ONLINE'" class="badge bg-success">ONLINE</span>
+                <span v-else class="badge bg-danger" :title="branch.error">OFFLINE / ERROR</span>
+              </div>
             </div>
             
             <div class="card-body p-0" v-if="branch.status === 'ONLINE'">
@@ -61,11 +71,14 @@
                       <th>Sisa Hari</th>
                       <th>Masa Berlaku</th>
                       <th>Status Cabang</th>
+                      <th>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-if="branch.licenses.length === 0">
-                      <td colspan="6" class="text-center py-4 text-muted">Belum ada lisensi di-generate untuk cabang ini.</td>
+                      <td colspan="7" class="text-center py-4 text-muted">
+                        Belum ada lisensi. Klik "Buat Key Baru" untuk memulai.
+                      </td>
                     </tr>
                     <tr v-for="(lic, index) in branch.licenses" :key="index">
                       <td class="ps-4">
@@ -74,7 +87,9 @@
                       <td><code class="text-primary">{{ lic.licenseKey }}</code></td>
                       <td>{{ lic.plan }}</td>
                       <td>
-                        <strong>{{ getDaysLeft(lic.expiresAt) }}</strong> Hari
+                        <span :class="getDaysClass(lic)">
+                          {{ getDaysLeft(lic.expiresAt) === '-' ? '-' : getDaysLeft(lic.expiresAt) + ' Hari' }}
+                        </span>
                       </td>
                       <td>{{ formatDate(lic.expiresAt) }}</td>
                       <td>
@@ -85,12 +100,26 @@
                           <option value="Aktif">Aktif</option>
                           <option value="Darurat">Darurat</option>
                           <option value="Kunci">Kunci</option>
-                          <option value="Belum Aktivasi">Belum Aktivasi</option>
+                          <option value="Kedaluwarsa">Kedaluwarsa</option>
                         </select>
+                      </td>
+                      <td>
+                        <button 
+                          class="btn btn-sm btn-outline-success"
+                          @click="openGenerateModal(branch, lic.licenseKey)"
+                          title="Buat Key Baru untuk perpanjangan">
+                          🔑 Key Baru
+                        </button>
                       </td>
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <!-- Tombol tambah lisensi baru (jika belum ada) -->
+              <div class="p-3 border-top d-flex justify-content-end">
+                <button class="btn btn-sm btn-success" @click="openGenerateModal(branch, null)">
+                  + Buat Lisensi Baru untuk {{ branch.lokasi }}
+                </button>
               </div>
             </div>
             
@@ -103,15 +132,100 @@
         </div>
       </div>
     </div>
+
+    <!-- ===== MODAL GENERATE KEY BARU ===== -->
+    <div class="modal-overlay" v-if="generateModal.show" @click.self="closeModal">
+      <div class="modal-box">
+        <h5 class="fw-bold mb-1">🔑 Buat License Key Baru</h5>
+        <p class="text-muted small mb-3">Untuk: <strong>{{ generateModal.branch?.lokasi }}</strong></p>
+
+        <!-- Hasil key baru -->
+        <div v-if="generateModal.result" class="mb-4">
+          <div class="new-key-box">
+            <p class="text-success small fw-bold mb-2">✅ Key Baru Berhasil Dibuat!</p>
+            <div class="new-key-code mb-2">{{ generateModal.result.newKey }}</div>
+            <small class="text-muted d-block mb-2">Plan: {{ generateModal.result.plan }}</small>
+            <button class="btn btn-sm btn-outline-success copy-btn" @click="copyKey(generateModal.result.newKey)">
+              {{ copied ? '✓ Tersalin!' : '📋 Salin Kode' }}
+            </button>
+          </div>
+          <div class="alert alert-warning mt-3 small mb-0">
+            <strong>⚠️ Penting:</strong> Kirimkan kode ini ke pemilik cabang. Key lama sudah dinonaktifkan otomatis. Masa aktif baru dihitung sejak pertama kali kode ini dimasukkan di kasir.
+          </div>
+        </div>
+
+        <!-- Form pilih plan -->
+        <div v-else>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nama Toko / Cabang</label>
+            <input type="text" class="form-control" v-model="generateModal.storeName" placeholder="TMC POS Cabang 1" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Paket Perpanjangan</label>
+            <div class="row g-2">
+              <div class="col-6" v-for="plan in planOptions" :key="plan.value">
+                <div 
+                  class="border rounded p-2 text-center" 
+                  :class="generateModal.plan === plan.value ? 'border-success bg-success bg-opacity-10 fw-bold' : 'border-secondary'"
+                  style="cursor:pointer;"
+                  @click="generateModal.plan = plan.value">
+                  <div class="fw-semibold">{{ plan.label }}</div>
+                  <small class="text-muted">{{ plan.desc }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="generateModal.error" class="alert alert-danger small py-2 mb-3">
+            {{ generateModal.error }}
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-secondary flex-fill" @click="closeModal">Batal</button>
+            <button 
+              class="btn btn-success flex-fill" 
+              @click="doGenerateKey"
+              :disabled="generateModal.loading || !generateModal.storeName">
+              <span v-if="generateModal.loading" class="spinner-border spinner-border-sm me-2"></span>
+              {{ generateModal.loading ? 'Membuat...' : '✓ Generate Key' }}
+            </button>
+          </div>
+        </div>
+
+        <button v-if="generateModal.result" class="btn btn-outline-secondary w-100 mt-2" @click="closeModal">
+          Tutup
+        </button>
+      </div>
+    </div>
+    <!-- ===== END MODAL ===== -->
+
   </div>
 
   <script>
-    const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, reactive, onMounted } = Vue;
 
     createApp({
       setup() {
         const branches = ref([]);
         const loading = ref(true);
+        const copied = ref(false);
+
+        const planOptions = [
+          { value: "1month", label: "1 Bulan", desc: "30 hari" },
+          { value: "3month", label: "3 Bulan", desc: "90 hari" },
+          { value: "6month", label: "6 Bulan", desc: "180 hari" },
+          { value: "1year",  label: "1 Tahun", desc: "365 hari" },
+        ];
+
+        const generateModal = reactive({
+          show: false,
+          branch: null,
+          storeName: "",
+          plan: "1month",
+          loading: false,
+          error: "",
+          result: null,
+        });
 
         const loadData = () => {
           loading.value = true;
@@ -127,7 +241,16 @@
         const getDaysLeft = (date) => {
           if (!date) return "-";
           const diff = new Date(date) - new Date();
-          return Math.ceil(diff / (1000 * 60 * 60 * 24));
+          const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          return days;
+        };
+
+        const getDaysClass = (item) => {
+          const days = getDaysLeft(item.expiresAt);
+          if (days === "-" || !item.expiresAt) return "";
+          if (days <= 0) return "days-expired";
+          if (days <= 7) return "days-warning";
+          return "days-ok";
         };
 
         const formatDate = (dateString) => {
@@ -138,7 +261,9 @@
         };
 
         const getStatusClass = (item) => {
-          if (item.status.toString().toLowerCase() !== "aktif") return "status-expired";
+          const status = item.status.toString().toLowerCase();
+          if (status === "kedaluwarsa" || status === "expired") return "status-expired";
+          if (status !== "aktif") return "status-expired";
           if (!item.expiresAt) return "status-warning";
           const days = getDaysLeft(item.expiresAt);
           if (days <= 0) return "status-expired";
@@ -146,23 +271,12 @@
           return "status-active";
         };
 
-        const getStatusText = (item) => {
-          if (item.status.toString().toLowerCase() !== "aktif") return "Dinonaktifkan";
-          if (!item.expiresAt) return "Belum Aktivasi";
-          const days = getDaysLeft(item.expiresAt);
-          if (days <= 0) return "Kedaluwarsa";
-          if (days <= 7) return "Akan Habis";
-          return "Aktif";
-        };
-
         const updateStatus = (branch, lic) => {
-          const originalStatus = lic.status; // might be tricky to revert if it fails, but we'll try
-          
           google.script.run
             .withSuccessHandler((res) => {
               if (!res.valid) {
                 alert("Gagal mengupdate status: " + res.error);
-                loadData(); // reload all
+                loadData();
               }
             })
             .withFailureHandler((err) => {
@@ -172,11 +286,63 @@
             .updateLicenseStatus(branch.url, branch.secret, lic.licenseKey, lic.status);
         };
 
+        const openGenerateModal = (branch, currentLicenseKey) => {
+          generateModal.show = true;
+          generateModal.branch = branch;
+          generateModal.storeName = branch.lokasi || "";
+          generateModal.plan = "1month";
+          generateModal.loading = false;
+          generateModal.error = "";
+          generateModal.result = null;
+        };
+
+        const closeModal = () => {
+          generateModal.show = false;
+          generateModal.result = null;
+          copied.value = false;
+          loadData(); // refresh data setelah modal ditutup
+        };
+
+        const doGenerateKey = () => {
+          if (!generateModal.storeName.trim()) {
+            generateModal.error = "Nama toko tidak boleh kosong.";
+            return;
+          }
+          generateModal.loading = true;
+          generateModal.error = "";
+
+          google.script.run
+            .withSuccessHandler((res) => {
+              generateModal.loading = false;
+              if (res.valid) {
+                generateModal.result = res;
+              } else {
+                generateModal.error = "Gagal membuat key: " + (res.error || "Error tidak dikenal");
+              }
+            })
+            .withFailureHandler((err) => {
+              generateModal.loading = false;
+              generateModal.error = "Error jaringan: " + err;
+            })
+            .generateNewLicenseKey(generateModal.branch.url, generateModal.branch.secret, generateModal.storeName, generateModal.plan);
+        };
+
+        const copyKey = (key) => {
+          navigator.clipboard.writeText(key).then(() => {
+            copied.value = true;
+            setTimeout(() => copied.value = false, 2000);
+          });
+        };
+
         onMounted(() => {
           loadData();
         });
 
-        return { branches, loading, loadData, getDaysLeft, formatDate, getStatusClass, getStatusText, updateStatus };
+        return { 
+          branches, loading, planOptions, generateModal, copied,
+          loadData, getDaysLeft, getDaysClass, formatDate, getStatusClass, 
+          updateStatus, openGenerateModal, closeModal, doGenerateKey, copyKey 
+        };
       }
     }).mount('#app');
   </script>

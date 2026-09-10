@@ -92,3 +92,28 @@ function updateLicenseStatus(url, secret, licenseKey, newStatus) {
     return { valid: false, error: e.toString() };
   }
 }
+
+// Fungsi untuk meng-generate License Key baru (perpanjangan lisensi)
+function generateNewLicenseKey(url, secret, storeName, plan) {
+  try {
+    const payload = {
+      action: "generate_key",
+      secret: secret,
+      storeName: storeName,
+      plan: plan
+    };
+
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+    return result;
+  } catch (e) {
+    return { valid: false, error: e.toString() };
+  }
+}

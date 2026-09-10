@@ -179,4 +179,64 @@ export const pushService = {
       return false;
     }
   },
+
+  /**
+   * Kirim notifikasi peringatan lisensi akan berakhir ke semua admin.
+   * Dipanggil oleh background scheduler setiap hari jika daysLeft <= 7.
+   */
+  async sendLicenseExpiryNotification(daysLeft: number, storeName: string): Promise<boolean> {
+    try {
+      const admins = await db.select().from(usersTable).where(eq(usersTable.role, "admin"));
+      const adminIds = admins.map((a) => a.id);
+      if (adminIds.length === 0) return false;
+
+      const subs = await db
+        .select()
+        .from(pushSubscriptionsTable)
+        .where(inArray(pushSubscriptionsTable.userId, adminIds));
+      if (subs.length === 0) return false;
+
+      let appName = "EnkaTextile";
+      try {
+        const appNameSetting = await db.select().from(settingsTable).where(eq(settingsTable.key, "app_name")).limit(1);
+        if (appNameSetting.length > 0) appName = appNameSetting[0].value;
+      } catch (e) { /* ignore */ }
+
+      const urgencyEmoji = daysLeft <= 2 ? "🚨" : daysLeft <= 4 ? "⚠️" : "🔔";
+      const title = `${urgencyEmoji} Lisensi Akan Berakhir - ${appName}`;
+      const body = `Lisensi ${storeName} akan berakhir dalam ${daysLeft} hari. Segera perpanjang sekarang!`;
+
+      const payload = JSON.stringify({
+        notification: {
+          title,
+          body,
+          icon: "/favicon.svg",
+          badge: "/favicon.svg",
+          vibrate: daysLeft <= 2 ? [300, 100, 300, 100, 300] : [200, 100, 200],
+          requireInteraction: true,
+          data: { url: "/pos/pengaturan" },
+          actions: [{ action: "open", title: "Buka Pengaturan" }]
+        }
+      });
+
+      const promises = subs.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload
+          );
+        } catch (error: any) {
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await db.delete(pushSubscriptionsTable).where(eq(pushSubscriptionsTable.id, sub.id));
+          }
+        }
+      });
+
+      await Promise.all(promises);
+      return true;
+    } catch (error) {
+      logger.error(error, "Error sending license expiry notification");
+      return false;
+    }
+  },
 };

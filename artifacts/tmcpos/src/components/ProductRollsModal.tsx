@@ -190,8 +190,8 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[85vh] mx-auto w-full max-w-3xl px-4 sm:px-6 pb-6 pt-2">
-        <DrawerHeader className="pb-2">
+      <DrawerContent className="max-h-[95vh] h-[95vh] flex flex-col mx-auto w-full max-w-5xl px-4 sm:px-6 pb-6 pt-2">
+        <DrawerHeader className="pb-2 shrink-0">
           <DrawerTitle className="text-base">Daftar Roll/Gulungan - {productName}</DrawerTitle>
           {/* Summary row */}
           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
@@ -282,7 +282,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
         {/* Add new roll form */}
         {isAdding && (
-          <div className="flex flex-col gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5">
+          <div className="flex flex-col gap-2 mb-3 p-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 shrink-0">
             <div className="flex items-center gap-2">
               <Input
                 placeholder={parseInt(newQty) > 1 ? "Auto-generate (Multi)" : "Barcode (Auto)"}
@@ -317,9 +317,9 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
             </div>
             
             {parseInt(newQty) > 0 && (
-              <div className="bg-white p-3 rounded-lg border border-slate-200 mt-1">
+              <div className="bg-white p-3 rounded-lg border border-slate-200 mt-1 shrink-0">
                 <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll (yds)</label>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[35vh] overflow-y-auto p-1">
                   {Array.from({ length: parseInt(newQty) || 0 }).map((_, i) => (
                     <div key={i} className="space-y-1">
                       <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
@@ -346,7 +346,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
         {/* Edit panel (shown when a roll is selected) */}
         {editingRoll && (
-          <div className="flex flex-col gap-2 mb-3 p-3.5 rounded-xl border-2 border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm relative overflow-hidden">
+          <div className="flex flex-col gap-2 mb-3 p-3.5 rounded-xl border-2 border-blue-200 bg-blue-50/80 dark:bg-blue-900/20 shadow-sm relative overflow-hidden shrink-0">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
                 ✏️ Edit Roll #{editingRoll.id}
@@ -403,10 +403,10 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         )}
 
         {/* Compact grid of rolls */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0 border border-primary/40 rounded-lg">
           {isLoading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-              {Array(12).fill(0).map((_, i) => (
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-1.5 p-2">
+              {Array(16).fill(0).map((_, i) => (
                 <Skeleton key={i} className="h-20 rounded-lg" />
               ))}
             </div>
@@ -416,11 +416,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
               <span className="text-sm">Tidak ada roll tersedia</span>
             </div>
           ) : (
-            <div
-              className="border border-primary/40 rounded-lg overflow-hidden"
-              style={{ maxHeight: "46vh", overflowY: "auto" }}
-            >
-              <div className="grid grid-cols-3 sm:grid-cols-4 divide-x divide-y divide-border">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 divide-x divide-y divide-border border-b border-r border-primary/20">
                 {sortedRolls.length === 0 ? (
                   <div className="col-span-4 flex flex-col items-center justify-center py-10 text-muted-foreground">
                     <Filter className="mb-2 h-6 w-6 opacity-30" />
@@ -550,7 +546,6 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   );
                 })}
               </div>
-            </div>
           )}
 
           {/* Legend */}

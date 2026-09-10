@@ -25,69 +25,91 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-// Tarik data dari semua GAS Cabang yang terdaftar
+// Tarik data dari semua GAS Cabang yang terdaftar (PARALEL - lebih cepat)
 function getAllBranchesData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("Master");
   if (!sheet) return [];
-  
+
   const data = sheet.getDataRange().getValues();
-  let branches = [];
-  
-  // Looping mulai baris ke-2 (index 1)
+
+  // Kumpulkan semua cabang yang valid terlebih dahulu
+  const validRows = [];
   for (let i = 1; i < data.length; i++) {
     const lokasi = data[i][0];
     const url = data[i][1];
     const secret = data[i][2];
     const owner = data[i][3];
-    
-    if (!url) continue; // Skip jika URL kosong
-    
+    if (!url) continue;
+    validRows.push({ lokasi, url, secret, owner });
+  }
+
+  if (validRows.length === 0) return [];
+
+  // Buat semua request sekaligus (PARALEL)
+  const requests = validRows.map(row => ({
+    url: `${row.url}?secret=${row.secret}`,
+    muteHttpExceptions: true,
+    followRedirects: true,
+    method: "get"
+  }));
+
+  let responses;
+  try {
+    responses = UrlFetchApp.fetchAll(requests);
+  } catch (err) {
+    // Jika fetchAll gagal total, kembalikan semua sebagai OFFLINE
+    return validRows.map(row => ({
+      lokasi: row.lokasi, owner: row.owner, url: row.url, secret: row.secret,
+      status: "OFFLINE", error: "Gagal koneksi massal", licenses: []
+    }));
+  }
+
+  // Proses hasil secara bersamaan
+  const branches = responses.map((response, idx) => {
+    const row = validRows[idx];
     try {
-      // Panggil doGet endpoint dari GAS Cabang dengan secret key
-      const response = UrlFetchApp.fetch(`${url}?secret=${secret}`, { muteHttpExceptions: true });
       if (response.getResponseCode() === 200) {
         const result = JSON.parse(response.getContentText());
-        branches.push({
-          lokasi,
-          owner,
-          url,
-          secret,
+        return {
+          lokasi: row.lokasi, owner: row.owner, url: row.url, secret: row.secret,
           status: "ONLINE",
           licenses: result.licenses || []
-        });
+        };
       } else {
-        branches.push({ lokasi, owner, url, secret, status: "OFFLINE", error: "HTTP " + response.getResponseCode(), licenses: [] });
+        return {
+          lokasi: row.lokasi, owner: row.owner, url: row.url, secret: row.secret,
+          status: "OFFLINE", error: "HTTP " + response.getResponseCode(), licenses: []
+        };
       }
     } catch (err) {
-      branches.push({ lokasi, owner, status: "OFFLINE", error: "Error Koneksi", licenses: [] });
+      return {
+        lokasi: row.lokasi, owner: row.owner, url: row.url, secret: row.secret,
+        status: "OFFLINE", error: "Error parsing response", licenses: []
+      };
     }
-  }
-  
+  });
+
   return branches;
+}
+
+// Helper: parse JSON dengan aman - jika response adalah HTML, kembalikan error yang jelas
+function safeParseJson(responseText) {
+  const trimmed = responseText.trim();
+  if (trimmed.startsWith("<")) {
+    // GAS mengembalikan HTML — biasanya karena redirect login atau perlu deploy ulang
+    return { valid: false, error: "GAS Cabang belum di-deploy ulang setelah update kode. Silakan buka GAS Cabang dan klik Deploy → New Version." };
+  }
+  return JSON.parse(trimmed);
 }
 
 // Fungsi untuk memperbarui status cabang (dipanggil dari frontend HTML)
 function updateLicenseStatus(url, secret, licenseKey, newStatus) {
   try {
-    const payload = {
-      action: "update_status",
-      licenseKey: licenseKey,
-      status: newStatus,
-      secret: secret
-    };
-
-    const options = {
-      method: "post",
-      contentType: "application/json",
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    };
-
+    const payload = { action: "update_status", licenseKey, status: newStatus, secret };
+    const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
     const response = UrlFetchApp.fetch(url, options);
-    const result = JSON.parse(response.getContentText());
-    
-    return result;
+    return safeParseJson(response.getContentText());
   } catch (e) {
     return { valid: false, error: e.toString() };
   }
@@ -99,7 +121,7 @@ function generateNewLicenseKey(url, secret, storeName, plan) {
     const payload = { action: "generate_key", secret, storeName, plan };
     const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
     const response = UrlFetchApp.fetch(url, options);
-    return JSON.parse(response.getContentText());
+    return safeParseJson(response.getContentText());
   } catch (e) {
     return { valid: false, error: e.toString() };
   }
@@ -111,7 +133,7 @@ function editLicense(url, secret, licenseKey, expiresAt, plan) {
     const payload = { action: "edit_license", secret, licenseKey, expiresAt, plan };
     const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
     const response = UrlFetchApp.fetch(url, options);
-    return JSON.parse(response.getContentText());
+    return safeParseJson(response.getContentText());
   } catch (e) {
     return { valid: false, error: e.toString() };
   }
@@ -123,7 +145,7 @@ function deleteLicense(url, secret, licenseKey) {
     const payload = { action: "delete_license", secret, licenseKey };
     const options = { method: "post", contentType: "application/json", payload: JSON.stringify(payload), muteHttpExceptions: true };
     const response = UrlFetchApp.fetch(url, options);
-    return JSON.parse(response.getContentText());
+    return safeParseJson(response.getContentText());
   } catch (e) {
     return { valid: false, error: e.toString() };
   }

@@ -310,9 +310,12 @@ export default function Barang() {
                           </div>
                         </td>
                         <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>
-                            {isLowStock ? 'Stok Rendah' : 'Aman'}
-                          </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>
+                              {isLowStock ? 'Stok Rendah' : 'Aman'}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-medium">Min: {formatNumber(p.minStock)}</span>
+                          </div>
                         </td>
                         <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-1 transition-opacity">
@@ -596,7 +599,7 @@ export default function Barang() {
 
                   <FormField control={form.control} name="minStock" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-semibold text-slate-600">Min. Stok Peringatan</FormLabel>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Min. Stok Peringatan (Roll)</FormLabel>
                       <FormControl>
                         <Input type="number" step="any" min={0} className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-violet-500"
                           {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)}

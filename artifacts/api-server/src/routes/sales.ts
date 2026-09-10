@@ -25,13 +25,12 @@ async function deductStockForItems(items: any[], invoiceNumber: string) {
 
     // Trigger low stock notification
     if (updatedProduct) {
-      const meterStock = parseFloat(updatedProduct.meterStock as string || "0");
       const minStock = parseFloat(updatedProduct.minStock as string || "0");
-      if (meterStock <= minStock) {
+      if (Number(updatedProduct.rollStock) <= minStock) {
         try {
           await pushService.sendNotificationToAdmins(
-            "⚠️ Peringatan Stok Rendah",
-            `Bahan: ${updatedProduct.name}\nSisa Stok: ${meterStock} Meter (Min: ${minStock})\nMohon segera lakukan pengadaan ulang.`,
+            "⚠️ Peringatan Stok Tipis",
+            `Bahan: ${updatedProduct.name}\nSisa Stok: ${updatedProduct.rollStock} Roll (Min: ${minStock})\nMohon segera lakukan pengadaan ulang.`,
             `/barang`
           );
         } catch (err) {

@@ -392,8 +392,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
             </div>
           </div>
           
-          <div ref={containerRef} className="flex-1 p-2 overflow-y-auto overflow-x-auto w-full pb-24 flex flex-col items-center sm:items-center items-start" style={{ height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px` }}>
-            <div id="printable-invoice" ref={invoiceRef} className="p-2 text-slate-800 bg-white origin-top-left sm:origin-top mx-0 sm:mx-auto" style={{ fontFamily: "'Inter', sans-serif", width: '800px', minWidth: '800px', transform: `scale(${scale})` }}>
+          <div ref={containerRef} className="flex-1 p-2 overflow-y-auto overflow-x-auto w-full pb-24 flex justify-center">
+            <div style={{ width: scale === 1 ? 'auto' : `${800 * scale}px`, height: scaledHeight === 'auto' ? 'auto' : `${scaledHeight}px`, flexShrink: 0 }}>
+              <div id="printable-invoice" ref={invoiceRef} className="p-2 text-slate-800 bg-white origin-top-left" style={{ fontFamily: "'Inter', sans-serif", width: '800px', transform: `scale(${scale})` }}>
               {isLoading && !data ? (
               <div className="flex justify-center items-center h-full pt-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -415,24 +416,24 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
 
               {/* Header */}
               <div className="flex justify-between items-start mb-1 pb-1 relative z-10">
-                <div className="w-[35%]">
-                  <h1 className="font-bold text-xl text-indigo-900 uppercase tracking-tight">{appName}</h1>
-                  <p className="whitespace-pre-line text-xs text-slate-500 uppercase leading-snug">{appAddress.replace(/, /g, ",\n")}</p>
+                <div className="flex-1 w-0 pr-4">
+                  <h1 className="font-bold text-xl text-indigo-900 uppercase tracking-tight truncate">{appName}</h1>
+                  <p className="whitespace-pre-line text-xs text-slate-500 uppercase leading-snug break-words">{appAddress.replace(/, /g, ",\n")}</p>
                 </div>
                 
-                <div className="w-[30%] text-center flex flex-col items-center justify-start">
+                <div className="shrink-0 flex flex-col items-center justify-start px-2">
                   <div className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-bold text-xs uppercase tracking-widest shadow-xs mb-1">Nota Penjualan</div>
-                  <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
-                    <QrCode className="w-4 h-4 text-indigo-400 no-print" /> No. {displayData.invoiceNumber || "DRAFT"}
+                  <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <QrCode className="w-4 h-4 text-indigo-400 no-print shrink-0" /> No. {displayData.invoiceNumber || "DRAFT"}
                   </div>
                   {isPaid && <div className="lunas-stamp mt-1 inline-block text-green-600 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">LUNAS</div>}
                   {isDraft && <div className="lunas-stamp mt-1 inline-block text-slate-500 px-2 py-1 font-bold text-xs tracking-widest uppercase rounded">DRAFT</div>}
                 </div>
                 
-                <div className="w-[35%] text-right text-xs flex flex-col items-end">
-                  <p className="mb-1 text-slate-500">Pekalongan, <span className="font-semibold text-slate-900">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
-                  <p className="uppercase tracking-widest font-medium text-indigo-400 text-xs">Kepada Yth.</p>
-                  <p className="font-medium uppercase text-sm text-slate-900 leading-none mt-0.5">{displayData.customerName || "UMUM"}</p>
+                <div className="flex-1 w-0 pl-4 text-right text-xs flex flex-col items-end">
+                  <p className="mb-1 text-slate-500 break-words w-full">Pekalongan, <span className="font-semibold text-slate-900">{formatDateTime(displayData.createdAt || new Date().toISOString()).replace(/\./g, ":")}</span></p>
+                  <p className="uppercase tracking-widest font-medium text-indigo-400 text-xs mt-1">Kepada Yth.</p>
+                  <p className="font-medium uppercase text-sm text-slate-900 leading-none mt-0.5 truncate max-w-full">{displayData.customerName || "UMUM"}</p>
                 </div>
               </div>
               
@@ -725,8 +726,9 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
                   </div>
                 );
               })()}
-            </div>
+              </div>
             )}
+            </div>
           </div>
           </div>
         </DrawerContent>

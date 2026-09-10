@@ -102,6 +102,11 @@ if "!TARGET_FILE!"=="" (
     exit /b
 )
 
+REM Auto-tambahkan .sql jika user lupa mengetikkan ekstensinya
+if /i "!TARGET_FILE:~-4!" neq ".sql" (
+    set TARGET_FILE=!TARGET_FILE!.sql
+)
+
 set BACKUP_PATH=%BACKUP_DIR%\%TARGET_FILE%
 
 if not exist "%BACKUP_PATH%" (
@@ -196,7 +201,19 @@ if "!USE_DOCKER!"=="yes" (
     )
 
     set PGPASSWORD=%PGPASSWORD_LOCAL%
-    echo [1/1] Memuat data backup ke database...
+
+    REM === LANGKAH 1: Drop & Recreate database ===
+    echo [1/2] Menghapus database lama dan membuat ulang...
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME%' AND pid <> pg_backend_pid();" >nul 2>&1
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME%;" >nul 2>&1
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" >nul 2>&1
+    if %ERRORLEVEL% neq 0 (
+        echo [GAGAL] Tidak bisa reset database. Pastikan PostgreSQL berjalan.
+        goto :error_end
+    )
+    echo  -> Database berhasil direset.
+
+    echo [2/2] Memuat data backup ke database...
     "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BACKUP_PATH%"
     if %ERRORLEVEL% neq 0 (
         goto :error_end

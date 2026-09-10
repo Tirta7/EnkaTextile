@@ -61,7 +61,7 @@ router.get("/dashboard/summary", async (req, res) => {
   const [lowStock] = await db
     .select({ count: sql<number>`count(*)` })
     .from(productsTable)
-    .where(sql`${productsTable.meterStock} <= ${productsTable.minStock}`);
+    .where(sql`${productsTable.rollStock} <= ${productsTable.minStock}`);
 
   res.json({
     todayRevenue: numStr(todaySales?.revenue),

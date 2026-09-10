@@ -59,7 +59,7 @@ router.get("/products", async (req, res): Promise<void> => {
     rollStock: parseFloat(p.rollStock ?? "0"),
     meterStock: parseFloat(p.meterStock ?? "0"),
     minStock: parseFloat(p.minStock ?? "0"),
-    isLowStock: parseFloat(p.meterStock ?? "0") <= parseFloat(p.minStock ?? "0"),
+    isLowStock: parseFloat(p.rollStock ?? "0") <= parseFloat(p.minStock ?? "0"),
   }));
 
   if (lowStock === "true") { res.json(result.filter(p => p.isLowStock)); return; }
@@ -155,7 +155,7 @@ router.get("/products/:id", async (req, res): Promise<void> => {
     rollStock: parseFloat(prod.rollStock ?? "0"),
     meterStock: parseFloat(prod.meterStock ?? "0"),
     minStock: parseFloat(prod.minStock ?? "0"),
-    isLowStock: parseFloat(prod.meterStock ?? "0") <= parseFloat(prod.minStock ?? "0"),
+    isLowStock: parseFloat(prod.rollStock ?? "0") <= parseFloat(prod.minStock ?? "0"),
   });
 });
 
@@ -257,7 +257,7 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     rollStock: parseFloat(prod.rollStock ?? "0"),
     meterStock: parseFloat(prod.meterStock ?? "0"),
     minStock: parseFloat(prod.minStock ?? "0"),
-    isLowStock: parseFloat(prod.meterStock ?? "0") <= parseFloat(prod.minStock ?? "0"),
+    isLowStock: parseFloat(prod.rollStock ?? "0") <= parseFloat(prod.minStock ?? "0"),
     categoryName: null,
   });
 });

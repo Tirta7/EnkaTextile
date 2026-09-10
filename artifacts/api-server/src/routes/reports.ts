@@ -317,7 +317,7 @@ router.get("/reports/stock-summary", async (req, res) => {
     meterStock: numStr(p.meterStock),
     minStock: numStr(p.minStock),
     stockValue: numStr(p.meterStock) * numStr(p.pricePerMeter),
-    isLowStock: numStr(p.meterStock) <= numStr(p.minStock),
+    isLowStock: numStr(p.rollStock) <= numStr(p.minStock),
   }));
 
   res.json({

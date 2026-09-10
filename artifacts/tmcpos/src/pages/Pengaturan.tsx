@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from "@/components/ui/drawer";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt, Moon, Sun, Palette, Lock, ShieldCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, CreditCard, GripVertical, Settings, Box, BellRing, MonitorSmartphone, Save, Image as ImageIcon, Receipt, Moon, Sun, Palette, Lock, ShieldCheck, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { registerAndSubscribePush } from "../lib/pushNotification";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
@@ -62,6 +62,8 @@ export default function Pengaturan() {
   const [invoiceBankAccountInput, setInvoiceBankAccountInput] = useState("");
   const [invoiceNotesInput, setInvoiceNotesInput] = useState("");
 
+  const [shopEnableCartInput, setShopEnableCartInput] = useState(true);
+
   // State untuk perpanjangan lisensi
   const [renewKeyInput, setRenewKeyInput] = useState("");
   const [isRenewing, setIsRenewing] = useState(false);
@@ -93,6 +95,9 @@ export default function Pengaturan() {
       }
       if (settings["invoice_notes"]) {
         setInvoiceNotesInput(settings["invoice_notes"]);
+      }
+      if (settings["shop_enable_cart"]) {
+        setShopEnableCartInput(settings["shop_enable_cart"] === "true");
       }
 
       setIsInitialized(true);
@@ -134,6 +139,18 @@ export default function Pengaturan() {
       },
       {
         onSuccess: () => toast({ title: "Pengaturan Nota disimpan!" }),
+        onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleSaveShopSettings = () => {
+    updateSettingsMutation.mutate(
+      { 
+        shop_enable_cart: shopEnableCartInput ? "true" : "false" 
+      },
+      {
+        onSuccess: () => toast({ title: "Pengaturan Katalog disimpan!" }),
         onError: (err: any) => toast({ title: "Gagal menyimpan", description: err.message, variant: "destructive" }),
       }
     );
@@ -477,6 +494,41 @@ export default function Pengaturan() {
             <Save size={16} />
             {updateSettingsMutation.isPending ? "Menyimpan..." : "Simpan"}
           </Button>
+        </div>
+      </div>
+
+      {/* Shop Settings Card */}
+      <div className="bg-white rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-4">
+        <div>
+          <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+            <Store size={18} className="text-emerald-500" />
+            Pengaturan Katalog (Shop)
+          </h3>
+          <p className="text-xs text-slate-500 mt-1 ml-6.5">
+            Atur fitur e-commerce untuk pelanggan Anda.
+          </p>
+        </div>
+        <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+          <div>
+            <div className="font-semibold text-slate-700 text-sm">Fitur Keranjang & Detail Ukuran Roll</div>
+            <div className="text-xs text-slate-500 mt-1 max-w-[400px]">
+              Jika diaktifkan, customer bisa melihat panjang roll spesifik dan memasukkannya ke Keranjang Belanja. Jika dimatikan, customer langsung order via WhatsApp tanpa tahu panjang roll spesifik.
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Switch 
+              checked={shopEnableCartInput} 
+              onCheckedChange={(val) => {
+                setShopEnableCartInput(val);
+                // Auto save
+                updateSettingsMutation.mutate({ shop_enable_cart: val ? "true" : "false" }, {
+                  onSuccess: () => toast({ title: "Pengaturan Katalog disimpan!" })
+                });
+              }} 
+              className="data-[state=checked]:bg-emerald-600" 
+              disabled={isLoadingSettings || updateSettingsMutation.isPending}
+            />
+          </div>
         </div>
       </div>
 

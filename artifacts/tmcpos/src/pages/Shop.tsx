@@ -125,7 +125,7 @@ function ProductImage({ src, name, className = "" }: { src: string | null; name:
 }
 
 // ─── Bottom Sheet ─────────────────────────────────────────────────────────────
-function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDetail | null; onClose: () => void; onAddToCart: (item: Omit<CartItem, "id">) => void }) {
+function BottomSheet({ product, onClose, onAddToCart, enableCart, whatsapp }: { product: ShopProductDetail | null; onClose: () => void; onAddToCart: (item: Omit<CartItem, "id">) => void; enableCart: boolean; whatsapp: string }) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [customLengthStr, setCustomLengthStr] = useState("");
@@ -158,6 +158,20 @@ function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDe
         alert("Silakan masukkan jumlah yard/meter yang valid untuk Bebas Potong.");
         return;
       }
+    }
+
+    if (!enableCart) {
+      // Direct checkout if cart is disabled
+      let msg = `Halo ENKA TEXTILE! 👋\nSaya ingin memesan:\n\n`;
+      if (selectedSize === null) {
+        msg += `${quantity}x ${product.name} (Bebas Potong - ${customLengthStr} ${product.primaryUnit})\n`;
+      } else {
+        msg += `${quantity}x ${product.name} (Roll-an)\n`;
+      }
+      msg += `\nApakah stoknya masih tersedia?`;
+      window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+      onClose();
+      return;
     }
 
     onAddToCart({
@@ -248,12 +262,12 @@ function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDe
               {product.pricePerRoll && (
                 <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 mt-1">
                   <span className="text-sm text-slate-500">
-                    {selectedSize ? `Total ${quantity} Roll (${selectedSize} ${product.primaryUnit})` : "Harga Grosir (Beli Roll-an)"}
+                    {enableCart && selectedSize ? `Total ${quantity} Roll (${selectedSize} ${product.primaryUnit})` : "Harga Grosir (Beli Roll-an)"}
                   </span>
                   <div className="flex flex-col items-end">
                     <span className="text-base font-bold text-violet-600">
-                      {selectedSize ? formatRupiah(product.pricePerRoll * selectedSize * quantity) : formatRupiah(product.pricePerRoll)}
-                      {!selectedSize && <span className="text-xs font-medium text-slate-400">/{product.primaryUnit}</span>}
+                      {enableCart && selectedSize ? formatRupiah(product.pricePerRoll * selectedSize * quantity) : formatRupiah(product.pricePerRoll)}
+                      {(!enableCart || !selectedSize) && <span className="text-xs font-medium text-slate-400">/{product.primaryUnit}</span>}
                     </span>
                     {selectedSize && (
                       <span className="text-[10px] text-slate-400 font-medium">
@@ -269,7 +283,7 @@ function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDe
             {product.availableSizes.length > 0 && (
               <div>
                 <p className="text-sm font-semibold text-slate-700 mb-3">
-                  Ukuran Tersedia
+                  Pilihan Pembelian
                   <span className="ml-2 text-xs text-slate-400 font-normal">({product.totalRolls} roll)</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -283,20 +297,34 @@ function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDe
                   >
                     Bebas Potong
                   </button>
-                  {product.availableSizes.map(size => (
+                  
+                  {enableCart ? (
+                    product.availableSizes.map(size => (
+                      <button
+                        key={size.length}
+                        onClick={() => setSelectedSize(size.length)}
+                        className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${
+                          selectedSize === size.length
+                            ? "border-rose-500 bg-rose-50 text-rose-700"
+                            : "border-slate-200 bg-white text-slate-700"
+                        }`}
+                      >
+                        {size.length} {product.primaryUnit}
+                        <span className="ml-1 text-[10px] opacity-70 font-normal">({size.count} stok)</span>
+                      </button>
+                    ))
+                  ) : (
                     <button
-                      key={size.length}
-                      onClick={() => setSelectedSize(size.length)}
+                      onClick={() => setSelectedSize(1)} // dummy truthy value for "Roll-an"
                       className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${
-                        selectedSize === size.length
+                        selectedSize !== null
                           ? "border-rose-500 bg-rose-50 text-rose-700"
                           : "border-slate-200 bg-white text-slate-700"
                       }`}
                     >
-                      {size.length} {product.primaryUnit}
-                      <span className="ml-1 text-[10px] opacity-70 font-normal">({size.count} stok)</span>
+                      Beli Roll-an
                     </button>
-                  ))}
+                  )}
                 </div>
                 
                 {/* Custom Length Input Form */}
@@ -349,11 +377,11 @@ function BottomSheet({ product, onClose, onAddToCart }: { product: ShopProductDe
                     <div className="w-10 text-center font-bold text-slate-700 text-sm">{quantity}</div>
                     <button 
                       onClick={() => {
-                        const maxQty = selectedSize !== null ? (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) : 99;
+                        const maxQty = enableCart && selectedSize !== null ? (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) : product.rollStock;
                         setQuantity(q => Math.min(maxQty, q + 1));
                       }}
-                      disabled={selectedSize !== null && quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-r-lg transition-colors ${selectedSize !== null && quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-200 active:scale-95"}`}
+                      disabled={(enableCart && selectedSize !== null) ? quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) : quantity >= product.rollStock}
+                      className={`w-8 h-8 flex items-center justify-center rounded-r-lg transition-colors ${((enableCart && selectedSize !== null) ? quantity >= (product.availableSizes.find(s => s.length === selectedSize)?.count ?? 1) : quantity >= product.rollStock) ? "text-slate-300 cursor-not-allowed" : "text-slate-600 hover:bg-slate-200 active:scale-95"}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                     </button>
@@ -582,7 +610,7 @@ export default function Shop() {
   const [selectedProduct, setSelectedProduct] = useState<ShopProductDetail | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [shopSettings, setShopSettings] = useState({ storeName: "ENKA TEXTILE", whatsapp: "" });
+  const [shopSettings, setShopSettings] = useState({ storeName: "ENKA TEXTILE", whatsapp: "", enableCart: true });
   const [activeSection, setActiveSection] = useState<"beranda" | "katalog" | "promo">("beranda");
 
   // Cart state
@@ -611,17 +639,6 @@ export default function Shop() {
     }
   };
 
-  // Load shop settings
-  useEffect(() => {
-    fetch(`${API_BASE}/api/settings/manifest.json`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.storeName) setShopSettings(s => ({ ...s, storeName: d.storeName }));
-        if (d.whatsapp) setShopSettings(s => ({ ...s, whatsapp: d.whatsapp }));
-      })
-      .catch(() => {});
-  }, []);
-
   // Load categories
   useEffect(() => {
     fetch(`${API_BASE}/api/shop/categories`)
@@ -630,20 +647,59 @@ export default function Shop() {
       .catch(() => {});
   }, []);
 
-  // Load products
+  // Load products, settings & Setup Polling
   useEffect(() => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (selectedCategory) params.set("categoryId", String(selectedCategory));
-    if (search) params.set("search", search);
+    let isMounted = true;
+    
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/settings`);
+        const d = await res.json();
+        if (isMounted) {
+          setShopSettings(s => {
+            const newSettings = { ...s };
+            if (d.app_name) newSettings.storeName = d.app_name;
+            if (d.app_whatsapp) newSettings.whatsapp = d.app_whatsapp;
+            if (d.shop_enable_cart) newSettings.enableCart = d.shop_enable_cart === "true";
+            return newSettings;
+          });
+        }
+      } catch (err) {
+        // silently fail
+      }
+    };
 
-    fetch(`${API_BASE}/api/shop/products?${params}`)
-      .then(r => r.json())
-      .then(data => {
-        setProducts(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const fetchProducts = async (showLoading = false) => {
+      if (showLoading) setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedCategory) params.set("categoryId", String(selectedCategory));
+      if (search) params.set("search", search);
+
+      try {
+        const res = await fetch(`${API_BASE}/api/shop/products?${params}`);
+        const data = await res.json();
+        if (isMounted) {
+          setProducts(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        // silently fail for background poll
+      } finally {
+        if (isMounted && showLoading) setLoading(false);
+      }
+    };
+
+    fetchSettings();
+    fetchProducts(true);
+
+    const intervalId = setInterval(() => {
+      fetchSettings();
+      fetchProducts(false);
+    }, 15000); // Auto refresh every 15 seconds
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, [selectedCategory, search]);
 
   // Open product detail
@@ -1052,32 +1108,38 @@ export default function Shop() {
           product={selectedProduct}
           onClose={() => { setSheetOpen(false); setSelectedProduct(null); }}
           onAddToCart={handleAddToCart}
+          enableCart={shopSettings.enableCart}
+          whatsapp={shopSettings.whatsapp}
         />
       )}
 
       {/* ── Cart FAB ── */}
-      <button
-        onClick={() => setCartModalOpen(true)}
-        className="fixed bottom-20 lg:bottom-10 right-4 lg:right-10 z-40 bg-rose-500 text-white p-4 rounded-full shadow-2xl shadow-rose-200 hover:scale-105 active:scale-95 transition-all"
-      >
-        <div className="relative">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-          {cart.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
-              {cart.length}
-            </span>
-          )}
-        </div>
-      </button>
+      {shopSettings.enableCart && (
+        <button
+          onClick={() => setCartModalOpen(true)}
+          className="fixed bottom-20 lg:bottom-10 right-4 lg:right-10 z-40 bg-rose-500 text-white p-4 rounded-full shadow-2xl shadow-rose-200 hover:scale-105 active:scale-95 transition-all"
+        >
+          <div className="relative">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                {cart.length}
+              </span>
+            )}
+          </div>
+        </button>
+      )}
 
       {/* ── Cart Modal ── */}
-      <CartModal
-        isOpen={cartModalOpen}
-        onClose={() => setCartModalOpen(false)}
-        cart={cart}
-        setCart={setCart}
-        whatsapp={shopSettings.whatsapp}
-      />
+      {shopSettings.enableCart && (
+        <CartModal
+          isOpen={cartModalOpen}
+          onClose={() => setCartModalOpen(false)}
+          cart={cart}
+          setCart={setCart}
+          whatsapp={shopSettings.whatsapp}
+        />
+      )}
     </div>
   );
 }

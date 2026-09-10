@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, useListCategories, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,22 @@ export default function Pembelian() {
         setIsOpen(false); resetForm();
         toast({ title: "Pembelian berhasil dicatat" });
       }
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/purchases/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Gagal menghapus pembelian");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey({}) });
+      queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+      toast({ title: "Pembelian berhasil dihapus" });
+    },
+    onError: () => {
+      toast({ title: "Gagal menghapus pembelian", variant: "destructive" });
     }
   });
 
@@ -200,7 +216,7 @@ export default function Pembelian() {
                     <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Total</th>
                     <th className="text-right py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Kekurangan</th>
-                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-20 whitespace-nowrap">Detail</th>
+                    <th className="text-center py-2.5 px-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider w-24 whitespace-nowrap">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -221,9 +237,27 @@ export default function Pembelian() {
                         <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah(p.totalAmount)}</td>
                         <td className={`py-2.5 px-3 text-right font-bold ${kurang > 0 ? 'text-amber-600' : 'text-slate-300'}`}>{kurang > 0 ? formatRupiah(kurang) : '—'}</td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          <button className="w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 flex items-center justify-center transition-colors mx-auto" title="Lihat Detail" onClick={() => setViewDetailId(p.id)}>
-                            <ArrowRightCircle className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button className="w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 flex items-center justify-center transition-colors" title="Lihat Detail" onClick={() => setViewDetailId(p.id)}>
+                              <ArrowRightCircle className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 flex items-center justify-center transition-colors disabled:opacity-50" 
+                              title="Hapus Pembelian" 
+                              onClick={() => {
+                                if (confirm("Apakah Anda yakin ingin menghapus pembelian ini? Semua roll yang ditambahkan akan ditarik kembali dari stok.")) {
+                                  deleteMutation.mutate(p.id);
+                                }
+                              }}
+                              disabled={deleteMutation.isPending}
+                            >
+                              {deleteMutation.isPending && deleteMutation.variables === p.id ? (
+                                <span className="h-3.5 w-3.5 rounded-full border-2 border-red-600 border-t-transparent animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

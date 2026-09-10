@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, stockMutationsTable, productRollsTable } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, paymentsTable, stockMutationsTable, productRollsTable } from "@workspace/db";
+import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
 import { CreatePurchaseBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 
@@ -205,6 +205,85 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
       subtotal: numStr(i.subtotal),
     })),
   });
+});
+
+router.delete("/purchases/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const [purchase] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, id));
+  if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
+
+  try {
+    // Get items
+    const items = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
+
+    for (const item of items) {
+      const rollCount = Number(item.rolls) || 0;
+      if (rollCount > 0 && item.rollId) {
+        // Delete rolls created for this purchase item using barcode pattern (PO invoice number)
+        // Rolls created by this purchase have IDs starting from item.rollId (first roll inserted)
+        // We get sequential IDs = rollId, rollId+1, rollId+2, ... rollId+rollCount-1
+        const rollIds = Array.from({ length: rollCount }, (_, i) => (item.rollId as number) + i);
+        
+        // Only delete rolls that still belong to this product (safety check)
+        const rollsToDelete = await db.select()
+          .from(productRollsTable)
+          .where(
+            and(
+              eq(productRollsTable.productId, item.productId),
+              inArray(productRollsTable.id, rollIds)
+            )
+          );
+
+        if (rollsToDelete.length > 0) {
+          await db.delete(productRollsTable).where(
+            inArray(productRollsTable.id, rollsToDelete.map(r => r.id))
+          );
+        }
+      }
+
+      // Record stock mutation
+      await db.insert(stockMutationsTable).values({
+        productId: item.productId,
+        type: "keluar",
+        rolls: item.rolls.toString(),
+        meters: item.meters.toString(),
+        description: `Batal Pembelian ${purchase.invoiceNumber}`,
+        reference: purchase.invoiceNumber,
+      });
+
+      // Sync product stock
+      const rolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, item.productId), eq(productRollsTable.status, "available")));
+      const calculatedRollStock = rolls.length;
+      const calculatedMeterStock = rolls.reduce((sum, r) => sum + parseFloat(r.currentLength), 0);
+
+      await db.execute(sql`
+        UPDATE ${productsTable} 
+        SET roll_stock = ${calculatedRollStock}, meter_stock = ${calculatedMeterStock}, updated_at = NOW()
+        WHERE id = ${item.productId}
+      `);
+    }
+
+    // Delete purchase items first
+    await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
+
+    // Find and delete payments linked to payables of this purchase
+    const relatedPayables = await db.select().from(payablesTable).where(eq(payablesTable.purchaseId, id));
+    if (relatedPayables.length > 0) {
+      for (const payable of relatedPayables) {
+        await db.delete(paymentsTable).where(eq(paymentsTable.payableId, payable.id));
+      }
+      await db.delete(payablesTable).where(eq(payablesTable.purchaseId, id));
+    }
+
+    // Delete the purchase itself
+    await db.delete(purchasesTable).where(eq(purchasesTable.id, id));
+
+    broadcastRefresh();
+    res.json({ success: true });
+  } catch (err: any) {
+    console.error("Error deleting purchase:", err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
+  }
 });
 
 export default router;

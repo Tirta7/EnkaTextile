@@ -374,7 +374,7 @@ export default function Pembelian() {
                     </div>
                     <div className="md:col-span-1">
                       <label className="text-xs text-muted-foreground mb-1 block truncate">Barcode</label>
-                      <Input className="h-8 px-2" placeholder="Opsional" value={item.barcode || ""} onChange={e => updateItem(index, "barcode", e.target.value)} />
+                      <Input className="h-8 px-2 bg-slate-100 cursor-not-allowed" placeholder="Otomatis" value={item.barcode || ""} readOnly />
                     </div>
                     <div className="md:col-span-1">
                       <label className="text-xs text-muted-foreground mb-1 block truncate">Roll</label>
@@ -382,7 +382,7 @@ export default function Pembelian() {
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Yard"})</label>
-                      <Input className={`h-8 px-2 ${(item.rolls && (item.rolls as number) > 0) ? 'bg-slate-100 cursor-not-allowed font-medium' : ''}`} type="number" step="any" min={0} value={item.meters} onChange={e => updateItem(index, "meters", e.target.value === "" ? "" : parseFloat(e.target.value))} readOnly={!!(item.rolls && (item.rolls as number) > 0)} />
+                      <Input className="h-8 px-2 bg-slate-100 cursor-not-allowed font-medium" type="number" step="any" min={0} value={item.meters} readOnly />
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Yard"}</label>

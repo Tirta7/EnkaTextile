@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { SupplierDebtDrawer } from "@/components/SupplierDebtDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Truck, Store, MoreVertical, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Truck, Store, MoreVertical, AlertCircle, CheckCircle2, Receipt } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -118,10 +118,9 @@ export default function Supplier() {
                         <td className="py-2.5 px-3 text-slate-500 text-xs whitespace-nowrap">{s.phone || <span className="text-slate-300">—</span>}</td>
                         <td className="py-2.5 px-3 text-slate-500 text-xs max-w-[140px] truncate">{s.address || <span className="text-slate-300">—</span>}</td>
                         <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                          <span
-                            className={`text-sm font-bold ${hasDebt ? 'text-red-600 cursor-pointer hover:underline' : 'text-slate-800'}`}
-                            onClick={() => { if (hasDebt) setViewDebtSupplierId(s.id); }}
-                          >{formatRupiah(currentDebt)}</span>
+                          <span className={`text-sm font-bold ${hasDebt ? 'text-red-600' : 'text-slate-800'}`}>
+                            {formatRupiah(currentDebt)}
+                          </span>
                         </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${hasDebt ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
@@ -130,6 +129,7 @@ export default function Supplier() {
                         </td>
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1 justify-center">
+                            <button title="Riwayat Tagihan" className="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center transition-colors" onClick={() => setViewDebtSupplierId(s.id)}><Receipt className="w-3.5 h-3.5" /></button>
                             <button title="Edit" className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors" onClick={() => openEdit(s)}><Pencil className="w-3.5 h-3.5" /></button>
                             <button title="Hapus" className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors" onClick={() => { if (confirm('Hapus supplier ini?')) deleteMutation.mutate({ id: s.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>

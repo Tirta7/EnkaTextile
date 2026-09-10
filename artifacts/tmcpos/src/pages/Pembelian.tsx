@@ -278,7 +278,7 @@ export default function Pembelian() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl p-0 overflow-hidden">
+        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl p-0 overflow-hidden">
           <DrawerTitle className="sr-only">Buat Pembelian Baru</DrawerTitle>
           <DrawerDescription className="sr-only">Form to create a new purchase</DrawerDescription>
           
@@ -401,14 +401,14 @@ export default function Pembelian() {
                   {item.rolls && (item.rolls as number) > 0 && (
                     <div className="mt-2 bg-white p-3 rounded-lg border border-slate-200">
                       <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll ({item.primaryUnit || "Yard"})</label>
-                      <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                      <div className="flex flex-wrap gap-3">
                         {Array.from({ length: item.rolls as number }).map((_, i) => (
-                          <div key={i} className="space-y-1">
-                            <label className="text-[10px] font-medium text-slate-500">Roll #{i + 1}</label>
+                          <div key={i} className="flex flex-col w-24 shrink-0 space-y-1">
+                            <label className="text-[10px] font-medium text-slate-500 truncate">Roll #{i + 1}</label>
                             <Input
                               type="number" step="any" min={0}
-                              placeholder="Panjang..."
-                              className="h-7 text-xs px-2"
+                              placeholder="Yard"
+                              className="h-8 text-xs px-2"
                               value={item.rollLengths?.[i] || ''}
                               onChange={e => updateItem(index, `rollLengths.${i}` as any, e.target.value === "" ? "" : parseFloat(e.target.value))}
                             />

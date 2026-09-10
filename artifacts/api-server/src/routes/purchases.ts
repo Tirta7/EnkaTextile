@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, paymentsTable, stockMutationsTable, productRollsTable } from "@workspace/db";
+import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, paymentsTable, stockMutationsTable, productRollsTable, saleItemsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
 import { CreatePurchaseBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
@@ -213,8 +213,11 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
   if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
 
   try {
-    // Get items
+    // Get items into memory first
     const items = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
+
+    // Delete purchase items first to avoid foreign key constraints from productRollsTable
+    await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
 
     for (const item of items) {
       const rollCount = Number(item.rolls) || 0;
@@ -235,8 +238,13 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
           );
 
         if (rollsToDelete.length > 0) {
+          // Unlink from sale_items if any (to avoid another FK constraint)
+          const rollIdsToDelete = rollsToDelete.map(r => r.id);
+          
+          await db.update(saleItemsTable).set({ rollId: null }).where(inArray(saleItemsTable.rollId, rollIdsToDelete));
+
           await db.delete(productRollsTable).where(
-            inArray(productRollsTable.id, rollsToDelete.map(r => r.id))
+            inArray(productRollsTable.id, rollIdsToDelete)
           );
         }
       }
@@ -262,9 +270,6 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
         WHERE id = ${item.productId}
       `);
     }
-
-    // Delete purchase items first
-    await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
 
     // Find and delete payments linked to payables of this purchase
     const relatedPayables = await db.select().from(payablesTable).where(eq(payablesTable.purchaseId, id));

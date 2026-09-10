@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { productsTable, categoriesTable, productRollsTable } from "@workspace/db";
+import { productsTable, categoriesTable, productRollsTable, saleItemsTable, purchaseItemsTable } from "@workspace/db";
 import { eq, ilike, and, lte, sql, inArray } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody, CreateProductRollBody, UpdateProductRollBody } from "@workspace/api-zod";
 import { pushService } from "../lib/push";
@@ -328,11 +328,21 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
 router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const rollId = parseInt(req.params.rollId);
-  await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
-  
-  await syncProductStockFromRolls(id);
-  
-  res.status(204).send();
+
+  try {
+    // Nullify rollId references in sale_items and purchase_items to avoid FK constraint
+    await db.update(saleItemsTable).set({ rollId: null }).where(eq(saleItemsTable.rollId, rollId));
+    await db.update(purchaseItemsTable).set({ rollId: null }).where(eq(purchaseItemsTable.rollId, rollId));
+
+    await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
+
+    await syncProductStockFromRolls(id);
+
+    res.status(204).send();
+  } catch (err: any) {
+    console.error("Error deleting roll:", err);
+    res.status(500).json({ error: err.message || "Gagal menghapus roll" });
+  }
 });
 
 export default router;

@@ -1,20 +1,19 @@
 @echo off
 setlocal enabledelayedexpansion
 
-title VOCpos - Hard Restart
+title VOCpos - Reset Database Bersih
 color 0C
 
 set PSQL="C:\Program Files\PostgreSQL\18\bin\psql.exe"
 
 echo ============================================================
-echo   PERINGATAN: HARD RESTART (RESET SEMUA DATA)
+echo  PERINGATAN: Semua data akan DIHAPUS PERMANEN!
+echo  (Penjualan, Barang, Pelanggan, Transaksi, dll)
 echo ============================================================
-echo Anda akan mereset SEMUA data dan aplikasi ke kondisi AWAL.
-echo Semua riwayat penjualan, barang, pelanggan dll akan HILANG!
 echo.
-set /p confirm="Ketik YAKIN untuk melanjutkan: "
+set /p confirm="Ketik YAKIN lalu tekan Enter: "
 if /i not "!confirm!"=="YAKIN" (
-    echo Dibatalkan.
+    echo Dibatalkan. Tidak ada data yang dihapus.
     pause
     exit /b
 )
@@ -36,9 +35,7 @@ pnpm --filter @workspace/db run push-force
 
 echo.
 echo ============================================================
-echo HARD RESTART SELESAI!
-echo ============================================================
-echo Database avocpos kini kosong bersih seperti baru.
+echo RESET SELESAI! Database avocpos kini kosong bersih.
 echo Silakan refresh browser aplikasi kasir Anda.
-echo.
+echo ============================================================
 pause

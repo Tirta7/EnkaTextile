@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { registerAndSubscribePush } from "../lib/pushNotification";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
+import { useLicense } from "@/hooks/useLicense";
 
 export default function Pengaturan() {
   const { theme, toggle: toggleTheme } = useTheme();
@@ -38,6 +39,7 @@ export default function Pengaturan() {
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const licenseInfo = useLicense();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editItem, setEditItem] = useState<{ id: number; name: string; isActive: boolean; sortOrder: number } | null>(null);
@@ -502,6 +504,44 @@ export default function Pengaturan() {
           >
             {isEnablingPush ? "Memproses..." : "Aktifkan Perangkat Ini"}
           </Button>
+        </div>
+      </div>
+
+      {/* License Info Card */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] overflow-hidden mb-6">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-bold text-slate-800 text-base">
+              <ShieldCheck size={18} className="text-violet-500" />
+              Informasi Lisensi
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 ml-6.5">
+              Status dan masa berlaku lisensi aplikasi Anda
+            </p>
+          </div>
+          {licenseInfo.status === "active" ? (
+             <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Aktif</Badge>
+          ) : licenseInfo.status === "offline_cached" ? (
+             <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200">Mode Offline</Badge>
+          ) : (
+             <Badge className="bg-red-100 text-red-700 hover:bg-red-200">Tidak Aktif</Badge>
+          )}
+        </div>
+        <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+             <Label className="text-slate-500 text-xs uppercase tracking-wider mb-1 block">Status</Label>
+             <p className="font-semibold text-slate-800">{licenseInfo.isValid ? "Berlaku" : "Kedaluwarsa"}</p>
+          </div>
+          <div>
+             <Label className="text-slate-500 text-xs uppercase tracking-wider mb-1 block">Sisa Hari</Label>
+             <p className="font-semibold text-slate-800">{licenseInfo.daysLeft} Hari</p>
+          </div>
+          <div>
+             <Label className="text-slate-500 text-xs uppercase tracking-wider mb-1 block">Masa Berlaku</Label>
+             <p className="font-semibold text-slate-800">
+               {licenseInfo.expiresAt ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(licenseInfo.expiresAt) : "-"}
+             </p>
+          </div>
         </div>
       </div>
 

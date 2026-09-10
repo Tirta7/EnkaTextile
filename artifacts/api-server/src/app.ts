@@ -51,8 +51,11 @@ app.use("/api/uploads", express.static(uploadsDir));
 
 // Auth guard — protect all other /api routes
 app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
-  const publicPaths = ["/healthz", "/settings", "/settings/manifest.json"];
+  const publicPaths = ["/healthz", "/settings", "/settings/manifest.json", "/license"];
   if (req.method === "GET" && publicPaths.some((p) => req.path === p || req.path.startsWith(p))) {
+    next(); return;
+  }
+  if (req.method === "POST" && req.path === "/license/activate") {
     next(); return;
   }
   if (!(req.session as any).userId) {

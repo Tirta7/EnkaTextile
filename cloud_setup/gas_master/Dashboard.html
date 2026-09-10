@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+  <style>
+    body { background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .status-active { color: #166534; background: #dcfce7; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .status-warning { color: #854d0e; background: #fef08a; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .status-expired { color: #991b1b; background: #fee2e2; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .status-offline { color: #475569; background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;}
+    .card-header { background-color: #1e293b; color: white; border-radius: 8px 8px 0 0 !important; }
+    .table th { font-size: 13px; color: #475569; text-transform: uppercase; }
+    .table td { vertical-align: middle; }
+    .branch-card { border-radius: 8px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .status-select { border: 1px solid transparent; outline: none; cursor: pointer; padding: 2px 20px 2px 8px; }
+    .status-select:hover { border: 1px solid #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div id="app" class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3 class="mb-0 fw-bold" style="color: #0f172a;">VOC MASTER CENTRAL COMMAND</h3>
+        <p class="text-muted mb-0">Sistem Monitoring Lisensi Terpusat</p>
+      </div>
+      <button class="btn btn-primary shadow-sm" @click="loadData">
+        <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+        Refresh Data
+      </button>
+    </div>
+
+    <div v-if="loading && branches.length === 0" class="text-center my-5">
+      <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+      <p class="mt-3 text-muted">Menghubungi semua cabang...</p>
+    </div>
+
+    <!-- Tampilkan per Cabang -->
+    <div v-else>
+      <div class="row">
+        <div class="col-12" v-for="branch in branches" :key="branch.lokasi">
+          <div class="card branch-card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+              <h5 class="mb-0 fw-bold">
+                {{ branch.lokasi }} 
+                <span class="badge bg-secondary ms-2 fw-normal" style="font-size: 11px;">Owner: {{ branch.owner }}</span>
+              </h5>
+              <span v-if="branch.status === 'ONLINE'" class="badge bg-success">ONLINE</span>
+              <span v-else class="badge bg-danger" :title="branch.error">OFFLINE / ERROR</span>
+            </div>
+            
+            <div class="card-body p-0" v-if="branch.status === 'ONLINE'">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="ps-4">Machine ID</th>
+                      <th>License Key</th>
+                      <th>Plan</th>
+                      <th>Sisa Hari</th>
+                      <th>Masa Berlaku</th>
+                      <th>Status Cabang</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="branch.licenses.length === 0">
+                      <td colspan="6" class="text-center py-4 text-muted">Belum ada lisensi di-generate untuk cabang ini.</td>
+                    </tr>
+                    <tr v-for="(lic, index) in branch.licenses" :key="index">
+                      <td class="ps-4">
+                        <code class="text-dark">{{ lic.machineId || 'Belum Terikat' }}</code>
+                      </td>
+                      <td><code class="text-primary">{{ lic.licenseKey }}</code></td>
+                      <td>{{ lic.plan }}</td>
+                      <td>
+                        <strong>{{ getDaysLeft(lic.expiresAt) }}</strong> Hari
+                      </td>
+                      <td>{{ formatDate(lic.expiresAt) }}</td>
+                      <td>
+                        <select 
+                          :class="['status-select', getStatusClass(lic)]" 
+                          v-model="lic.status"
+                          @change="updateStatus(branch, lic)">
+                          <option value="Aktif">Aktif</option>
+                          <option value="Darurat">Darurat</option>
+                          <option value="Kunci">Kunci</option>
+                          <option value="Belum Aktivasi">Belum Aktivasi</option>
+                        </select>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <div class="card-body text-center py-5" v-else>
+              <p class="text-danger mb-0">Gagal terhubung ke GAS Cabang: {{ branch.error }}</p>
+              <small class="text-muted">Pastikan URL GAS WebApp di Master Sheet sudah benar dan dapat diakses.</small>
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const branches = ref([]);
+        const loading = ref(true);
+
+        const loadData = () => {
+          loading.value = true;
+          google.script.run.withSuccessHandler(data => {
+            branches.value = data;
+            loading.value = false;
+          }).withFailureHandler(err => {
+            alert("Gagal memuat data master: " + err.message);
+            loading.value = false;
+          }).getAllBranchesData();
+        };
+
+        const getDaysLeft = (date) => {
+          if (!date) return "-";
+          const diff = new Date(date) - new Date();
+          return Math.ceil(diff / (1000 * 60 * 60 * 24));
+        };
+
+        const formatDate = (dateString) => {
+          if (!dateString) return "-";
+          const d = new Date(dateString);
+          if (isNaN(d.getTime())) return "-";
+          return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        };
+
+        const getStatusClass = (item) => {
+          if (item.status.toString().toLowerCase() !== "aktif") return "status-expired";
+          if (!item.expiresAt) return "status-warning";
+          const days = getDaysLeft(item.expiresAt);
+          if (days <= 0) return "status-expired";
+          if (days <= 7) return "status-warning";
+          return "status-active";
+        };
+
+        const getStatusText = (item) => {
+          if (item.status.toString().toLowerCase() !== "aktif") return "Dinonaktifkan";
+          if (!item.expiresAt) return "Belum Aktivasi";
+          const days = getDaysLeft(item.expiresAt);
+          if (days <= 0) return "Kedaluwarsa";
+          if (days <= 7) return "Akan Habis";
+          return "Aktif";
+        };
+
+        const updateStatus = (branch, lic) => {
+          const originalStatus = lic.status; // might be tricky to revert if it fails, but we'll try
+          
+          google.script.run
+            .withSuccessHandler((res) => {
+              if (!res.valid) {
+                alert("Gagal mengupdate status: " + res.error);
+                loadData(); // reload all
+              }
+            })
+            .withFailureHandler((err) => {
+              alert("Error jaringan saat update: " + err);
+              loadData();
+            })
+            .updateLicenseStatus(branch.url, branch.secret, lic.licenseKey, lic.status);
+        };
+
+        onMounted(() => {
+          loadData();
+        });
+
+        return { branches, loading, loadData, getDaysLeft, formatDate, getStatusClass, getStatusText, updateStatus };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

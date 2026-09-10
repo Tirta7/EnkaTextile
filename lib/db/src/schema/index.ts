@@ -353,3 +353,18 @@ export const insertReturnExchangedItemSchema = createInsertSchema(returnExchange
 export type InsertReturnExchangedItem = z.infer<typeof insertReturnExchangedItemSchema>;
 export type ReturnExchangedItem = typeof returnExchangedItemsTable.$inferSelect;
 
+// License Cache
+export const licenseCacheTable = pgTable("license_cache", {
+  id: serial("id").primaryKey(),
+  licenseKey: text("license_key").notNull(),
+  isValid: boolean("is_valid").notNull().default(false),
+  expiresAt: timestamp("expires_at"),
+  cachedAt: timestamp("cached_at").defaultNow().notNull(),
+  daysLeft: integer("days_left"),
+  storeName: text("store_name"),
+});
+
+export const insertLicenseCacheSchema = createInsertSchema(licenseCacheTable).omit({ id: true, cachedAt: true });
+export type InsertLicenseCache = z.infer<typeof insertLicenseCacheSchema>;
+export type LicenseCache = typeof licenseCacheTable.$inferSelect;
+

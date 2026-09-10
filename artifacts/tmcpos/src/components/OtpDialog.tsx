@@ -16,7 +16,6 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [devOtp, setDevOtp] = useState<string | null>(null); // DEV MODE
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -27,7 +26,6 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
       setOtpInput("");
       setError("");
       setCountdown(0);
-      setDevOtp(null);
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [open]);
@@ -43,7 +41,6 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
         setLoading(false);
         return;
       }
-      if (data.devOtp) setDevOtp(data.devOtp); // DEV MODE
       startCountdown(data.expiresInMinutes);
       setStep("entering");
     } catch {
@@ -143,24 +140,6 @@ export function OtpDialog({ open, onOpenChange, onSuccess }: OtpDialogProps) {
               <p className="text-sm text-slate-600 mb-1">Masukkan 6-digit kode OTP</p>
               <p className="text-xs text-slate-400">Kode telah dikirim ke owner via Push Notifikasi</p>
             </div>
-
-            {/* DEV MODE: tampilkan kode OTP langsung */}
-            {devOtp && (
-              <div
-                className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 cursor-pointer hover:bg-amber-100 transition-colors group"
-                onClick={() => setOtpInput(devOtp)}
-                title="Klik untuk isi otomatis"
-              >
-                <FlaskConical className="w-5 h-5 text-amber-500 shrink-0" />
-                <div className="flex-1">
-                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-0.5">
-                    🔧 Dev Mode — Klik untuk isi otomatis
-                  </p>
-                  <p className="text-2xl font-black tracking-[0.3em] text-amber-800">{devOtp}</p>
-                </div>
-                <Copy className="w-4 h-4 text-amber-400 group-hover:text-amber-600 transition-colors shrink-0" />
-              </div>
-            )}
             
             <div className="space-y-4">
               <div className="flex justify-center">

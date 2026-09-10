@@ -19,6 +19,7 @@ import notificationsRouter from "./notifications";
 import { settingsRouter } from "./settings";
 import returnsRouter from "./returns";
 import uploadRouter from "./upload";
+import licenseRouter from "./license";
 
 const router: IRouter = Router();
 
@@ -43,4 +44,5 @@ router.use(uploadRouter);
 router.use("/users", usersRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/settings", settingsRouter);
+router.use("/license", licenseRouter);
 export default router;

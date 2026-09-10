@@ -24,6 +24,7 @@ import Pengaturan from "@/pages/Pengaturan";
 import Karyawan from "@/pages/Karyawan";
 import { Loader2 } from "lucide-react";
 import Shop from "@/pages/Shop";
+import { LicenseGate } from "@/components/LicenseGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -146,9 +147,11 @@ function App() {
             {/* Protected POS routes under /pos */}
             <Route path="/pos/*?">
               <WouterRouter base="/pos">
-                <AuthGate>
-                  <Router />
-                </AuthGate>
+                <LicenseGate>
+                  <AuthGate>
+                    <Router />
+                  </AuthGate>
+                </LicenseGate>
               </WouterRouter>
             </Route>
             

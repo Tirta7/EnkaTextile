@@ -15,6 +15,13 @@
       "when": 1784340579647,
       "tag": "0001_add_image_url_to_products",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789001375939,
+      "tag": "0002_careless_blizzard",
+      "breakpoints": true
     }
   ]
 }

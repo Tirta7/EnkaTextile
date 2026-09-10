@@ -251,10 +251,10 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
               )}
 
               {availableRolls.length > 0 && (
-                <div className="flex-1 flex flex-col min-h-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-sm font-semibold text-slate-700">Pilih Spesifik Barcode</div>
-                    <div className="relative w-full sm:w-50">
+                    <div className="relative w-full sm:w-64">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
                       <Input 
                         placeholder="Cari barcode..." 
@@ -265,7 +265,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
                     </div>
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto border rounded-lg p-3 bg-slate-50">
+                  <div className="border rounded-lg p-3 bg-slate-50">
                     {paginatedRolls.length === 0 ? (
                       <div className="text-center py-6 text-sm text-slate-500">Tidak ada roll ditemukan</div>
                     ) : (
@@ -314,10 +314,11 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
                   {totalPages > 1 && (
                     <div className="flex items-center justify-between pt-4 mt-1">
                       <Button 
+                        type="button"
                         variant="outline" 
                         size="sm" 
                         disabled={rollPage === 1} 
-                        onClick={() => setRollPage(p => Math.max(1, p - 1))}
+                        onClick={(e) => { e.preventDefault(); setRollPage(p => Math.max(1, p - 1)); }}
                       >
                         Sebelumnya
                       </Button>
@@ -325,10 +326,11 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
                         Halaman {rollPage} dari {totalPages}
                       </span>
                       <Button 
+                        type="button"
                         variant="outline" 
                         size="sm" 
                         disabled={rollPage === totalPages} 
-                        onClick={() => setRollPage(p => Math.min(totalPages, p + 1))}
+                        onClick={(e) => { e.preventDefault(); setRollPage(p => Math.min(totalPages, p + 1)); }}
                       >
                         Selanjutnya
                       </Button>
@@ -338,7 +340,7 @@ function SaleItemRow({ item, index, products, categories, updateItem, updateItem
               )}
             </div>
             <div className="flex justify-end p-4 border-t bg-slate-50">
-              <Button onClick={() => setIsRollModalOpen(false)} className="w-full sm:w-auto px-8">Selesai</Button>
+              <Button type="button" onClick={() => setIsRollModalOpen(false)} className="w-full sm:w-auto px-8">Selesai</Button>
             </div>
           </DialogContent>
         </Dialog>

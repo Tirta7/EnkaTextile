@@ -15,7 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PackageX, Pencil, Trash2, Plus, Check, X, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 interface ProductRollsModalProps {
   productId: number | null;
@@ -92,29 +92,24 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   const [selectedRollIds, setSelectedRollIds] = useState<number[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; title?: string; message: string; onConfirm: () => void } | null>(null);
+
 
   const handleBulkDelete = async () => {
     if (!productId || selectedRollIds.length === 0) return;
     
-    setConfirmDialog({
-      isOpen: true,
-      title: "Konfirmasi Hapus",
-      message: `Anda yakin ingin menghapus ${selectedRollIds.length} roll terpilih? Data yang dihapus tidak dapat dikembalikan.`,
-      onConfirm: async () => {
-        setIsDeletingBulk(true);
-        try {
-          for (const rollId of selectedRollIds) {
-            await deleteMutation.mutateAsync({ id: productId, rollId });
-          }
-          setSelectedRollIds([]);
-        } catch (error) {
-          console.error("Gagal menghapus beberapa roll", error);
-        } finally {
-          setIsDeletingBulk(false);
+    if (window.confirm(`Anda yakin ingin menghapus ${selectedRollIds.length} roll terpilih? Data yang dihapus tidak dapat dikembalikan.`)) {
+      setIsDeletingBulk(true);
+      try {
+        for (const rollId of selectedRollIds) {
+          await deleteMutation.mutateAsync({ id: productId, rollId });
         }
+        setSelectedRollIds([]);
+      } catch (error) {
+        console.error("Gagal menghapus beberapa roll", error);
+      } finally {
+        setIsDeletingBulk(false);
       }
-    });
+    }
   };
   const startEdit = (roll: Roll) => {
     setEditingRollId(roll.id);
@@ -412,12 +407,10 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                         <Check className="h-4 w-4 mr-1.5" /> Simpan
                       </Button>
                       <Button size="sm" variant="outline" className="h-9 w-9 p-0 text-destructive hover:bg-red-50 hover:text-red-600 border-red-200" onClick={() => {
-                        setConfirmDialog({
-                          isOpen: true,
-                          title: "Hapus Roll",
-                          message: "Apakah Anda yakin ingin menghapus roll ini? Data akan hilang secara permanen.",
-                          onConfirm: () => deleteMutation.mutate({ id: productId!, rollId: editingRoll.id })
-                        });
+                        if (window.confirm("Apakah Anda yakin ingin menghapus roll ini? Data akan hilang secara permanen.")) {
+                          deleteMutation.mutate({ id: productId!, rollId: editingRoll.id });
+                          setEditingRollId(null);
+                        }
                       }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -698,25 +691,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         </div>
       </DrawerContent>
 
-      {confirmDialog && (
-        <AlertDialog open={confirmDialog.isOpen} onOpenChange={(open) => {
-          if (!open) setConfirmDialog(null);
-        }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{confirmDialog.title || "Konfirmasi"}</AlertDialogTitle>
-              <AlertDialogDescription>{confirmDialog.message}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Tidak</AlertDialogCancel>
-              <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={() => {
-                confirmDialog.onConfirm();
-                setConfirmDialog(null);
-              }}>Ya, Hapus</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+
     </Drawer>
   );
 }

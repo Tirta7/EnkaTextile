@@ -624,7 +624,7 @@ export default function Barang() {
                       <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider shrink-0">Detail Panjang Tiap Roll (Yard/Meter)</p>
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-45 overflow-y-auto pr-1.5">
                         {Array.from({ length: form.watch('rollStock') || 0 }).map((_, i) => (
-                          <div key={i} className="space-y-1">
+                          <div key={i} className="space-y-1 relative group">
                             <label className="text-[10px] font-bold text-amber-600">Roll #{i + 1}</label>
                             <Input
                               type="text" inputMode="decimal" placeholder="0"
@@ -642,6 +642,24 @@ export default function Barang() {
                                 form.setValue('meterStock', parseFloat(total.toFixed(3)), { shouldValidate: true, shouldDirty: true });
                               }}
                             />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const newLengths = [...(form.getValues('rollLengths') || [])];
+                                newLengths.splice(i, 1);
+                                form.setValue('rollLengths', newLengths, { shouldValidate: true, shouldDirty: true });
+                                form.setValue('rollStock', newLengths.length, { shouldValidate: true, shouldDirty: true });
+                                const total = newLengths.reduce((a, b) => {
+                                  const bNum = typeof b === 'string' ? parseFloat(b.replace(',', '.')) : b;
+                                  return a + (bNum || 0);
+                                }, 0);
+                                form.setValue('meterStock', parseFloat(total.toFixed(3)), { shouldValidate: true, shouldDirty: true });
+                              }}
+                              className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-0.5 transition-opacity"
+                              title="Hapus Roll Ini"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
                         ))}
                       </div>

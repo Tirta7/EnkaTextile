@@ -429,7 +429,7 @@ export default function Pembelian() {
                             <button 
                               type="button" 
                               onClick={() => removeRollLength(index, i)} 
-                              className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-0.5 transition-opacity"
                               title="Hapus Roll Ini"
                             >
                               <Trash2 className="w-3 h-3" />

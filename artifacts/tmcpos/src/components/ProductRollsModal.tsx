@@ -372,7 +372,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                       <label className="text-sm font-bold text-slate-800 block mb-3 border-b pb-2">Detail Panjang Tiap Roll (yds)</label>
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 max-h-[50vh] overflow-y-auto p-1">
                         {Array.from({ length: parseInt(newQty) || 0 }).map((_, i) => (
-                          <div key={i} className="space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <div key={i} className="space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100 relative group">
                             <label className="text-[11px] font-bold text-slate-500 block text-center uppercase tracking-wider">Roll #{i + 1}</label>
                             <Input
                               type="text" inputMode="decimal"
@@ -387,6 +387,19 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                               }}
                               disabled={isCreatingMultiple}
                             />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const newArr = [...newLengths];
+                                newArr.splice(i, 1);
+                                setNewLengths(newArr);
+                                setNewQty(String(Math.max(0, parseInt(newQty) - 1)));
+                              }}
+                              className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-0.5 transition-opacity"
+                              title="Hapus Roll Ini"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         ))}
                       </div>

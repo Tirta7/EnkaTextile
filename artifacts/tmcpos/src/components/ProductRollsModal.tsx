@@ -136,6 +136,47 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
     });
   };
 
+  const [isEditingBulk, setIsEditingBulk] = useState(false);
+  const [bulkEditValues, setBulkEditValues] = useState<Record<number, { originalLength: string, currentLength: string }>>({});
+  const [isSavingBulk, setIsSavingBulk] = useState(false);
+
+  const startBulkEdit = () => {
+    const initialValues: Record<number, { originalLength: string, currentLength: string }> = {};
+    selectedRollIds.forEach(id => {
+      const roll = rolls?.find((r: Roll) => r.id === id);
+      if (roll) {
+         initialValues[id] = { originalLength: String(roll.originalLength), currentLength: String(roll.currentLength) };
+      }
+    });
+    setBulkEditValues(initialValues);
+    setIsEditingBulk(true);
+    setIsAdding(false);
+    setEditingRollId(null);
+  };
+
+  const saveBulkEdit = async () => {
+    if (!productId) return;
+    setIsSavingBulk(true);
+    try {
+      for (const [id, vals] of Object.entries(bulkEditValues)) {
+        await updateMutation.mutateAsync({
+          id: productId,
+          rollId: parseInt(id),
+          data: {
+            originalLength: parseFloat(vals.originalLength) || 0,
+            currentLength: parseFloat(vals.currentLength) || 0
+          }
+        });
+      }
+      setIsEditingBulk(false);
+      setSelectedRollIds([]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingBulk(false);
+    }
+  };
+
   const saveNew = async () => {
     if (!productId) return;
     const qty = parseInt(newQty) || 1;
@@ -220,7 +261,10 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
             {selectedRollIds.length > 0 ? (
               <div className="flex items-center gap-2 w-full mb-1 bg-red-50 text-red-700 px-3 py-1.5 rounded-lg border border-red-200">
                 <span className="text-xs font-semibold">{selectedRollIds.length} roll terpilih</span>
-                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-red-700 hover:text-red-800 hover:bg-red-100 ml-auto" onClick={handleBulkDelete} disabled={isDeletingBulk}>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-blue-700 hover:text-blue-800 hover:bg-blue-100 ml-auto" onClick={startBulkEdit} disabled={isDeletingBulk}>
+                  <Pencil className="h-3 w-3 mr-1" /> Edit
+                </Button>
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-red-700 hover:text-red-800 hover:bg-red-100" onClick={handleBulkDelete} disabled={isDeletingBulk}>
                   {isDeletingBulk ? <span className="h-3 w-3 rounded-full border-2 border-red-600 border-t-transparent animate-spin mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />} Hapus
                 </Button>
                 <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setSelectedRollIds([])} disabled={isDeletingBulk}>
@@ -290,7 +334,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
         <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
           
           {/* Sidebar for Add / Edit */}
-          {(isAdding || editingRoll) && (
+          {(isAdding || editingRoll || isEditingBulk) && (
             <div className="w-full lg:w-[55%] xl:w-[60%] flex flex-col gap-3 shrink-0 min-h-0 overflow-y-auto pr-1">
               {/* Add new roll form */}
               {isAdding && (
@@ -409,6 +453,68 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   </div>
                 </div>
               )}
+
+              {/* Bulk Edit panel */}
+              {isEditingBulk && (
+                <div className="flex flex-col gap-3 p-4 rounded-xl border-2 border-blue-300 bg-blue-50 shadow-sm relative overflow-hidden shrink-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-base font-bold text-blue-700">
+                      ✏️ Edit Massal ({Object.keys(bulkEditValues).length} Roll)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" className="h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium" onClick={saveBulkEdit} disabled={isSavingBulk}>
+                        {isSavingBulk ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />} Simpan
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-muted-foreground hover:bg-slate-200" onClick={() => setIsEditingBulk(false)} disabled={isSavingBulk}>
+                        <X className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm max-h-[50vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {Object.entries(bulkEditValues).map(([id, vals]) => {
+                        const numericId = parseInt(id);
+                        const rollIdx = rolls?.findIndex(r => r.id === numericId);
+                        const displayNum = rollIdx !== undefined && rollIdx >= 0 ? rollIdx + 1 : id;
+                        return (
+                          <div key={id} className="space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                            <label className="text-[11px] font-bold text-slate-500 block text-center uppercase tracking-wider">Roll #{displayNum}</label>
+                            <div className="flex gap-1.5">
+                              <div className="flex-1">
+                                <span className="text-[9px] text-muted-foreground block mb-0.5">Awal</span>
+                                <Input
+                                  type="number"
+                                  className="h-8 text-xs font-medium text-center border-slate-300 px-1"
+                                  value={vals.originalLength}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    setBulkEditValues(prev => ({ ...prev, [numericId]: { ...prev[numericId], originalLength: val } }));
+                                  }}
+                                  disabled={isSavingBulk}
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <span className="text-[9px] text-muted-foreground block mb-0.5">Sisa</span>
+                                <Input
+                                  type="number"
+                                  className="h-8 text-xs font-bold text-center border-blue-300 bg-blue-50/50 text-blue-700 px-1"
+                                  value={vals.currentLength}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    setBulkEditValues(prev => ({ ...prev, [numericId]: { ...prev[numericId], currentLength: val } }));
+                                  }}
+                                  disabled={isSavingBulk}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -416,7 +522,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
           <div className="flex-1 overflow-y-auto min-h-0 border border-primary/40 rounded-lg flex flex-col bg-slate-50/50">
             <div className="flex-1 overflow-y-auto p-1.5">
               {isLoading ? (
-                <div className={`grid ${isAdding || editingRoll ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1.5 p-1`}>
+                <div className={`grid ${isAdding || editingRoll || isEditingBulk ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1.5 p-1`}>
                   {Array(16).fill(0).map((_, i) => (
                     <Skeleton key={i} className="h-20 rounded-lg" />
                   ))}
@@ -427,7 +533,7 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   <span className="text-sm">Tidak ada roll tersedia</span>
                 </div>
               ) : (
-                <div className={`grid ${isAdding || editingRoll ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1`}>
+                <div className={`grid ${isAdding || editingRoll || isEditingBulk ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1`}>
                     {sortedRolls.length === 0 ? (
                       <div className="col-span-full flex flex-col items-center justify-center py-10 text-muted-foreground h-full">
                         <Filter className="mb-2 h-6 w-6 opacity-30" />

@@ -81,6 +81,20 @@ export default function Pembelian() {
   const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "", rollLengths: [] }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
 
+  const removeRollLength = (itemIndex: number, rollIndex: number) => {
+    setItems(prev => {
+      const updated = [...prev];
+      if (updated[itemIndex].rollLengths && updated[itemIndex].rollLengths!.length > rollIndex) {
+        updated[itemIndex].rollLengths!.splice(rollIndex, 1);
+        updated[itemIndex].rolls = updated[itemIndex].rollLengths!.length;
+        updated[itemIndex].meters = parseFloat(updated[itemIndex].rollLengths!.reduce((a: number, b: any) => a + (parseFloat(String(b).replace(',', '.')) || 0), 0).toFixed(3));
+        const item = updated[itemIndex];
+        updated[itemIndex].subtotal = Math.round((typeof item.meters === "number" ? item.meters : 0) * (typeof item.pricePerMeter === "number" ? item.pricePerMeter : 0));
+      }
+      return updated;
+    });
+  };
+
   const updateItem = (index: number, field: keyof PurchaseItem | `rollLengths.${number}`, value: any) => {
     setItems(prev => {
       const updated = [...prev];
@@ -403,7 +417,7 @@ export default function Pembelian() {
                       <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll ({item.primaryUnit || "Yard"})</label>
                       <div className="flex flex-wrap gap-3">
                         {Array.from({ length: item.rolls as number }).map((_, i) => (
-                          <div key={i} className="flex flex-col w-24 shrink-0 space-y-1">
+                          <div key={i} className="flex flex-col w-24 shrink-0 space-y-1 relative group">
                             <label className="text-[10px] font-medium text-slate-500 truncate">Roll #{i + 1}</label>
                             <Input
                               type="number" step="any" min={0}
@@ -412,6 +426,14 @@ export default function Pembelian() {
                               value={item.rollLengths?.[i] || ''}
                               onChange={e => updateItem(index, `rollLengths.${i}` as any, e.target.value === "" ? "" : parseFloat(e.target.value))}
                             />
+                            <button 
+                              type="button" 
+                              onClick={() => removeRollLength(index, i)} 
+                              className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Hapus Roll Ini"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
                         ))}
                       </div>

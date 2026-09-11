@@ -189,6 +189,17 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
     .leftJoin(productsTable, eq(purchaseItemsTable.productId, productsTable.id))
     .where(eq(purchaseItemsTable.purchaseId, id));
 
+  const itemsWithRolls = await Promise.all(items.map(async (i) => {
+    const rollCount = Number(i.rolls) || 0;
+    let rollLengths: number[] = [];
+    if (rollCount > 0 && i.rollId) {
+      const rollIds = Array.from({ length: rollCount }, (_, idx) => (i.rollId as number) + idx);
+      const rolls = await db.select({ length: productRollsTable.originalLength }).from(productRollsTable).where(inArray(productRollsTable.id, rollIds));
+      rollLengths = rolls.map(r => parseFloat(r.length));
+    }
+    return { ...i, rollLengths };
+  }));
+
   res.json({
     ...purchase,
     totalAmount: numStr(purchase.totalAmount),
@@ -196,13 +207,14 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
     remainingAmount: numStr(purchase.totalAmount) - numStr(purchase.paidAmount),
     dueDate: purchase.dueDate?.toISOString() ?? null,
     createdAt: purchase.createdAt.toISOString(),
-    items: items.map(i => ({
+    items: itemsWithRolls.map(i => ({
       ...i,
       rollId: i.rollId,
       rolls: numStr(i.rolls),
       meters: numStr(i.meters),
       pricePerMeter: numStr(i.pricePerMeter),
       subtotal: numStr(i.subtotal),
+      rollLengths: i.rollLengths,
     })),
   });
 });

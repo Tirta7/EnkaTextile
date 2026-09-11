@@ -884,15 +884,16 @@ export const GetPurchaseResponse = zod.object({
   "notes": zod.string().nullish(),
   "createdAt": zod.string(),
   "items": zod.array(zod.object({
-  "id": zod.number(),
-  "purchaseId": zod.number(),
+  "id": zod.number().optional(),
+  "purchaseId": zod.number().optional(),
   "productId": zod.number(),
   "productName": zod.string().nullish(),
   "rollId": zod.number().nullish(),
   "rolls": zod.number(),
   "meters": zod.number(),
   "pricePerMeter": zod.number(),
-  "subtotal": zod.number()
+  "subtotal": zod.number(),
+  "rollLengths": zod.array(zod.number()).optional()
 }))
 })
 

@@ -133,6 +133,19 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                             <span className="font-bold text-violet-700">{formatRupiah(item.subtotal)}</span>
                           </div>
                         </div>
+                        
+                        {item.rollLengths && item.rollLengths.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-100">
+                            <div className="text-[10px] text-slate-500 font-semibold mb-1 uppercase">Detail Roll</div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.rollLengths.map((length: number, i: number) => (
+                                <div key={i} className="text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-600 font-medium">
+                                  R#{i + 1}: {length}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

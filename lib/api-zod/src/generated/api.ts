@@ -182,6 +182,8 @@ export const ListProductsResponseItem = zod.object({
   "rackLocation": zod.string(),
   "imageUrl": zod.string().nullish(),
   "description": zod.string().nullish(),
+  "costPricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().nullable().optional(),
   "pricePerMeter": zod.number(),
   "pricePerRoll": zod.number().nullable(),
   "rollStock": zod.number(),

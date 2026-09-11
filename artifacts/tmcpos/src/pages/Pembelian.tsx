@@ -113,7 +113,7 @@ export default function Pembelian() {
         const prod = products?.find(p => p.id === parseInt(value));
         if (prod) { 
           updated[index].productName = prod.name; 
-          updated[index].pricePerMeter = prod.pricePerMeter;
+          updated[index].pricePerMeter = prod.costPricePerMeter ?? 0;
           updated[index].primaryUnit = prod.primaryUnit;
           updated[index].secondaryUnit = prod.secondaryUnit;
         }

@@ -201,8 +201,12 @@ if not errorlevel 1 (
     echo  [!] Instalasi via winget gagal, mencoba download manual...
 )
 
-echo  Mengunduh Docker Desktop installer...
-powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' -Uri 'https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe' -OutFile '%TEMP%\DockerInstaller.exe'"
+echo  Mengunduh Docker Desktop installer (Tunggu, ada bar progress di bawah)...
+curl.exe -# -L "https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe" -o "%TEMP%\DockerInstaller.exe"
+if not exist "%TEMP%\DockerInstaller.exe" (
+    echo  [!] Download via curl gagal. Mencoba menggunakan PowerShell...
+    powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' -Uri 'https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe' -OutFile '%TEMP%\DockerInstaller.exe'"
+)
 if not exist "%TEMP%\DockerInstaller.exe" (
     echo  [ERROR] Gagal mengunduh. Periksa koneksi internet.
     pause

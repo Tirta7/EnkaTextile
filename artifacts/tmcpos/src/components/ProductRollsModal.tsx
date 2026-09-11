@@ -473,9 +473,15 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   
                   <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm max-h-[50vh] overflow-y-auto">
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {Object.entries(bulkEditValues).map(([id, vals]) => {
+                      {Object.entries(bulkEditValues)
+                        .sort(([idA], [idB]) => {
+                          const idxA = rolls?.findIndex((r: Roll) => r.id === parseInt(idA)) ?? 0;
+                          const idxB = rolls?.findIndex((r: Roll) => r.id === parseInt(idB)) ?? 0;
+                          return idxA - idxB;
+                        })
+                        .map(([id, vals]) => {
                         const numericId = parseInt(id);
-                        const rollIdx = rolls?.findIndex(r => r.id === numericId);
+                        const rollIdx = rolls?.findIndex((r: Roll) => r.id === numericId);
                         const displayNum = rollIdx !== undefined && rollIdx >= 0 ? rollIdx + 1 : id;
                         return (
                           <div key={id} className="space-y-1.5 bg-slate-50 p-2 rounded-lg border border-slate-100">

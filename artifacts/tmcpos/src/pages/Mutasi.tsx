@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListMutations, useCreateMutation, useListProducts, getListMutationsQueryKey, getListProductsQueryKey } from "@workspace/api-client-react";
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, ArrowLeftRight, ArrowUpFromLine, ArrowDownToLine, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
+import { Plus, Search, ArrowLeftRight, ArrowUpFromLine, ArrowDownToLine, CheckCircle2, Clock, AlertCircle, Package, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -49,6 +50,7 @@ export default function Mutasi() {
   const { data: products } = useListProducts({}, { query: { queryKey: getListProductsQueryKey({}) } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -173,7 +175,20 @@ export default function Mutasi() {
                         </td>
                         <td className={`py-2.5 px-3 text-right font-bold text-sm ${m.type === 'keluar' ? 'text-rose-600' : 'text-emerald-600'}`}>{sign}{formatNumber(m.meters)}</td>
                         <td className={`py-2.5 px-3 text-right text-xs font-medium ${m.type === 'keluar' ? 'text-rose-500' : 'text-emerald-500'}`}>{m.rolls > 0 ? `${sign}${formatNumber(m.rolls)}` : <span className="text-slate-300">—</span>}</td>
-                        <td className="py-2.5 px-3 text-xs text-slate-500 italic whitespace-nowrap">{m.description || <span className="text-slate-300">—</span>}</td>
+                        <td className="py-2.5 px-3 text-xs text-slate-500 italic whitespace-nowrap">
+                          {m.description || <span className="text-slate-300">—</span>}
+                          {/* Tombol Restore untuk Batal Pembelian */}
+                          {m.description?.startsWith('Batal Pembelian') && m.reference && (
+                            <button
+                              onClick={() => { window.location.href = `/pos/pembelian?restoreInvoice=${encodeURIComponent(m.reference as string)}`; }}
+                              className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded-full transition-colors"
+                              title="Pulihkan & edit ulang pembelian ini"
+                            >
+                              <RotateCcw className="w-2.5 h-2.5" />
+                              Restore
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}

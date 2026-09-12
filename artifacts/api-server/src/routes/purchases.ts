@@ -152,6 +152,92 @@ router.post("/purchases", async (req, res): Promise<void> => {
   });
 });
 
+// ────────── GET by invoice number (for restore cancelled purchase) ──────────
+// MUST be registered BEFORE /purchases/:id to avoid Express matching "by-invoice" as an id
+router.get("/purchases/by-invoice", async (req, res): Promise<void> => {
+  const invoiceNumber = req.query.invoice as string;
+  const [purchase] = await db
+    .select({
+      id: purchasesTable.id,
+      invoiceNumber: purchasesTable.invoiceNumber,
+      supplierId: purchasesTable.supplierId,
+      supplierName: suppliersTable.name,
+      paymentType: purchasesTable.paymentType,
+      totalAmount: purchasesTable.totalAmount,
+      paidAmount: purchasesTable.paidAmount,
+      status: purchasesTable.status,
+      dueDate: purchasesTable.dueDate,
+      notes: purchasesTable.notes,
+      createdAt: purchasesTable.createdAt,
+    })
+    .from(purchasesTable)
+    .leftJoin(suppliersTable, eq(purchasesTable.supplierId, suppliersTable.id))
+    .where(eq(purchasesTable.invoiceNumber, invoiceNumber));
+
+  if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
+
+  const items = await db
+    .select({
+      productId: purchaseItemsTable.productId,
+      productName: productsTable.name,
+      categoryId: productsTable.categoryId,
+      rollId: purchaseItemsTable.rollId,
+      rolls: purchaseItemsTable.rolls,
+      meters: purchaseItemsTable.meters,
+      pricePerMeter: purchaseItemsTable.pricePerMeter,
+      subtotal: purchaseItemsTable.subtotal,
+      primaryUnit: productsTable.primaryUnit,
+      secondaryUnit: productsTable.secondaryUnit,
+      barcode: productsTable.barcode,
+    })
+    .from(purchaseItemsTable)
+    .leftJoin(productsTable, eq(purchaseItemsTable.productId, productsTable.id))
+    .where(eq(purchaseItemsTable.purchaseId, purchase.id));
+
+  const itemsWithRolls = await Promise.all(items.map(async (i) => {
+    const rollCount = Number(i.rolls) || 0;
+    let rollLengths: number[] = [];
+
+    if (rollCount > 0) {
+      if (i.rollId) {
+        // Try fetching original roll lengths by rollId range
+        const rollIds = Array.from({ length: rollCount }, (_, idx) => (i.rollId as number) + idx);
+        const rolls = await db
+          .select({ id: productRollsTable.id, length: productRollsTable.originalLength })
+          .from(productRollsTable)
+          .where(inArray(productRollsTable.id, rollIds));
+        if (rolls.length > 0) {
+          rollLengths = rolls.map(r => parseFloat(r.length));
+        }
+      }
+      // Fallback: reconstruct from average (covers both deleted rolls and nulled rollId)
+      if (rollLengths.length === 0) {
+        const avg = Number(i.meters) / rollCount;
+        rollLengths = Array.from({ length: rollCount }, () => parseFloat(avg.toFixed(3)));
+      }
+    }
+    return { ...i, rollLengths };
+  }));
+
+  res.json({
+    ...purchase,
+    totalAmount: numStr(purchase.totalAmount),
+    paidAmount: numStr(purchase.paidAmount),
+    remainingAmount: numStr(purchase.totalAmount) - numStr(purchase.paidAmount),
+    dueDate: purchase.dueDate?.toISOString() ?? null,
+    createdAt: purchase.createdAt.toISOString(),
+    items: itemsWithRolls.map(i => ({
+      ...i,
+      rollId: i.rollId,
+      rolls: numStr(i.rolls),
+      meters: numStr(i.meters),
+      pricePerMeter: numStr(i.pricePerMeter),
+      subtotal: numStr(i.subtotal),
+      rollLengths: i.rollLengths,
+    })),
+  });
+});
+
 router.get("/purchases/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const [purchase] = await db
@@ -217,6 +303,7 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
       rollLengths: i.rollLengths,
     })),
   });
+
 });
 
 router.delete("/purchases/:id", async (req, res): Promise<void> => {
@@ -225,18 +312,14 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
   if (!purchase) { res.status(404).json({ error: "Not found" }); return; }
 
   try {
-    // Get items into memory first
+    // Get items into memory first (kept for stock rollback & mutations)
     const items = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
-
-    // Delete purchase items first to avoid foreign key constraints from productRollsTable
-    await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, id));
 
     for (const item of items) {
       const rollCount = Number(item.rolls) || 0;
       if (rollCount > 0 && item.rollId) {
         // Delete rolls created for this purchase item using barcode pattern (PO invoice number)
         // Rolls created by this purchase have IDs starting from item.rollId (first roll inserted)
-        // We get sequential IDs = rollId, rollId+1, rollId+2, ... rollId+rollCount-1
         const rollIds = Array.from({ length: rollCount }, (_, i) => (item.rollId as number) + i);
         
         // Only delete rolls that still belong to this product (safety check)
@@ -250,14 +333,12 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
           );
 
         if (rollsToDelete.length > 0) {
-          // Unlink from sale_items if any (to avoid another FK constraint)
           const rollIdsToDelete = rollsToDelete.map(r => r.id);
-          
+          // Unlink from sale_items to avoid FK constraint
           await db.update(saleItemsTable).set({ rollId: null }).where(inArray(saleItemsTable.rollId, rollIdsToDelete));
-
-          await db.delete(productRollsTable).where(
-            inArray(productRollsTable.id, rollIdsToDelete)
-          );
+          // Unlink from purchase_items to avoid FK constraint (soft delete keeps purchase_items)
+          await db.update(purchaseItemsTable).set({ rollId: null }).where(inArray(purchaseItemsTable.rollId, rollIdsToDelete));
+          await db.delete(productRollsTable).where(inArray(productRollsTable.id, rollIdsToDelete));
         }
       }
 
@@ -292,8 +373,9 @@ router.delete("/purchases/:id", async (req, res): Promise<void> => {
       await db.delete(payablesTable).where(eq(payablesTable.purchaseId, id));
     }
 
-    // Delete the purchase itself
-    await db.delete(purchasesTable).where(eq(purchasesTable.id, id));
+    // SOFT DELETE: mark purchase as cancelled instead of hard deleting
+    // This preserves purchase_items so detail roll can be restored later
+    await db.update(purchasesTable).set({ status: "cancelled" } as any).where(eq(purchasesTable.id, id));
 
     broadcastRefresh();
     res.json({ success: true });

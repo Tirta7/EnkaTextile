@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, useListCategories, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
@@ -14,7 +15,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -41,6 +42,10 @@ export default function Pembelian() {
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreSourceInvoice, setRestoreSourceInvoice] = useState("");
+
+  const [location, navigate] = useLocation();
 
   const { data: purchases, isLoading } = useListPurchases({}, { query: { queryKey: getListPurchasesQueryKey({}) } });
   const { data: suppliers } = useListSuppliers({}, { query: { queryKey: getListSuppliersQueryKey({}) } });
@@ -76,7 +81,56 @@ export default function Pembelian() {
     }
   });
 
-  const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); };
+  const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); setIsRestoring(false); setRestoreSourceInvoice(""); };
+
+  // ── Restore dari URL param ──────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inv = params.get("restoreInvoice");
+    if (!inv) return;
+
+    // Hapus param dari URL supaya tidak loop saat refresh
+    window.history.replaceState({}, '', '/pos/pembelian');
+
+    const fetchAndRestore = async () => {
+      try {
+        const res = await fetch(`/api/purchases/by-invoice?invoice=${encodeURIComponent(inv)}`, { credentials: 'include' });
+        if (!res.ok) throw new Error("Tidak ditemukan");
+        const data = await res.json();
+
+        // Isi form dengan data lama
+        setSupplierId(data.supplierId?.toString() || "");
+        setPaymentType(data.paymentType || "tunai");
+        setNotes(`[Restore dari ${inv}] ${data.notes || ""}`.trim());
+        setRestoreSourceInvoice(inv);
+        setIsRestoring(true);
+
+        const restoredItems: PurchaseItem[] = (data.items || []).map((i: any) => ({
+          categoryId: i.categoryId || undefined,
+          productId: i.productId,
+          productName: i.productName || "",
+          rolls: Number(i.rolls) || 0,
+          meters: Number(i.meters) || 0,
+          pricePerMeter: Number(i.pricePerMeter) || 0,
+          subtotal: Number(i.subtotal) || 0,
+          primaryUnit: i.primaryUnit || undefined,
+          secondaryUnit: i.secondaryUnit || undefined,
+          barcode: i.barcode || "",
+          rollLengths: Array.isArray(i.rollLengths) ? i.rollLengths : [],
+        }));
+        setItems(restoredItems);
+
+        // Auto-generate invoice number baru
+        const existingInvoices = purchases?.map(p => p.invoiceNumber) || [];
+        setInvoiceNumber(generateSequentialInvoiceNumber("INV-IN", existingInvoices));
+        setIsOpen(true);
+      } catch (e) {
+        toast({ title: "Gagal memuat data pembelian yang dibatalkan", variant: "destructive" });
+      }
+    };
+
+    fetchAndRestore();
+  }, [location]);
 
   const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "", rollLengths: [] }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
@@ -113,7 +167,7 @@ export default function Pembelian() {
         const prod = products?.find(p => p.id === parseInt(value));
         if (prod) { 
           updated[index].productName = prod.name; 
-          updated[index].pricePerMeter = prod.costPricePerMeter ?? 0;
+          updated[index].pricePerMeter = (prod as any).costPricePerMeter ?? (prod as any).pricePerMeter ?? 0;
           updated[index].primaryUnit = prod.primaryUnit;
           updated[index].secondaryUnit = prod.secondaryUnit;
         }
@@ -123,8 +177,8 @@ export default function Pembelian() {
         const val = parseInt(value) || 0;
         const currentLengths = updated[index].rollLengths || [];
         const newLengths = Array.from({ length: val }, (_, i) => currentLengths[i] || "");
-        updated[index].rollLengths = newLengths;
-        updated[index].meters = parseFloat(newLengths.reduce((a: number, b: any) => a + (parseFloat(String(b).replace(',', '.')) || 0), 0).toFixed(3));
+        updated[index].rollLengths = newLengths as number[];
+        updated[index].meters = parseFloat((newLengths as any[]).reduce((a: number, b: any) => a + (parseFloat(String(b).replace(',', '.')) || 0), 0).toFixed(3));
       }
       
       const item = updated[index];
@@ -238,6 +292,7 @@ export default function Pembelian() {
                     let badgeBg = "bg-green-100 text-green-700";
                     if (p.status === 'kredit') badgeBg = "bg-amber-100 text-amber-700";
                     else if (p.status === 'partial') badgeBg = "bg-blue-100 text-blue-700";
+                    else if (p.status === 'cancelled') badgeBg = "bg-rose-100 text-rose-700";
                     const kurang = p.totalAmount - (p.paidAmount || 0);
                     return (
                       <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
@@ -302,8 +357,14 @@ export default function Pembelian() {
               <ShoppingBag className="w-5 h-5 text-white" strokeWidth={1.5} />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Buat Pembelian Baru</h2>
-              <p className="text-violet-200 text-xs">Catat transaksi pembelian barang dari supplier</p>
+              <h2 className="text-lg font-bold text-white leading-tight">
+                {isRestoring ? `Restore Pembelian` : `Buat Pembelian Baru`}
+              </h2>
+              <p className="text-violet-200 text-xs">
+                {isRestoring
+                  ? `Mengedit ulang data dari nota ${restoreSourceInvoice}`
+                  : `Catat transaksi pembelian barang dari supplier`}
+              </p>
             </div>
           </div>
           
@@ -454,7 +515,13 @@ export default function Pembelian() {
           </div>
           <DrawerFooter className="px-0 pt-4 mt-4 flex-row gap-2">
             <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-            <Button className="flex-1" onClick={handleSubmit} disabled={createMutation.isPending || items.length === 0}>Simpan Pembelian</Button>
+            <Button
+              className={`flex-1 ${isRestoring ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || items.length === 0}
+            >
+              {isRestoring ? <><RotateCcw className="mr-2 h-4 w-4" />Tambahkan ke Pembelian</> : "Simpan Pembelian"}
+            </Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

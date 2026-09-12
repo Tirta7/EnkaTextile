@@ -5,6 +5,7 @@ import { eq, and, gte, lte, sql, desc, inArray, ne } from "drizzle-orm";
 import { CreateSaleBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
 import { pushService } from "../lib/push";
+import * as XLSX from "xlsx";
 
 const router = Router();
 
@@ -184,8 +185,169 @@ async function generateNextInvoiceNumber(prefix: string = "INV"): Promise<string
   return `${prefix}/${dateStr}/${String(nextSeq).padStart(4, "0")}`;
 }
 
+
+// ─── GET /sales/export (Export to Excel) ───────────────────────────────────────
+router.get("/sales/export", async (req, res): Promise<void> => {
+  try {
+    const { startDate, endDate, status } = req.query;
+    const conditions: any[] = [];
+    if (startDate) conditions.push(gte(salesTable.createdAt, new Date(startDate as string)));
+    if (endDate) {
+      const endDt = new Date(endDate as string);
+      endDt.setHours(23, 59, 59, 999);
+      conditions.push(lte(salesTable.createdAt, endDt));
+    }
+    if (status) conditions.push(sql`${salesTable.status} = ${status}`);
+
+    // Fetch sales
+    const sales = await db
+      .select({
+        id: salesTable.id,
+        invoiceNumber: salesTable.invoiceNumber,
+        customerId: salesTable.customerId,
+        customerName: customersTable.name,
+        paymentType: salesTable.paymentType,
+        totalAmount: salesTable.totalAmount,
+        paidAmount: salesTable.paidAmount,
+        status: salesTable.status,
+        dueDate: salesTable.dueDate,
+        notes: salesTable.notes,
+        createdAt: salesTable.createdAt,
+      })
+      .from(salesTable)
+      .leftJoin(customersTable, eq(salesTable.customerId, customersTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(salesTable.createdAt));
+
+    // Fetch sale items for all sales
+    const saleIds = sales.map(s => s.id);
+    let saleItemsData: any[] = [];
+    if (saleIds.length > 0) {
+      saleItemsData = await db
+        .select({
+          saleId: saleItemsTable.saleId,
+          productName: productsTable.name,
+          categoryName: categoriesTable.name,
+          rolls: saleItemsTable.rolls,
+          meters: saleItemsTable.meters,
+          pricePerMeter: saleItemsTable.pricePerMeter,
+          subtotal: saleItemsTable.subtotal,
+        })
+        .from(saleItemsTable)
+        .leftJoin(productsTable, eq(saleItemsTable.productId, productsTable.id))
+        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .where(inArray(saleItemsTable.saleId, saleIds));
+    }
+
+    // Group items by saleId
+    const itemsBySaleId = new Map<number, any[]>();
+    for (const item of saleItemsData) {
+      if (!itemsBySaleId.has(item.saleId)) itemsBySaleId.set(item.saleId, []);
+      itemsBySaleId.get(item.saleId)!.push(item);
+    }
+
+    // Build rows: one row per item, with sale info repeated
+    const rows: any[] = [];
+    let rowNo = 1;
+
+    for (const s of sales) {
+      const items = itemsBySaleId.get(s.id) || [];
+      const totalAmt = parseFloat(s.totalAmount as string) || 0;
+      const paidAmt = parseFloat(s.paidAmount as string) || 0;
+      const remaining = totalAmt - paidAmt;
+
+      const tanggal = s.createdAt
+        ? new Date(s.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })
+        : "";
+
+      if (items.length === 0) {
+        rows.push({
+          "No": rowNo++,
+          "Tanggal": tanggal,
+          "No Invoice": s.invoiceNumber,
+          "Pelanggan": s.customerName || "Umum",
+          "Kategori": "",
+          "Produk / Barang": "",
+          "Roll": 0,
+          "Meter/Yard": 0,
+          "Harga / Meter": 0,
+          "Subtotal": 0,
+          "Total Nota": totalAmt,
+          "Sudah Dibayar": paidAmt,
+          "Sisa Bayar": remaining > 0 ? remaining : 0,
+          "Metode Bayar": s.paymentType,
+          "Status": s.status,
+          "Catatan": s.notes || "",
+        });
+      } else {
+        items.forEach((item, idx) => {
+          rows.push({
+            "No": idx === 0 ? rowNo++ : "",
+            "Tanggal": idx === 0 ? tanggal : "",
+            "No Invoice": idx === 0 ? s.invoiceNumber : "",
+            "Pelanggan": idx === 0 ? (s.customerName || "Umum") : "",
+            "Kategori": item.categoryName || "",
+            "Produk / Barang": item.productName || "",
+            "Roll": parseFloat(item.rolls) || 0,
+            "Meter/Yard": parseFloat(item.meters) || 0,
+            "Harga / Meter": parseFloat(item.pricePerMeter) || 0,
+            "Subtotal": parseFloat(item.subtotal) || 0,
+            "Total Nota": idx === 0 ? totalAmt : "",
+            "Sudah Dibayar": idx === 0 ? paidAmt : "",
+            "Sisa Bayar": idx === 0 ? (remaining > 0 ? remaining : 0) : "",
+            "Metode Bayar": idx === 0 ? s.paymentType : "",
+            "Status": idx === 0 ? s.status : "",
+            "Catatan": idx === 0 ? (s.notes || "") : "",
+          });
+        });
+      }
+    }
+
+    // Build worksheet
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 5 },   // No
+      { wch: 14 },  // Tanggal
+      { wch: 24 },  // No Invoice
+      { wch: 22 },  // Pelanggan
+      { wch: 18 },  // Kategori
+      { wch: 24 },  // Produk
+      { wch: 8 },   // Roll
+      { wch: 12 },  // Meter
+      { wch: 16 },  // Harga/Meter
+      { wch: 18 },  // Subtotal
+      { wch: 18 },  // Total
+      { wch: 18 },  // Dibayar
+      { wch: 18 },  // Sisa
+      { wch: 14 },  // Metode
+      { wch: 12 },  // Status
+      { wch: 24 },  // Catatan
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Penjualan");
+
+    // Date range label for filename
+    const fromLabel = startDate ? (startDate as string).replace(/-/g, "") : "all";
+    const toLabel = endDate ? (endDate as string).replace(/-/g, "") : "all";
+    const filename = `Penjualan_${fromLabel}_sd_${toLabel}.xlsx`;
+
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(buffer);
+  } catch (err: any) {
+    console.error("Export sales error:", err);
+    res.status(500).json({ error: err.message || "Export gagal" });
+  }
+});
+
 // ─── GET /sales ────────────────────────────────────────────────────────────────
 router.get("/sales", async (req, res) => {
+
   const { customerId, status, startDate, endDate } = req.query;
   const conditions: any[] = [];
   if (customerId) conditions.push(eq(salesTable.customerId, parseInt(customerId as string)));

@@ -13,7 +13,7 @@ import { Combobox, ComboboxItem } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban, DollarSign } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, PlusCircle, Printer, CheckCircle2, Clock, XCircle, AlertCircle, Receipt as ReceiptIcon, User as UserIcon, ChevronDown, CreditCard, Pencil, Ban, DollarSign, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -417,6 +417,7 @@ export default function Penjualan() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
@@ -880,6 +881,39 @@ export default function Penjualan() {
               />
             </div>
             <DateRangeFilter onFilter={(from, to) => { setDateFrom(from); setDateTo(to); }} />
+            <Button
+              variant="outline"
+              className="h-8 rounded-lg text-xs font-semibold px-3 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              disabled={isExporting}
+              onClick={async () => {
+                setIsExporting(true);
+                try {
+                  const params = new URLSearchParams();
+                  if (dateFrom) params.set("startDate", dateFrom);
+                  if (dateTo) params.set("endDate", dateTo);
+                  const url = `/api/sales/export${params.toString() ? '?' + params.toString() : ''}`;
+                  const res = await fetch(url, { credentials: "include" });
+                  if (!res.ok) throw new Error("Export gagal");
+                  const blob = await res.blob();
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  const cd = res.headers.get("Content-Disposition") || "";
+                  const match = cd.match(/filename="?([^"]+)"?/);
+                  a.download = match ? match[1] : "Penjualan.xlsx";
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                } catch {
+                  alert("Gagal mengexport data penjualan");
+                } finally {
+                  setIsExporting(false);
+                }
+              }}
+            >
+              {isExporting
+                ? <span className="h-3.5 w-3.5 mr-1.5 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin inline-block" />
+                : <Download className="mr-1.5 h-3.5 w-3.5" />}
+              Export Excel
+            </Button>
             <Button onClick={() => { resetForm(); setIsOpen(true); }} className="h-8 rounded-lg shadow-sm bg-violet-600 hover:bg-violet-700 text-xs font-semibold px-3">
               <Plus className="mr-1.5 h-3.5 w-3.5" /> Buat Nota
             </Button>

@@ -1,0 +1,1 @@
+ALTER TABLE "purchase_items" ADD COLUMN "roll_lengths_json" text;

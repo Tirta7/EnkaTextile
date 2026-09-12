@@ -128,6 +128,7 @@ export interface ProductInput {
   rollStock?: number;
   meterStock?: number;
   minStock?: number;
+  rollLengths?: number[];
 }
 
 export interface ProductRollInput {
@@ -169,6 +170,7 @@ export interface ProductUpdate {
   minStock?: number;
   rollStock?: number;
   meterStock?: number;
+  rollLengths?: number[];
 }
 
 export interface Customer {
@@ -302,6 +304,7 @@ export interface SaleInput {
   paymentType: string;
   dueDate?: string;
   notes?: string;
+  dpAmount?: number;
   items: SaleItemInput[];
 }
 
@@ -341,6 +344,7 @@ export interface PurchaseItem {
   meters: number;
   pricePerMeter: number;
   subtotal: number;
+  rollLengths?: number[];
 }
 
 export interface PurchaseItemInput {
@@ -351,6 +355,7 @@ export interface PurchaseItemInput {
   pricePerMeter: number;
   subtotal: number;
   barcode?: string;
+  rollLengths?: number[];
 }
 
 export interface PurchaseDetail {

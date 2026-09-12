@@ -18,4 +18,5 @@ export interface PurchaseItem {
   meters: number;
   pricePerMeter: number;
   subtotal: number;
+  rollLengths?: number[];
 }

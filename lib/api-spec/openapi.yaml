@@ -1599,6 +1599,10 @@ components:
           type: number
         minStock:
           type: number
+        rollLengths:
+          type: array
+          items:
+            type: number
 
     ProductRollInput:
       type: object
@@ -1678,6 +1682,10 @@ components:
           type: number
         meterStock:
           type: number
+        rollLengths:
+          type: array
+          items:
+            type: number
 
     Customer:
       type: object
@@ -1971,6 +1979,10 @@ components:
           type: number
         subtotal:
           type: number
+        rollLengths:
+          type: array
+          items:
+            type: number
 
     PurchaseItemInput:
       type: object
@@ -1990,6 +2002,10 @@ components:
           type: number
         barcode:
           type: string
+        rollLengths:
+          type: array
+          items:
+            type: number
 
     PurchaseDetail:
       type: object

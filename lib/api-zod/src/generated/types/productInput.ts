@@ -23,4 +23,5 @@ export interface ProductInput {
   rollStock?: number;
   meterStock?: number;
   minStock?: number;
+  rollLengths?: number[];
 }

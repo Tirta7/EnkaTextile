@@ -23,4 +23,5 @@ export interface ProductUpdate {
   minStock?: number;
   rollStock?: number;
   meterStock?: number;
+  rollLengths?: number[];
 }

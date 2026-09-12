@@ -14,5 +14,6 @@ export interface SaleInput {
   paymentType: string;
   dueDate?: string;
   notes?: string;
+  dpAmount?: number;
   items: SaleItemInput[];
 }

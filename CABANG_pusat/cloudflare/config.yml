@@ -1,0 +1,7 @@
+tunnel: 7ff84be7-7490-43f7-86df-94866a32a92d
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: enkatextile.co.id
+    service: http://app:8080
+  - service: http_status:404

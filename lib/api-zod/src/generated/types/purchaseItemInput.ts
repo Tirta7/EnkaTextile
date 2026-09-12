@@ -14,4 +14,5 @@ export interface PurchaseItemInput {
   pricePerMeter: number;
   subtotal: number;
   barcode?: string;
+  rollLengths?: number[];
 }

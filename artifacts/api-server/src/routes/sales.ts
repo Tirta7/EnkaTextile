@@ -186,6 +186,210 @@ async function generateNextInvoiceNumber(prefix: string = "INV"): Promise<string
 }
 
 
+
+// ─── POST /sales/import (Import from Excel) ────────────────────────────────────
+router.post("/sales/import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" });
+      return;
+    }
+
+    // Parse uploaded Excel file via busboy
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_fieldname, file) => {
+        fileReceived = true;
+        file.on("data", (chunk: Buffer) => chunks.push(chunk));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan dalam request" });
+      return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    if (rawRows.length === 0) {
+      res.json({ success: 0, failed: 0, errors: [], message: "File Excel kosong" });
+      return;
+    }
+
+    // Load all products and customers for matching
+    const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode }).from(productsTable);
+    const allCustomers = await db.select({ id: customersTable.id, name: customersTable.name }).from(customersTable);
+
+    // Helper: match product by name (case-insensitive)
+    const findProduct = (name: string) => {
+      const n = name?.trim().toLowerCase();
+      return allProducts.find(p => p.name.toLowerCase() === n);
+    };
+    const findCustomer = (name: string) => {
+      const n = name?.trim().toLowerCase();
+      if (!n || n === "umum" || n === "") return null;
+      return allCustomers.find(c => c.name.toLowerCase() === n);
+    };
+
+    // Group rows by invoice number
+    const invoiceMap = new Map<string, any[]>();
+    for (const row of rawRows) {
+      const inv = String(row["No Invoice"] || "").trim();
+      if (!inv) continue;
+      if (!invoiceMap.has(inv)) invoiceMap.set(inv, []);
+      invoiceMap.get(inv)!.push(row);
+    }
+
+    const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];
+    let successCount = 0;
+
+    for (const [invoiceNumber, rows] of invoiceMap) {
+      try {
+        // Check if invoice already exists
+        const existing = await db.select({ id: salesTable.id }).from(salesTable)
+          .where(sql`${salesTable.invoiceNumber} = ${invoiceNumber}`);
+        if (existing.length > 0) {
+          results.push({ invoice: invoiceNumber, status: "skip", message: "Invoice sudah ada, dilewati" });
+          continue;
+        }
+
+        // Parse sale-level data from first row
+        const firstRow = rows[0];
+        const tanggalStr = String(firstRow["Tanggal"] || "").trim();
+        const customerName = String(firstRow["Pelanggan"] || "").trim();
+        const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
+        const notes = String(firstRow["Catatan"] || "").trim();
+
+        // Parse tanggal (format dd/mm/yyyy or yyyy-mm-dd)
+        let createdAt: Date | undefined;
+        if (tanggalStr) {
+          const parts = tanggalStr.includes("/") ? tanggalStr.split("/") : tanggalStr.split("-");
+          if (parts.length === 3) {
+            if (tanggalStr.includes("/")) {
+              // dd/mm/yyyy
+              createdAt = new Date(`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`);
+            } else {
+              createdAt = new Date(tanggalStr);
+            }
+          }
+        }
+
+        // Match customer
+        const customer = findCustomer(customerName);
+
+        // Parse items
+        const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number }[] = [];
+        const itemErrors: string[] = [];
+
+        for (const row of rows) {
+          const prodName = String(row["Produk / Barang"] || "").trim();
+          if (!prodName) continue; // skip empty product rows
+
+          const prod = findProduct(prodName);
+          if (!prod) {
+            itemErrors.push(`Produk "${prodName}" tidak ditemukan`);
+            continue;
+          }
+
+          const rolls = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
+          const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
+          const pricePerMeter = parseFloat(String(row["Harga / Meter"]).replace(",", ".")) || 0;
+          const subtotal = parseFloat(String(row["Subtotal"]).replace(",", ".")) || Math.round(meters * pricePerMeter);
+
+          items.push({ productId: prod.id, rolls, meters, pricePerMeter, subtotal });
+        }
+
+        if (itemErrors.length > 0) {
+          results.push({ invoice: invoiceNumber, status: "error", message: itemErrors.join("; ") });
+          continue;
+        }
+
+        if (items.length === 0) {
+          results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" });
+          continue;
+        }
+
+        const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
+        const isKredit = paymentType === "kredit" || paymentType === "tempo";
+        const paidAmount = isKredit ? 0 : totalAmount;
+        const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+
+        // Insert sale
+        const [sale] = await db.insert(salesTable).values({
+          invoiceNumber,
+          customerId: customer?.id ?? null,
+          paymentType,
+          totalAmount: totalAmount.toString(),
+          paidAmount: paidAmount.toString(),
+          status,
+          notes: notes || null,
+          ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
+        } as any).returning();
+
+        // Insert items & deduct stock
+        for (const item of items) {
+          await db.insert(saleItemsTable).values({
+            saleId: sale.id,
+            productId: item.productId,
+            rolls: item.rolls.toString(),
+            meters: item.meters.toString(),
+            pricePerMeter: item.pricePerMeter.toString(),
+            subtotal: item.subtotal.toString(),
+          });
+
+          // Deduct stock
+          await db.update(productsTable).set({
+            rollStock: sql`${productsTable.rollStock} - ${item.rolls}`,
+            meterStock: sql`${productsTable.meterStock} - ${item.meters}`,
+            updatedAt: sql`NOW()`,
+          }).where(eq(productsTable.id, item.productId));
+
+          // Stock mutation log
+          await db.insert(stockMutationsTable).values({
+            productId: item.productId,
+            type: "keluar",
+            rolls: item.rolls.toString(),
+            meters: item.meters.toString(),
+            description: `Import Penjualan ${invoiceNumber}`,
+            reference: invoiceNumber,
+          });
+        }
+
+        successCount++;
+        results.push({ invoice: invoiceNumber, status: "ok", message: `${items.length} item berhasil diimport` });
+      } catch (err: any) {
+        results.push({ invoice: invoiceNumber, status: "error", message: err.message || "Error tidak diketahui" });
+      }
+    }
+
+    broadcastRefresh();
+    res.json({
+      success: successCount,
+      failed: results.filter(r => r.status === "error").length,
+      skipped: results.filter(r => r.status === "skip").length,
+      total: invoiceMap.size,
+      details: results,
+    });
+  } catch (err: any) {
+    console.error("Import sales error:", err);
+    res.status(500).json({ error: err.message || "Import gagal" });
+  }
+});
+
 // ─── GET /sales/export (Export to Excel) ───────────────────────────────────────
 router.get("/sales/export", async (req, res): Promise<void> => {
   try {
@@ -270,6 +474,7 @@ router.get("/sales/export", async (req, res): Promise<void> => {
           "Produk / Barang": "",
           "Roll": 0,
           "Meter/Yard": 0,
+          "Detail Roll": "",
           "Harga / Meter": 0,
           "Subtotal": 0,
           "Total Nota": totalAmt,
@@ -280,7 +485,22 @@ router.get("/sales/export", async (req, res): Promise<void> => {
           "Catatan": s.notes || "",
         });
       } else {
-        items.forEach((item, idx) => {
+        const groupedItems = new Map<string, any>();
+        for (const item of items) {
+          const key = `${item.productId}_${item.pricePerMeter}`;
+          if (!groupedItems.has(key)) {
+            groupedItems.set(key, { ...item, rolls: 0, meters: 0, subtotal: 0, rollLengths: [] });
+          }
+          const g = groupedItems.get(key);
+          g.rolls += parseFloat(item.rolls) || 0;
+          g.meters += parseFloat(item.meters) || 0;
+          g.subtotal += parseFloat(item.subtotal) || 0;
+          if (item.rollId) {
+            g.rollLengths.push(parseFloat(item.meters) || 0);
+          }
+        }
+
+        Array.from(groupedItems.values()).forEach((item, idx) => {
           rows.push({
             "No": idx === 0 ? rowNo++ : "",
             "Tanggal": idx === 0 ? tanggal : "",
@@ -288,10 +508,11 @@ router.get("/sales/export", async (req, res): Promise<void> => {
             "Pelanggan": idx === 0 ? (s.customerName || "Umum") : "",
             "Kategori": item.categoryName || "",
             "Produk / Barang": item.productName || "",
-            "Roll": parseFloat(item.rolls) || 0,
-            "Meter/Yard": parseFloat(item.meters) || 0,
+            "Roll": item.rolls,
+            "Meter/Yard": item.meters,
+            "Detail Roll": item.rollLengths.length > 0 ? item.rollLengths.map((r: number, i: number) => `R#${i + 1}: ${r}`).join(", ") : "",
             "Harga / Meter": parseFloat(item.pricePerMeter) || 0,
-            "Subtotal": parseFloat(item.subtotal) || 0,
+            "Subtotal": item.subtotal,
             "Total Nota": idx === 0 ? totalAmt : "",
             "Sudah Dibayar": idx === 0 ? paidAmt : "",
             "Sisa Bayar": idx === 0 ? (remaining > 0 ? remaining : 0) : "",
@@ -315,11 +536,10 @@ router.get("/sales/export", async (req, res): Promise<void> => {
       { wch: 18 },  // Kategori
       { wch: 24 },  // Produk
       { wch: 8 },   // Roll
-      { wch: 12 },  // Meter
+      { wch: 12 },  // Meter/Yard
+      { wch: 40 },  // Detail Roll
       { wch: 16 },  // Harga/Meter
       { wch: 18 },  // Subtotal
-      { wch: 18 },  // Total
-      { wch: 18 },  // Dibayar
       { wch: 18 },  // Sisa
       { wch: 14 },  // Metode
       { wch: 12 },  // Status

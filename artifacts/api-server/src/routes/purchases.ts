@@ -4,10 +4,341 @@ import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, paya
 import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
 import { CreatePurchaseBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
+import * as XLSX from "xlsx";
 
 const router = Router();
 
 function numStr(v: string | null | undefined) { return parseFloat(v ?? "0"); }
+
+// ─── GET /purchases/export ─────────────────────────────────────────────────────
+router.get("/purchases/export", async (req, res): Promise<void> => {
+  try {
+    const { startDate, endDate } = req.query;
+    const conditions: any[] = [];
+    if (startDate) conditions.push(gte(purchasesTable.createdAt, new Date(startDate as string)));
+    if (endDate) {
+      const endDt = new Date(endDate as string);
+      endDt.setHours(23, 59, 59, 999);
+      conditions.push(lte(purchasesTable.createdAt, endDt));
+    }
+
+    const purchases = await db
+      .select({
+        id: purchasesTable.id,
+        invoiceNumber: purchasesTable.invoiceNumber,
+        supplierId: purchasesTable.supplierId,
+        supplierName: suppliersTable.name,
+        paymentType: purchasesTable.paymentType,
+        totalAmount: purchasesTable.totalAmount,
+        paidAmount: purchasesTable.paidAmount,
+        status: purchasesTable.status,
+        dueDate: purchasesTable.dueDate,
+        notes: purchasesTable.notes,
+        createdAt: purchasesTable.createdAt,
+      })
+      .from(purchasesTable)
+      .leftJoin(suppliersTable, eq(purchasesTable.supplierId, suppliersTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(purchasesTable.createdAt));
+
+    const purchaseIds = purchases.map(p => p.id);
+    let itemsData: any[] = [];
+    if (purchaseIds.length > 0) {
+      itemsData = await db
+        .select({
+          purchaseId: purchaseItemsTable.purchaseId,
+          productName: productsTable.name,
+          barcode: productsTable.barcode,
+          rolls: purchaseItemsTable.rolls,
+          meters: purchaseItemsTable.meters,
+          pricePerMeter: purchaseItemsTable.pricePerMeter,
+          subtotal: purchaseItemsTable.subtotal,
+          rollLengthsJson: purchaseItemsTable.rollLengthsJson,
+        })
+        .from(purchaseItemsTable)
+        .leftJoin(productsTable, eq(purchaseItemsTable.productId, productsTable.id))
+        .where(inArray(purchaseItemsTable.purchaseId, purchaseIds));
+    }
+
+    const itemsByPurchaseId = new Map<number, any[]>();
+    for (const item of itemsData) {
+      if (!itemsByPurchaseId.has(item.purchaseId)) itemsByPurchaseId.set(item.purchaseId, []);
+      itemsByPurchaseId.get(item.purchaseId)!.push(item);
+    }
+
+    const rows: any[] = [];
+    let rowNo = 1;
+
+    for (const p of purchases) {
+      const items = itemsByPurchaseId.get(p.id) || [];
+      const totalAmt = parseFloat(p.totalAmount as string) || 0;
+      const paidAmt = parseFloat(p.paidAmount as string) || 0;
+      const remaining = totalAmt - paidAmt;
+      const tanggal = p.createdAt
+        ? new Date(p.createdAt).toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric" })
+        : "";
+
+      if (items.length === 0) {
+        rows.push({
+          "No": rowNo++, "Tanggal": tanggal,
+          "No Invoice": p.invoiceNumber, "Supplier": p.supplierName || "",
+          "Barcode": "", "Produk / Barang": "",
+          "Roll": 0, "Meter/Yard": 0, "Detail Roll": "", "Harga / Meter": 0, "Subtotal": 0,
+          "Total Nota": totalAmt, "Sudah Dibayar": paidAmt,
+          "Sisa Bayar": remaining > 0 ? remaining : 0,
+          "Metode Bayar": p.paymentType, "Status": p.status, "Catatan": p.notes || "",
+        });
+      } else {
+        items.forEach((item, idx) => {
+          rows.push({
+            "No": idx === 0 ? rowNo++ : "",
+            "Tanggal": idx === 0 ? tanggal : "",
+            "No Invoice": idx === 0 ? p.invoiceNumber : "",
+            "Supplier": idx === 0 ? (p.supplierName || "") : "",
+            "Barcode": item.barcode || "",
+            "Produk / Barang": item.productName || "",
+            "Roll": parseFloat(item.rolls) || 0,
+            "Meter/Yard": parseFloat(item.meters) || 0,
+            "Detail Roll": item.rollLengthsJson ? (JSON.parse(item.rollLengthsJson) as number[]).map((r, i) => `R#${i + 1}: ${r}`).join(", ") : "",
+            "Harga / Meter": parseFloat(item.pricePerMeter) || 0,
+            "Subtotal": parseFloat(item.subtotal) || 0,
+            "Total Nota": idx === 0 ? totalAmt : "",
+            "Sudah Dibayar": idx === 0 ? paidAmt : "",
+            "Sisa Bayar": idx === 0 ? (remaining > 0 ? remaining : 0) : "",
+            "Metode Bayar": idx === 0 ? p.paymentType : "",
+            "Status": idx === 0 ? p.status : "",
+            "Catatan": idx === 0 ? (p.notes || "") : "",
+          });
+        });
+      }
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 22 }, { wch: 14 }, { wch: 24 },
+      { wch: 8 }, { wch: 12 }, { wch: 40 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
+      { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 24 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pembelian");
+
+    const fromLabel = startDate ? (startDate as string).replace(/-/g, "") : "all";
+    const toLabel = endDate ? (endDate as string).replace(/-/g, "") : "all";
+    const filename = `Pembelian_${fromLabel}_sd_${toLabel}.xlsx`;
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(buffer);
+  } catch (err: any) {
+    console.error("Export purchases error:", err);
+    res.status(500).json({ error: err.message || "Export gagal" });
+  }
+});
+
+// ─── POST /purchases/import ────────────────────────────────────────────────────
+router.post("/purchases/import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" }); return;
+    }
+
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_f, file) => {
+        fileReceived = true;
+        file.on("data", (c: Buffer) => chunks.push(c));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan" }); return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    if (rawRows.length === 0) {
+      res.json({ success: 0, failed: 0, skipped: 0, total: 0, details: [] }); return;
+    }
+
+    const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode }).from(productsTable);
+    const allSuppliers = await db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable);
+
+    const findProduct = (name: string) => {
+      const n = name?.trim().toLowerCase();
+      return allProducts.find(p => p.name.toLowerCase() === n);
+    };
+    const findSupplier = (name: string) => {
+      const n = name?.trim().toLowerCase();
+      return allSuppliers.find(s => s.name.toLowerCase() === n);
+    };
+
+    // Group rows by invoice number
+    const invoiceMap = new Map<string, any[]>();
+    for (const row of rawRows) {
+      const inv = String(row["No Invoice"] || "").trim();
+      if (!inv) continue;
+      if (!invoiceMap.has(inv)) invoiceMap.set(inv, []);
+      invoiceMap.get(inv)!.push(row);
+    }
+
+    const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];
+    let successCount = 0;
+
+    for (const [invoiceNumber, rows] of invoiceMap) {
+      try {
+        const existing = await db.select({ id: purchasesTable.id }).from(purchasesTable)
+          .where(sql`${purchasesTable.invoiceNumber} = ${invoiceNumber}`);
+        if (existing.length > 0) {
+          results.push({ invoice: invoiceNumber, status: "skip", message: "Invoice sudah ada, dilewati" });
+          continue;
+        }
+
+        const firstRow = rows[0];
+        const supplierName = String(firstRow["Supplier"] || "").trim();
+        const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
+        const notes = String(firstRow["Catatan"] || "").trim();
+        const tanggalStr = String(firstRow["Tanggal"] || "").trim();
+
+        // Parse tanggal
+        let createdAt: Date | undefined;
+        if (tanggalStr) {
+          const parts = tanggalStr.includes("/") ? tanggalStr.split("/") : tanggalStr.split("-");
+          if (parts.length === 3) {
+            createdAt = tanggalStr.includes("/")
+              ? new Date(`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`)
+              : new Date(tanggalStr);
+          }
+        }
+
+        if (!supplierName) {
+          results.push({ invoice: invoiceNumber, status: "error", message: "Kolom Supplier kosong" });
+          continue;
+        }
+        const supplier = findSupplier(supplierName);
+        if (!supplier) {
+          results.push({ invoice: invoiceNumber, status: "error", message: `Supplier "${supplierName}" tidak ditemukan` });
+          continue;
+        }
+
+        // Parse items
+        const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number }[] = [];
+        const itemErrors: string[] = [];
+
+        for (const row of rows) {
+          const prodName = String(row["Produk / Barang"] || "").trim();
+          if (!prodName) continue;
+          const prod = findProduct(prodName);
+          if (!prod) { itemErrors.push(`Produk "${prodName}" tidak ditemukan`); continue; }
+
+          const rolls = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
+          const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
+          const pricePerMeter = parseFloat(String(row["Harga / Meter"]).replace(",", ".")) || 0;
+          const subtotal = parseFloat(String(row["Subtotal"]).replace(",", ".")) || Math.round(meters * pricePerMeter);
+          items.push({ productId: prod.id, rolls, meters, pricePerMeter, subtotal });
+        }
+
+        if (itemErrors.length > 0) {
+          results.push({ invoice: invoiceNumber, status: "error", message: itemErrors.join("; ") }); continue;
+        }
+        if (items.length === 0) {
+          results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" }); continue;
+        }
+
+        const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
+        const isKredit = paymentType === "kredit" || paymentType === "tempo";
+        const paidAmount = isKredit ? 0 : totalAmount;
+        const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+
+        const [purchase] = await db.insert(purchasesTable).values({
+          invoiceNumber,
+          supplierId: supplier.id,
+          paymentType,
+          totalAmount: totalAmount.toString(),
+          paidAmount: paidAmount.toString(),
+          status,
+          notes: notes || null,
+          ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
+        } as any).returning();
+
+        for (const item of items) {
+          const avgLength = item.rolls > 0 ? item.meters / item.rolls : 0;
+          const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
+          const baseBarcode = prod?.barcode || `PRD-${item.productId}`;
+          let insertedRollId: number | null = null;
+
+          for (let i = 0; i < item.rolls; i++) {
+            const barcodeToSave = `${baseBarcode}-R${Date.now()}-${i}`;
+            const [roll] = await db.insert(productRollsTable).values({
+              productId: item.productId, barcode: barcodeToSave,
+              originalLength: avgLength.toString(), currentLength: avgLength.toString(), status: "available",
+            }).returning();
+            if (i === 0) insertedRollId = roll.id;
+          }
+
+          await db.insert(purchaseItemsTable).values({
+            purchaseId: purchase.id, productId: item.productId,
+            rollId: insertedRollId, rolls: item.rolls.toString(),
+            meters: item.meters.toString(), pricePerMeter: item.pricePerMeter.toString(),
+            subtotal: item.subtotal.toString(),
+          } as any);
+
+          // Sync stock
+          const rolls = await db.select().from(productRollsTable)
+            .where(and(eq(productRollsTable.productId, item.productId), eq(productRollsTable.status, "available")));
+          const newRollStock = rolls.length;
+          const newMeterStock = rolls.reduce((s, r) => s + parseFloat(r.currentLength), 0);
+          await db.execute(sql`UPDATE ${productsTable} SET roll_stock=${newRollStock}, meter_stock=${newMeterStock}, updated_at=NOW() WHERE id=${item.productId}`);
+
+          await db.insert(stockMutationsTable).values({
+            productId: item.productId, type: "masuk",
+            rolls: item.rolls.toString(), meters: item.meters.toString(),
+            description: `Import Pembelian ${invoiceNumber}`, reference: invoiceNumber,
+          });
+        }
+
+        if (status !== "lunas") {
+          await db.insert(payablesTable).values({
+            purchaseId: purchase.id, supplierId: supplier.id,
+            totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
+            status: status === "partial" ? "partial" : "unpaid",
+          });
+        }
+
+        successCount++;
+        results.push({ invoice: invoiceNumber, status: "ok", message: `${items.length} item berhasil diimport` });
+      } catch (err: any) {
+        results.push({ invoice: invoiceNumber, status: "error", message: err.message || "Error tidak diketahui" });
+      }
+    }
+
+    broadcastRefresh();
+    res.json({
+      success: successCount,
+      failed: results.filter(r => r.status === "error").length,
+      skipped: results.filter(r => r.status === "skip").length,
+      total: invoiceMap.size,
+      details: results,
+    });
+  } catch (err: any) {
+    console.error("Import purchases error:", err);
+    res.status(500).json({ error: err.message || "Import gagal" });
+  }
+});
+
 
 router.get("/purchases", async (req, res) => {
   const { supplierId, startDate, endDate } = req.query;

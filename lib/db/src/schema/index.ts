@@ -170,6 +170,7 @@ export const purchaseItemsTable = pgTable("purchase_items", {
   meters: numeric("meters", { precision: 12, scale: 4 }).notNull().default("0"),
   pricePerMeter: numeric("price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
   subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull().default("0"),
+  rollLengthsJson: text("roll_lengths_json"), // JSON array of individual roll lengths, saved before rolls are deleted
 });
 
 export const insertPurchaseItemSchema = createInsertSchema(purchaseItemsTable).omit({ id: true });

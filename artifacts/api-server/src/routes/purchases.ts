@@ -101,12 +101,16 @@ router.post("/purchases", async (req, res): Promise<void> => {
     await db.insert(purchaseItemsTable).values({
       purchaseId: purchase.id,
       productId: item.productId,
-      rollId: insertedRollId, // arbitrarily store the first roll ID if they added multiple
+      rollId: insertedRollId,
       rolls: item.rolls.toString(),
       meters: item.meters.toString(),
       pricePerMeter: item.pricePerMeter.toString(),
       subtotal: item.subtotal.toString(),
-    });
+      // Simpan panjang tiap roll sebagai JSON agar bisa dipulihkan saat restore
+      rollLengthsJson: (item.rollLengths && item.rollLengths.length > 0)
+        ? JSON.stringify(item.rollLengths.map((l: any) => parseFloat(String(l).replace(',', '.')) || 0))
+        : null,
+    } as any);
     
     // Sync the product's meter_stock and roll_stock based on the productRollsTable
     const rolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, item.productId), eq(productRollsTable.status, "available")));
@@ -182,6 +186,7 @@ router.get("/purchases/by-invoice", async (req, res): Promise<void> => {
       productName: productsTable.name,
       categoryId: productsTable.categoryId,
       rollId: purchaseItemsTable.rollId,
+      rollLengthsJson: purchaseItemsTable.rollLengthsJson,
       rolls: purchaseItemsTable.rolls,
       meters: purchaseItemsTable.meters,
       pricePerMeter: purchaseItemsTable.pricePerMeter,
@@ -199,8 +204,18 @@ router.get("/purchases/by-invoice", async (req, res): Promise<void> => {
     let rollLengths: number[] = [];
 
     if (rollCount > 0) {
-      if (i.rollId) {
-        // Try fetching original roll lengths by rollId range
+      // Priority 1: gunakan rollLengthsJson yang tersimpan saat pembelian dibuat
+      if (i.rollLengthsJson) {
+        try {
+          const parsed = JSON.parse(i.rollLengthsJson);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            rollLengths = parsed.map(Number);
+          }
+        } catch {}
+      }
+
+      // Priority 2: coba ambil dari productRollsTable jika rollId masih ada
+      if (rollLengths.length === 0 && i.rollId) {
         const rollIds = Array.from({ length: rollCount }, (_, idx) => (i.rollId as number) + idx);
         const rolls = await db
           .select({ id: productRollsTable.id, length: productRollsTable.originalLength })
@@ -210,7 +225,8 @@ router.get("/purchases/by-invoice", async (req, res): Promise<void> => {
           rollLengths = rolls.map(r => parseFloat(r.length));
         }
       }
-      // Fallback: reconstruct from average (covers both deleted rolls and nulled rollId)
+
+      // Priority 3: fallback ke rata-rata
       if (rollLengths.length === 0) {
         const avg = Number(i.meters) / rollCount;
         rollLengths = Array.from({ length: rollCount }, () => parseFloat(avg.toFixed(3)));

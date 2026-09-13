@@ -236,44 +236,46 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       return allSuppliers.find(s => s.name.toLowerCase() === n);
     };
 
-    // Group rows by invoice number (carry over if blank)
+    // Group rows by invoice number + supplier (carry over if blank)
     const invoiceMap = new Map<string, any[]>();
-    let currentInv = "";
+    let currentInvKey = "";
     
     for (const row of rawRows) {
       const inv = String(row["No Invoice"] || "").trim();
+      const sup = String(row["Supplier"] || "").trim();
+      
       if (inv) {
-        currentInv = inv;
+        currentInvKey = `${inv}___${sup}`;
+        // Store original inv in the row if we want to use it later, but we can also just rely on the first row
+        row["_ParsedInvoice"] = inv;
       }
       
-      if (!currentInv) continue;
+      if (!currentInvKey) continue;
       
-      // Jika baris ini memiliki invoice kosong, salin Supplier dan Tanggal dari currentInv agar tidak hilang
+      // Jika baris ini memiliki invoice kosong, salin Supplier dan Tanggal dari currentInvKey agar tidak hilang
       if (!inv) {
         if (!row["Supplier"]) {
-           const parentRows = invoiceMap.get(currentInv);
+           const parentRows = invoiceMap.get(currentInvKey);
            if (parentRows && parentRows.length > 0) row["Supplier"] = parentRows[0]["Supplier"];
         }
         if (!row["Tanggal"]) {
-           const parentRows = invoiceMap.get(currentInv);
+           const parentRows = invoiceMap.get(currentInvKey);
            if (parentRows && parentRows.length > 0) row["Tanggal"] = parentRows[0]["Tanggal"];
         }
       }
       
-      if (!invoiceMap.has(currentInv)) invoiceMap.set(currentInv, []);
-      invoiceMap.get(currentInv)!.push(row);
+      if (!invoiceMap.has(currentInvKey)) invoiceMap.set(currentInvKey, []);
+      invoiceMap.get(currentInvKey)!.push(row);
     }
 
     const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];
     let successCount = 0;
 
-    for (const [invoiceNumber, rows] of invoiceMap) {
+    for (const [invKey, rows] of invoiceMap) {
       try {
-        const existingList = await db.select({ id: purchasesTable.id }).from(purchasesTable)
-          .where(sql`${purchasesTable.invoiceNumber} = ${invoiceNumber}`);
-
         // ── Parse common data from Excel rows ──
         const firstRow = rows[0];
+        const invoiceNumber = firstRow["_ParsedInvoice"] || String(firstRow["No Invoice"] || "").trim();
         const supplierName = String(firstRow["Supplier"] || "").trim();
         const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
         const notes = String(firstRow["Catatan"] || "").trim();
@@ -296,6 +298,12 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         if (!supplier) {
           results.push({ invoice: invoiceNumber, status: "error", message: `Supplier "${supplierName}" tidak ditemukan` }); continue;
         }
+
+        const existingList = await db.select({ id: purchasesTable.id }).from(purchasesTable)
+          .where(and(
+             eq(purchasesTable.invoiceNumber, invoiceNumber),
+             eq(purchasesTable.supplierId, supplier.id)
+          ));
 
         // Parse items
         const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number; rollLengths: number[] }[] = [];

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 13px; padding: 12px; background: #f5f5f5; }
+    h3 { font-size: 15px; margin-bottom: 10px; color: #333; }
+    
+    #toolbar {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+    }
+    button {
+      padding: 7px 14px; border: none; border-radius: 4px;
+      cursor: pointer; font-size: 13px; color: white;
+    }
+    #btnAdd    { background: #555; }
+    #btnProcess { background: #4CAF50; }
+    #btnAdd:hover    { background: #333; }
+    #btnProcess:hover { background: #388E3C; }
+    
+    #jobTable { width: 100%; border-collapse: collapse; background: white; }
+    #jobTable th {
+      background: #1565C0; color: white;
+      padding: 6px 6px; text-align: left; font-size: 12px; white-space: nowrap;
+    }
+    #jobTable td { padding: 4px 4px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    #jobTable tr:nth-child(even) { background: #f9f9f9; }
+    
+    #jobTable select, #jobTable input {
+      width: 100%; padding: 4px 5px; border: 1px solid #ccc;
+      border-radius: 3px; font-size: 12px;
+    }
+    .col-no   { width: 28px; text-align: center; }
+    .col-kat  { width: 130px; }
+    .col-nama { width: 120px; }
+    .col-num  { width: 60px; }
+    .col-roll { width: 48px; }
+    .col-total { width: 70px; }
+    .col-target { width: 58px; }
+    .col-del  { width: 28px; text-align: center; }
+    .col-status { width: 150px; font-size: 11px; }
+    
+    .status-done     { color: #2e7d32; font-weight: bold; }
+    .status-notfound { color: #c62828; }
+    .status-multiple { color: #e65100; }
+    .status-pending  { color: #888; }
+    
+    #globalStatus { margin-top: 10px; font-size: 13px; color: #333; }
+    
+    /* Conflict modal */
+    #conflictOverlay {
+      display: none; position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999;
+    }
+    #conflictModal {
+      background: white; margin: 60px auto; padding: 16px;
+      width: 560px; border-radius: 6px; max-height: 80vh; overflow-y: auto;
+    }
+    #conflictModal h4 { margin-bottom: 10px; font-size: 14px; }
+    .conflict-item {
+      margin-bottom: 8px; padding: 7px; border: 1px solid #ddd;
+      border-radius: 4px; font-size: 12px; cursor: pointer;
+    }
+    .conflict-item input[type=radio] { margin-right: 6px; }
+    #btnConfirm { background: #2196F3; margin-top: 10px; }
+    #btnCancelConflict { background: #888; margin-top: 10px; margin-left: 6px; }
+    
+    .del-btn {
+      background: #e53935; color: white; border: none; border-radius: 3px;
+      padding: 2px 7px; cursor: pointer; font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Cari & Pindah Roll — Mode Batch</h3>
+  
+  <div id="toolbar">
+    <button id="btnAdd" onclick="addRow()">+ Tambah Baris</button>
+    <button id="btnProcess" onclick="processAll()">▶ Proses Semua</button>
+    <span id="globalStatus"></span>
+  </div>
+  
+  <div style="overflow-x:auto;">
+    <table id="jobTable">
+      <thead>
+        <tr>
+          <th class="col-no">#</th>
+          <th class="col-kat">Kategori</th>
+          <th class="col-nama">Nama Barang</th>
+          <th class="col-num">Angka Awal</th>
+          <th class="col-num">Angka Akhir</th>
+          <th class="col-roll">Jumlah Roll</th>
+          <th class="col-total">Total Yard</th>
+          <th class="col-target">Target Cell</th>
+          <th class="col-status">Status</th>
+          <th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="jobBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Conflict resolution modal -->
+  <div id="conflictOverlay">
+    <div id="conflictModal">
+      <h4 id="conflictTitle">Pilih Deret yang Benar:</h4>
+      <div id="conflictList"></div>
+      <button id="btnConfirm" onclick="confirmConflict()">Kirim</button>
+      <button id="btnCancelConflict" onclick="closeConflict()">Batal</button>
+    </div>
+  </div>
+
+  <script>
+    var allPairs = {};    // {kategori: [namaBarang,...]}
+    var rowCount = 0;
+    var conflictQueue = []; // [{jobIndex, matches, targetCell}]
+    var currentConflict = null;
+    var jobResults = [];
+    
+    // ---- INIT ----
+    window.onload = function() {
+      setStatus("Memuat data barang...");
+      google.script.run
+        .withSuccessHandler(function(pairs) {
+          allPairs = pairs;
+          setStatus("");
+          addRow(); // mulai dengan 1 baris kosong
+        })
+        .withFailureHandler(function(e) { setStatus("Error: " + e.message); })
+        .getAllBarangPairs();
+    };
+    
+    function setStatus(msg) {
+      document.getElementById('globalStatus').innerText = msg;
+    }
+    
+    // ---- ADD ROW ----
+    function addRow() {
+      rowCount++;
+      var idx = rowCount;
+      var tbody = document.getElementById('jobBody');
+      var tr = document.createElement('tr');
+      tr.id = "row_" + idx;
+      tr.setAttribute('data-idx', idx);
+      
+      // Build kategori options
+      var katOpts = '<option value="">-- Pilih --</option>';
+      Object.keys(allPairs).sort().forEach(function(k) {
+        katOpts += '<option value="' + escHtml(k) + '">' + escHtml(k) + '</option>';
+      });
+      
+      tr.innerHTML =
+        '<td class="col-no">' + idx + '</td>' +
+        '<td class="col-kat"><select class="kat-sel" onchange="onKatChange(this,' + idx + ')">' + katOpts + '</select></td>' +
+        '<td class="col-nama"><select class="nama-sel" id="nama_' + idx + '"><option value="">-- Pilih Kategori --</option></select></td>' +
+        '<td class="col-num"><input type="text" class="awal" placeholder="120"></td>' +
+        '<td class="col-num"><input type="text" class="akhir" placeholder="129"></td>' +
+        '<td class="col-roll"><input type="number" class="jumlah" placeholder="18"></td>' +
+        '<td class="col-total"><input type="text" class="total" placeholder="2120"></td>' +
+        '<td class="col-target"><input type="text" class="target" placeholder="I51"></td>' +
+        '<td class="col-status status-pending" id="status_' + idx + '">Menunggu</td>' +
+        '<td class="col-del"><button class="del-btn" onclick="deleteRow(' + idx + ')">✕</button></td>';
+      
+      tbody.appendChild(tr);
+    }
+    
+    function deleteRow(idx) {
+      var el = document.getElementById("row_" + idx);
+      if (el) el.parentNode.removeChild(el);
+    }
+    
+    function onKatChange(sel, idx) {
+      var kat = sel.value;
+      var namaSel = document.getElementById("nama_" + idx);
+      namaSel.innerHTML = '<option value="">-- Pilih --</option>';
+      if (!kat || !allPairs[kat]) return;
+      allPairs[kat].forEach(function(n) {
+        var opt = document.createElement('option');
+        opt.value = n; opt.text = n;
+        namaSel.appendChild(opt);
+      });
+    }
+    
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    
+    // ---- COLLECT JOBS ----
+    function collectJobs() {
+      var rows = document.querySelectorAll('#jobBody tr');
+      var jobs = [];
+      rows.forEach(function(tr) {
+        var idx = tr.getAttribute('data-idx');
+        jobs.push({
+          idx: idx,
+          kategori:      tr.querySelector('.kat-sel').value,
+          namaBarang:    tr.querySelector('.nama-sel').value,
+          startVal:      tr.querySelector('.awal').value,
+          endVal:        tr.querySelector('.akhir').value,
+          expectedCount: tr.querySelector('.jumlah').value,
+          expectedTotal: tr.querySelector('.total').value,
+          targetCell:    tr.querySelector('.target').value
+        });
+      });
+      return jobs;
+    }
+    
+    // ---- PROCESS ALL ----
+    function processAll() {
+      var jobs = collectJobs();
+      if (!jobs.length) { setStatus("Tambahkan baris dulu!"); return; }
+      
+      // Validasi minimal
+      for (var i = 0; i < jobs.length; i++) {
+        if (!jobs[i].kategori || !jobs[i].namaBarang || !jobs[i].startVal || !jobs[i].endVal || !jobs[i].targetCell) {
+          setStatus("Baris " + (i+1) + ": Lengkapi Kategori, Nama Barang, Angka Awal, Angka Akhir, dan Target Cell.");
+          return;
+        }
+      }
+      
+      // Reset status semua baris
+      jobs.forEach(function(job) {
+        setRowStatus(job.idx, "pending", "Memproses...");
+      });
+      
+      setStatus("Memproses " + jobs.length + " item...");
+      
+      google.script.run
+        .withSuccessHandler(function(results) {
+          conflictQueue = [];
+          jobResults = results;
+          
+          var doneCount = 0, notFoundCount = 0, multipleCount = 0;
+          
+          results.forEach(function(res) {
+            var job = jobs[res.jobIndex];
+            if (res.status === "done") {
+              setRowStatus(job.idx, "done", "✅ " + res.count + " roll (" + String(res.total).replace('.', ',') + " yds) → " + res.targetCell);
+              doneCount++;
+            } else if (res.status === "notfound") {
+              setRowStatus(job.idx, "notfound", "❌ Tidak ditemukan");
+              notFoundCount++;
+            } else if (res.status === "multiple") {
+              setRowStatus(job.idx, "multiple", "⚠️ " + res.matches.length + " pilihan — klik untuk pilih");
+              // Tambahkan ke antrian konflik
+              conflictQueue.push({ jobIndex: res.jobIndex, job: job, matches: res.matches });
+              multipleCount++;
+            }
+          });
+          
+          var msg = "Selesai: " + doneCount + " berhasil";
+          if (notFoundCount) msg += ", " + notFoundCount + " tidak ditemukan";
+          if (multipleCount) msg += ", " + multipleCount + " perlu konfirmasi (lihat tanda ⚠️)";
+          setStatus(msg);
+          
+          // Mulai resolve konflik satu per satu jika ada
+          if (conflictQueue.length > 0) {
+            nextConflict();
+          }
+        })
+        .withFailureHandler(function(e) {
+          setStatus("Error: " + e.message);
+        })
+        .processBatch(jobs);
+    }
+    
+    function setRowStatus(idx, type, msg) {
+      var el = document.getElementById("status_" + idx);
+      if (!el) return;
+      el.className = "col-status status-" + type;
+      el.innerText = msg;
+    }
+    
+    // ---- CONFLICT RESOLUTION ----
+    function nextConflict() {
+      if (conflictQueue.length === 0) return;
+      currentConflict = conflictQueue.shift();
+      
+      document.getElementById('conflictTitle').innerText =
+        "Pilih deret untuk: " + currentConflict.job.namaBarang + " (" + currentConflict.job.kategori + ") → " + currentConflict.job.targetCell;
+      
+      var html = '';
+      currentConflict.matches.forEach(function(m, i) {
+        html +=
+          '<div class="conflict-item">' +
+          '<input type="radio" name="cMatch" id="cm_' + i + '" value="' + i + '" ' + (i===0?'checked':'') + '>' +
+          '<label for="cm_' + i + '">' +
+          '<b>Baris ' + m.rowIndex + '</b>: ' + m.count + ' roll (Total ' + String(m.total).replace('.', ',') + ' yds)' +
+          '<br><small>' + (Array.isArray(m.sequence) ? m.sequence.join(', ') : '') + '</small>' +
+          '</label></div>';
+      });
+      document.getElementById('conflictList').innerHTML = html;
+      document.getElementById('conflictOverlay').style.display = 'block';
+    }
+    
+    function confirmConflict() {
+      var radios = document.getElementsByName('cMatch');
+      var sel = -1;
+      for (var i = 0; i < radios.length; i++) {
+        if (radios[i].checked) { sel = parseInt(radios[i].value); break; }
+      }
+      if (sel === -1) return;
+      
+      var match = currentConflict.matches[sel];
+      var job = currentConflict.job;
+      
+      document.getElementById('conflictOverlay').style.display = 'none';
+      setRowStatus(job.idx, "pending", "Menyalin...");
+      
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setRowStatus(job.idx, "done", "✅ " + resp);
+          nextConflict();
+        })
+        .withFailureHandler(function(e) {
+          setRowStatus(job.idx, "notfound", "❌ Error: " + e.message);
+          nextConflict();
+        })
+        .moveSelectedRoll(match, job.targetCell);
+    }
+    
+    function closeConflict() {
+      document.getElementById('conflictOverlay').style.display = 'none';
+      setRowStatus(currentConflict.job.idx, "multiple", "⚠️ Dilewati");
+      nextConflict();
+    }
+  </script>
+</body>
+</html>

@@ -202,9 +202,16 @@ export default function Pembelian() {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
     if (items.some(i => !i.productId || (typeof i.meters === "number" ? i.meters : 0) <= 0)) { toast({ title: "Mohon lengkapi data barang", variant: "destructive" }); return; }
     if (!supplierId) { toast({ title: "Pilih supplier", variant: "destructive" }); return; }
+    
+    let finalInvoiceNumber = invoiceNumber;
+    if (isRestoring || !finalInvoiceNumber) {
+      const existingInvoices = purchases?.map(p => p.invoiceNumber) || [];
+      finalInvoiceNumber = generateSequentialInvoiceNumber("INV-IN", existingInvoices);
+    }
+
     createMutation.mutate({
       data: {
-        invoiceNumber,
+        invoiceNumber: finalInvoiceNumber,
         supplierId: parseInt(supplierId),
         paymentType: paymentType as any,
         dueDate: dueDate || undefined,

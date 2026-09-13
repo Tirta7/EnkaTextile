@@ -71,6 +71,17 @@ router.post("/payables/:id/payments", async (req, res): Promise<void> => {
     updatedAt: new Date(),
   }).where(eq(payablesTable.id, id));
 
+  // Update linked purchase
+  if (pay.purchaseId) {
+    await db.execute(sql`
+      UPDATE purchases 
+      SET paid_amount = paid_amount + ${parsed.data.amount},
+          status = CASE WHEN paid_amount + ${parsed.data.amount} >= total_amount THEN 'lunas' ELSE 'partial' END,
+          updated_at = NOW()
+      WHERE id = ${pay.purchaseId}
+    `);
+  }
+
   broadcastRefresh();
 
   // Trigger push notification for payment

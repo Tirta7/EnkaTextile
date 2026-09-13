@@ -35,6 +35,9 @@ async function syncPurchaseTotals(purchaseId: number, keepPaid: boolean = true) 
     } else if (newStatus !== "lunas") {
       await db.insert(payablesTable).values({ purchaseId, supplierId: purchase.supplierId, totalAmount: String(newTotal), paidAmount: String(existingPaid), status: newStatus === "partial" ? "partial" : "unpaid" } as any);
     }
+  } catch (e) { console.error("syncPurchaseTotals error:", e); }
+}
+
 // Helper: After a specific roll is changed/deleted, update ONLY the purchase item that originally created it.
 async function syncPurchaseItemForSpecificRoll(productId: number, modifiedRollId: number) {
   try {

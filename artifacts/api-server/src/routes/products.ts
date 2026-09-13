@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { productsTable, categoriesTable, productRollsTable, saleItemsTable, purchaseItemsTable } from "@workspace/db";
-import { eq, ilike, and, lte, sql, inArray } from "drizzle-orm";
+import { productsTable, categoriesTable, productRollsTable, saleItemsTable, purchaseItemsTable, purchasesTable, payablesTable } from "@workspace/db";
+import { eq, ilike, and, lte, sql, inArray, desc } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody, CreateProductRollBody, UpdateProductRollBody } from "@workspace/api-zod";
 import { pushService } from "../lib/push";
+import * as XLSX from "xlsx";
 
 const router = Router();
 
@@ -15,6 +16,47 @@ async function syncProductStockFromRolls(productId: number) {
     rollStock: String(rollStock),
     meterStock: String(meterStock)
   }).where(eq(productsTable.id, productId));
+}
+
+// Helper: Sync purchase totals from all its items (keepPaid=true: keep existing paidAmount)
+async function syncPurchaseTotals(purchaseId: number, keepPaid: boolean = true) {
+  try {
+    const items = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
+    if (items.length === 0) return;
+    const newTotal = items.reduce((s, i) => s + parseFloat(i.subtotal || "0"), 0);
+    const [purchase] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, purchaseId));
+    if (!purchase) return;
+    const existingPaid = keepPaid ? parseFloat(purchase.paidAmount || "0") : 0;
+    const newStatus = existingPaid >= newTotal ? "lunas" : existingPaid > 0 ? "partial" : "tempo";
+    await db.update(purchasesTable).set({ totalAmount: String(newTotal), paidAmount: String(existingPaid), status: newStatus, updatedAt: new Date() } as any).where(eq(purchasesTable.id, purchaseId));
+    const [payable] = await db.select().from(payablesTable).where(eq(payablesTable.purchaseId, purchaseId));
+    if (payable) {
+      await db.update(payablesTable).set({ totalAmount: String(newTotal), paidAmount: String(existingPaid), status: newStatus === "lunas" ? "paid" : newStatus === "partial" ? "partial" : "unpaid", updatedAt: new Date() } as any).where(eq(payablesTable.purchaseId, purchaseId));
+    } else if (newStatus !== "lunas") {
+      await db.insert(payablesTable).values({ purchaseId, supplierId: purchase.supplierId, totalAmount: String(newTotal), paidAmount: String(existingPaid), status: newStatus === "partial" ? "partial" : "unpaid" } as any);
+    }
+  } catch (e) { console.error("syncPurchaseTotals error:", e); }
+}
+
+// Helper: After any roll change, sync the most recent purchase item for this product
+async function syncPurchaseItemFromCurrentRolls(productId: number) {
+  try {
+    const currentRolls = await db.select().from(productRollsTable)
+      .where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")))
+      .orderBy(productRollsTable.createdAt);
+    const purchaseItems = await db.select().from(purchaseItemsTable)
+      .where(eq(purchaseItemsTable.productId, productId))
+      .orderBy(desc(purchaseItemsTable.id));
+    if (purchaseItems.length === 0) return;
+    const latestItem = purchaseItems[0];
+    const rollLengths = currentRolls.map(r => parseFloat(r.currentLength));
+    const newMeters = rollLengths.reduce((a, b) => a + b, 0);
+    const newRolls = currentRolls.length;
+    const pricePerMeter = parseFloat(latestItem.pricePerMeter || "0");
+    const newSubtotal = Math.round(newMeters * pricePerMeter);
+    await db.update(purchaseItemsTable).set({ rollLengthsJson: JSON.stringify(rollLengths), meters: String(newMeters), rolls: String(newRolls), subtotal: String(newSubtotal) } as any).where(eq(purchaseItemsTable.id, latestItem.id));
+    await syncPurchaseTotals(latestItem.purchaseId, true);
+  } catch (e) { console.error("syncPurchaseItemFromCurrentRolls error:", e); }
 }
 
 router.get("/products", async (req, res): Promise<void> => {
@@ -64,6 +106,226 @@ router.get("/products", async (req, res): Promise<void> => {
 
   if (lowStock === "true") { res.json(result.filter(p => p.isLowStock)); return; }
   res.json(result);
+});
+
+// ─── GET /products/export ─────────────────────────────────────────────────────
+router.get("/products/export", async (req, res): Promise<void> => {
+  try {
+    const products = await db
+      .select({
+        id: productsTable.id,
+        name: productsTable.name,
+        barcode: productsTable.barcode,
+        categoryName: categoriesTable.name,
+        primaryUnit: productsTable.primaryUnit,
+        secondaryUnit: productsTable.secondaryUnit,
+        costPricePerMeter: productsTable.costPricePerMeter,
+        pricePerMeter: productsTable.pricePerMeter,
+        costPricePerRoll: productsTable.costPricePerRoll,
+        pricePerRoll: productsTable.pricePerRoll,
+        rollStock: productsTable.rollStock,
+        meterStock: productsTable.meterStock,
+        minStock: productsTable.minStock,
+        description: productsTable.description,
+      })
+      .from(productsTable)
+      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .orderBy(productsTable.name);
+
+    // Get available rolls to populate Roll columns
+    const allAvailableRolls = await db.select().from(productRollsTable).where(eq(productRollsTable.status, "available"));
+    const rollsByProductId = new Map<number, any[]>();
+    for (const r of allAvailableRolls) {
+      if (!rollsByProductId.has(r.productId)) rollsByProductId.set(r.productId, []);
+      rollsByProductId.get(r.productId)!.push(r);
+    }
+
+    let maxRolls = 0;
+    for (const [_, rolls] of rollsByProductId) {
+      if (rolls.length > maxRolls) maxRolls = rolls.length;
+    }
+
+    const rows: any[] = [];
+    let rowNo = 1;
+
+    for (const p of products) {
+      const row: any = {
+        "No": rowNo++,
+        "Barcode": p.barcode || "",
+        "Nama Barang": p.name || "",
+        "Kategori": p.categoryName || "",
+        "Unit 1": p.primaryUnit || "",
+        "Unit 2": p.secondaryUnit || "",
+        "Stok (Roll)": parseFloat(p.rollStock || "0"),
+        "Stok (Meter)": parseFloat(p.meterStock || "0"),
+        "Min Stok": parseFloat(p.minStock || "0"),
+      };
+
+      const productRolls = rollsByProductId.get(p.id) || [];
+      for (let i = 1; i <= maxRolls; i++) {
+        row[`Roll ${i}`] = productRolls[i - 1] ? parseFloat(productRolls[i - 1].currentLength) : "";
+      }
+
+      row["Harga Beli (M)"] = parseFloat(p.costPricePerMeter || "0");
+      row["Harga Jual (M)"] = parseFloat(p.pricePerMeter || "0");
+      row["Harga Beli (R)"] = parseFloat(p.costPricePerRoll || "0");
+      row["Harga Jual (R)"] = parseFloat(p.pricePerRoll || "0");
+      row["Deskripsi"] = p.description || "";
+
+      rows.push(row);
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Barang");
+    const filename = `Data_Barang.xlsx`;
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(buffer);
+  } catch (err: any) {
+    console.error("Export products error:", err);
+    res.status(500).json({ error: err.message || "Export gagal" });
+  }
+});
+
+// ─── POST /products/import ────────────────────────────────────────────────────
+router.post("/products/import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" }); return;
+    }
+
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_f, file) => {
+        fileReceived = true;
+        file.on("data", (c: Buffer) => chunks.push(c));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan" }); return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    if (rawRows.length === 0) {
+      res.json({ success: 0, failed: 0, message: "File kosong" }); return;
+    }
+
+    const allCategories = await db.select().from(categoriesTable);
+    const findCategory = (name: string) => allCategories.find(c => c.name.toLowerCase() === name?.trim().toLowerCase());
+
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (const row of rawRows) {
+      try {
+        const name = String(row["Nama Barang"] || "").trim();
+        if (!name) continue; // Skip empty rows
+
+        let categoryId: number | null = null;
+        const catName = String(row["Kategori"] || "").trim();
+        if (catName) {
+          let cat = findCategory(catName);
+          if (!cat) {
+            const [newCat] = await db.insert(categoriesTable).values({ name: catName }).returning();
+            allCategories.push(newCat);
+            cat = newCat;
+          }
+          categoryId = cat.id;
+        }
+
+        const barcode = String(row["Barcode"] || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        
+        let existingProd = (await db.select().from(productsTable).where(eq(productsTable.name, name)))[0];
+        if (!existingProd && row["Barcode"]) {
+           existingProd = (await db.select().from(productsTable).where(eq(productsTable.barcode, String(row["Barcode"]))))[0];
+        }
+
+        // Parse rolls
+        const rollLengths: number[] = [];
+        for (const key of Object.keys(row)) {
+          if (key.startsWith("Roll ") && key !== "Roll") {
+            const val = parseFloat(String(row[key]).replace(",", "."));
+            if (!isNaN(val) && val > 0) {
+               const rollIndexStr = key.replace("Roll ", "").trim();
+               const rollIndex = parseInt(rollIndexStr, 10);
+               if (!isNaN(rollIndex) && rollIndex > 0) {
+                   rollLengths[rollIndex - 1] = val;
+               }
+            }
+          }
+        }
+        const cleanRollLengths = rollLengths.filter(r => r !== undefined);
+        const meterStock = cleanRollLengths.reduce((a, b) => a + b, 0);
+        const rollStock = cleanRollLengths.length;
+
+        // Base Data
+        const prodData = {
+          name, barcode, categoryId,
+          primaryUnit: String(row["Unit 1"] || "METER").trim(),
+          secondaryUnit: String(row["Unit 2"] || "ROLL").trim(),
+          costPricePerMeter: String(parseFloat(String(row["Harga Beli (M)"] || "0").replace(",", ".")) || 0),
+          pricePerMeter: String(parseFloat(String(row["Harga Jual (M)"] || "0").replace(",", ".")) || 0),
+          costPricePerRoll: String(parseFloat(String(row["Harga Beli (R)"] || "0").replace(",", ".")) || 0),
+          pricePerRoll: String(parseFloat(String(row["Harga Jual (R)"] || "0").replace(",", ".")) || 0),
+          minStock: String(parseFloat(String(row["Min Stok"] || "0").replace(",", ".")) || 0),
+          description: String(row["Deskripsi"] || "").trim(),
+          rollStock: String(rollStock),
+          meterStock: String(meterStock),
+        };
+
+        let prodId;
+        if (existingProd) {
+          await db.update(productsTable).set({ ...prodData, updatedAt: new Date() }).where(eq(productsTable.id, existingProd.id));
+          prodId = existingProd.id;
+        } else {
+          const [newProd] = await db.insert(productsTable).values(prodData as any).returning();
+          prodId = newProd.id;
+        }
+
+        // Sync rolls
+        await db.delete(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
+
+        if (rollStock > 0) {
+           const ts = Date.now();
+           const rollsToInsert = cleanRollLengths.map((len, i) => ({
+             productId: prodId,
+             barcode: `${barcode}-R${ts}-${i + 1}-${Math.floor(Math.random() * 9999)}`,
+             originalLength: String(len),
+             currentLength: String(len),
+             status: "available"
+           }));
+           await db.insert(productRollsTable).values(rollsToInsert as any);
+        }
+
+        successCount++;
+      } catch (err: any) {
+        errors.push(`Gagal memproses baris: ${err.message}`);
+      }
+    }
+
+    res.json({ success: successCount, failed: errors.length, errors, message: "Import selesai" });
+  } catch (err: any) {
+    console.error("Import products error:", err);
+    res.status(500).json({ error: err.message || "Import gagal" });
+  }
 });
 
 router.post("/products", async (req, res): Promise<void> => {
@@ -316,6 +578,7 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   if (!updatedRoll) { res.status(404).json({ error: "Roll not found" }); return; }
 
   await syncProductStockFromRolls(id);
+  await syncPurchaseItemFromCurrentRolls(id);
 
   res.json({
     ...updatedRoll,
@@ -337,6 +600,7 @@ router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => 
     await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
 
     await syncProductStockFromRolls(id);
+    await syncPurchaseItemFromCurrentRolls(id);
 
     res.status(204).send();
   } catch (err: any) {

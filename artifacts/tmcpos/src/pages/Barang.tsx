@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
@@ -46,7 +47,6 @@ type FormData = z.infer<typeof schema>;
 export default function Barang() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [categoryAlphabetFilter, setCategoryAlphabetFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -126,6 +126,43 @@ export default function Barang() {
     }
   };
 
+  const handleExport = () => {
+    window.location.href = `${API_BASE}/api/products/export`;
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      toast({ title: "Mengimpor data...", description: "Mohon tunggu sebentar." });
+      const res = await fetch(`${API_BASE}/api/products/import`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) {
+          toast({ title: "Gagal import", description: data.error, variant: "destructive" });
+        } else {
+          toast({ title: "Import selesai", description: `${data.success} berhasil, ${data.failed} gagal.` });
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({ title: "Gagal import", description: errorData.error || "Terjadi kesalahan pada server", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Gagal import", description: err.message, variant: "destructive" });
+    } finally {
+      if (e.target) e.target.value = '';
+    }
+  };
+
   const openCreate = () => {
     form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0, rollLengths: [] });
     setEditingId(null);
@@ -196,42 +233,66 @@ export default function Barang() {
               />
             </div>
             
+            <Button onClick={handleExport} variant="outline" className="h-8 px-3 rounded-lg text-xs font-bold border-slate-200 text-slate-700">
+              <Download className="mr-1.5 h-3 w-3" /> Export
+            </Button>
+            <Button onClick={() => document.getElementById("import-file-product")?.click()} variant="outline" className="h-8 px-3 rounded-lg text-xs font-bold border-slate-200 text-slate-700">
+              <PlusCircle className="mr-1.5 h-3 w-3" /> Import
+            </Button>
+            <input type="file" id="import-file-product" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+
             <Button onClick={openCreate} className="h-8 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
               <Plus className="mr-1.5 h-3 w-3" /> Tambah
             </Button>
           </div>
         </div>
 
-        {/* Category & Alphabet Filters */}
-        <div className="flex items-center gap-3 overflow-x-auto hide-scrollbar">
-          <div className="flex items-center bg-slate-100/50 p-0.5 rounded-lg border border-slate-200/60 shrink-0">
-            <button onClick={() => setCategoryAlphabetFilter(null)} className={`flex items-center rounded-md px-2.5 text-[10px] font-bold h-6 whitespace-nowrap transition-all ${categoryAlphabetFilter === null ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Semua</button>
-            {Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i)).map(letter => {
-              const has = categories?.some(c => c.name.toUpperCase().startsWith(letter));
-              if (!has && categoryAlphabetFilter !== letter) return null;
-              return (
-                <button key={letter} onClick={() => setCategoryAlphabetFilter(categoryAlphabetFilter === letter ? null : letter)} className={`flex items-center rounded-md px-2 text-[10px] font-bold h-6 transition-all ${categoryAlphabetFilter === letter ? 'bg-white shadow-sm text-violet-700' : 'text-slate-500 hover:text-slate-700'}`}>
-                  {letter}
-                </button>
-              );
-            })}
-          </div>
+        {/* Category Filter — Searchable Combobox */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
+            className={`h-7 px-3 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap ${
+              selectedCategoryId === null
+                ? 'bg-violet-50 text-violet-700 border-violet-200 shadow-sm'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+            }`}
+          >
+            Semua ({products?.length || 0})
+          </button>
 
-          <div className="w-px h-4 bg-slate-200 shrink-0"></div>
+          <Combobox
+            items={(categories ?? [])
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(c => ({
+                value: c.id.toString(),
+                label: `${c.name} (${products?.filter(p => p.categoryId === c.id).length || 0})`,
+              }))}
+            value={selectedCategoryId?.toString() ?? ""}
+            onValueChange={(v) => { setSelectedCategoryId(v ? parseInt(v) : null); setCurrentPage(1); }}
+            placeholder="Pilih Kategori..."
+            searchPlaceholder="Cari kategori..."
+            emptyText="Kategori tidak ditemukan"
+            className="h-7 text-[11px] border-slate-200 rounded-lg bg-white min-w-[180px] max-w-[220px] px-2.5"
+          />
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {categories?.filter(c => !categoryAlphabetFilter || c.name.toUpperCase().startsWith(categoryAlphabetFilter)).map(c => {
-              const count = products?.filter(p => p.categoryId === c.id).length || 0;
-              const isActive = selectedCategoryId === c.id;
-              return (
-                <button key={c.id} onClick={() => { setSelectedCategoryId(isActive ? null : c.id); setCurrentPage(1); }}
-                  className={`flex items-center gap-1.5 rounded-lg px-2.5 h-6 text-[10px] font-bold whitespace-nowrap transition-all border ${isActive ? "bg-violet-50 text-violet-700 border-violet-200 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}>
-                  {c.name}
-                  <span className={`text-[8px] px-1 py-0.5 rounded-full ${isActive ? 'bg-violet-200/50 text-violet-700' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+          {/* Active category chip */}
+          {selectedCategoryId !== null && (() => {
+            const activeCat = categories?.find(c => c.id === selectedCategoryId);
+            const count = products?.filter(p => p.categoryId === selectedCategoryId).length || 0;
+            return activeCat ? (
+              <div className="flex items-center gap-1.5 px-2.5 h-7 bg-violet-50 text-violet-700 border border-violet-200 rounded-lg text-[11px] font-bold">
+                <span>{activeCat.name}</span>
+                <span className="text-[9px] bg-violet-200/50 px-1 py-0.5 rounded-full">{count}</span>
+                <button
+                  onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
+                  className="ml-0.5 hover:text-violet-900 transition-colors"
+                >
+                  <X size={10} />
                 </button>
-              );
-            })}
-          </div>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {/* Rekap Summary (Ultra Compact Strip) */}

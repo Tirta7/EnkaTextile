@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useSettings } from "@/hooks/useSettings";
@@ -8,37 +8,56 @@ interface HeaderProps {
   onMenuClick: () => void;
   theme: "light" | "dark";
   onThemeToggle: () => void;
+  sidebarCollapsed?: boolean;
+  onSidebarToggle?: () => void;
 }
 
-export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
+export function Header({ onMenuClick, theme, onThemeToggle, sidebarCollapsed, onSidebarToggle }: HeaderProps) {
   const { isConnected } = useWebSocket();
   const { data: settings } = useSettings();
   const appName = settings?.["app_name"] || "EnkaTextile";
 
   return (
     <header
-      className="hidden md:flex h-[calc(64px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b items-center justify-between sticky top-0 z-30 px-5 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]"
+      className="hidden md:flex h-14 border-b items-center justify-between sticky top-0 z-30 px-4"
       style={{
         borderColor: theme === "dark" ? "rgba(255,255,255,0.06)" : "hsl(var(--border))",
         background: theme === "dark"
-          ? "rgba(10,10,20,0.85)"
-          : "rgba(255,255,255,0.85)",
+          ? "rgba(10,10,20,0.88)"
+          : "rgba(255,255,255,0.88)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {/* Desktop: sidebar collapse toggle */}
+        {onSidebarToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden lg:flex w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
+            onClick={onSidebarToggle}
+            title={sidebarCollapsed ? "Buka sidebar" : "Sembunyikan sidebar"}
+          >
+            {sidebarCollapsed
+              ? <PanelLeftOpen size={16} />
+              : <PanelLeftClose size={16} />
+            }
+          </Button>
+        )}
+
+        {/* Mobile: hamburger to open overlay sidebar */}
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-muted-foreground hover:text-foreground w-9 h-9 rounded-xl"
+          className="lg:hidden w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground"
           onClick={onMenuClick}
         >
-          <Menu size={18} />
+          <Menu size={16} />
         </Button>
 
-        <div className="hidden sm:flex items-center gap-2.5">
-          <div className="font-semibold text-sm text-foreground/70 tracking-wide">
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="font-semibold text-sm text-foreground/65 tracking-wide">
             {appName}
           </div>
           <div className="w-1 h-1 rounded-full bg-foreground/20" />
@@ -52,7 +71,7 @@ export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
         {/* Live indicator */}
         <div
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all",
             isConnected
               ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400"
               : "border-red-500/30 bg-red-500/8 text-red-500"
@@ -70,17 +89,17 @@ export function Header({ onMenuClick, theme, onThemeToggle }: HeaderProps) {
           variant="ghost"
           size="icon"
           onClick={onThemeToggle}
-          className="w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent"
+          className="w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
           title={theme === "dark" ? "Mode Terang" : "Mode Gelap"}
         >
           {theme === "dark"
-            ? <Sun size={16} className="text-amber-400" />
-            : <Moon size={16} />}
+            ? <Sun size={15} className="text-amber-400" />
+            : <Moon size={15} />}
         </Button>
 
         {/* Avatar */}
         <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm cursor-pointer shadow-sm shrink-0"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm cursor-pointer shadow-sm shrink-0"
           style={{ background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" }}
         >
           A

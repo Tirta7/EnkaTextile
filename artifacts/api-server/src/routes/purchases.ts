@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, payablesTable, paymentsTable, stockMutationsTable, productRollsTable, saleItemsTable } from "@workspace/db";
+import { purchasesTable, purchaseItemsTable, suppliersTable, productsTable, categoriesTable, payablesTable, paymentsTable, stockMutationsTable, productRollsTable, saleItemsTable } from "@workspace/db";
 import { eq, and, gte, lte, sql, desc, inArray } from "drizzle-orm";
 import { CreatePurchaseBody } from "@workspace/api-zod";
 import { broadcastRefresh } from "../lib/websocket";
@@ -66,6 +66,15 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
       itemsByPurchaseId.get(item.purchaseId)!.push(item);
     }
 
+    // Calculate max rolls for dynamic columns
+    let maxRolls = 0;
+    for (const item of itemsData) {
+      if (item.rollLengthsJson) {
+        const rolls = JSON.parse(item.rollLengthsJson) as number[];
+        if (rolls.length > maxRolls) maxRolls = rolls.length;
+      }
+    }
+
     const rows: any[] = [];
     let rowNo = 1;
 
@@ -79,18 +88,25 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
         : "";
 
       if (items.length === 0) {
-        rows.push({
+        const row: any = {
           "No": rowNo++, "Tanggal": tanggal,
           "No Invoice": p.invoiceNumber, "Supplier": p.supplierName || "",
           "Barcode": "", "Produk / Barang": "",
-          "Roll": 0, "Meter/Yard": 0, "Detail Roll": "", "Harga / Meter": 0, "Subtotal": 0,
-          "Total Nota": totalAmt, "Sudah Dibayar": paidAmt,
-          "Sisa Bayar": remaining > 0 ? remaining : 0,
-          "Metode Bayar": p.paymentType, "Status": p.status, "Catatan": p.notes || "",
-        });
+          "Roll": 0, "Meter/Yard": 0
+        };
+        for (let i = 1; i <= maxRolls; i++) row[`Roll ${i}`] = "";
+        row["Harga / Meter"] = 0;
+        row["Subtotal"] = 0;
+        row["Total Nota"] = totalAmt;
+        row["Sudah Dibayar"] = paidAmt;
+        row["Sisa Bayar"] = remaining > 0 ? remaining : 0;
+        row["Metode Bayar"] = p.paymentType;
+        row["Status"] = p.status;
+        row["Catatan"] = p.notes || "";
+        rows.push(row);
       } else {
         items.forEach((item, idx) => {
-          rows.push({
+          const row: any = {
             "No": idx === 0 ? rowNo++ : "",
             "Tanggal": idx === 0 ? tanggal : "",
             "No Invoice": idx === 0 ? p.invoiceNumber : "",
@@ -99,16 +115,26 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
             "Produk / Barang": item.productName || "",
             "Roll": parseFloat(item.rolls) || 0,
             "Meter/Yard": parseFloat(item.meters) || 0,
-            "Detail Roll": item.rollLengthsJson ? (JSON.parse(item.rollLengthsJson) as number[]).map((r, i) => `R#${i + 1}: ${r}`).join(", ") : "",
-            "Harga / Meter": parseFloat(item.pricePerMeter) || 0,
-            "Subtotal": parseFloat(item.subtotal) || 0,
-            "Total Nota": idx === 0 ? totalAmt : "",
-            "Sudah Dibayar": idx === 0 ? paidAmt : "",
-            "Sisa Bayar": idx === 0 ? (remaining > 0 ? remaining : 0) : "",
-            "Metode Bayar": idx === 0 ? p.paymentType : "",
-            "Status": idx === 0 ? p.status : "",
-            "Catatan": idx === 0 ? (p.notes || "") : "",
-          });
+          };
+          
+          let rollLengths: number[] = [];
+          if (item.rollLengthsJson) {
+            rollLengths = JSON.parse(item.rollLengthsJson) as number[];
+          }
+          for (let i = 1; i <= maxRolls; i++) {
+            row[`Roll ${i}`] = rollLengths[i - 1] !== undefined ? rollLengths[i - 1] : "";
+          }
+
+          row["Harga / Meter"] = parseFloat(item.pricePerMeter) || 0;
+          row["Subtotal"] = parseFloat(item.subtotal) || 0;
+          row["Total Nota"] = idx === 0 ? totalAmt : "";
+          row["Sudah Dibayar"] = idx === 0 ? paidAmt : "";
+          row["Sisa Bayar"] = idx === 0 ? (remaining > 0 ? remaining : 0) : "";
+          row["Metode Bayar"] = idx === 0 ? p.paymentType : "";
+          row["Status"] = idx === 0 ? p.status : "";
+          row["Catatan"] = idx === 0 ? (p.notes || "") : "";
+          
+          rows.push(row);
         });
       }
     }
@@ -200,20 +226,16 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
 
     for (const [invoiceNumber, rows] of invoiceMap) {
       try {
-        const existing = await db.select({ id: purchasesTable.id }).from(purchasesTable)
+        const existingList = await db.select({ id: purchasesTable.id }).from(purchasesTable)
           .where(sql`${purchasesTable.invoiceNumber} = ${invoiceNumber}`);
-        if (existing.length > 0) {
-          results.push({ invoice: invoiceNumber, status: "skip", message: "Invoice sudah ada, dilewati" });
-          continue;
-        }
 
+        // ── Parse common data from Excel rows ──
         const firstRow = rows[0];
         const supplierName = String(firstRow["Supplier"] || "").trim();
         const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
         const notes = String(firstRow["Catatan"] || "").trim();
         const tanggalStr = String(firstRow["Tanggal"] || "").trim();
 
-        // Parse tanggal
         let createdAt: Date | undefined;
         if (tanggalStr) {
           const parts = tanggalStr.includes("/") ? tanggalStr.split("/") : tanggalStr.split("-");
@@ -225,75 +247,112 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         }
 
         if (!supplierName) {
-          results.push({ invoice: invoiceNumber, status: "error", message: "Kolom Supplier kosong" });
-          continue;
+          results.push({ invoice: invoiceNumber, status: "error", message: "Kolom Supplier kosong" }); continue;
         }
         const supplier = findSupplier(supplierName);
         if (!supplier) {
-          results.push({ invoice: invoiceNumber, status: "error", message: `Supplier "${supplierName}" tidak ditemukan` });
-          continue;
+          results.push({ invoice: invoiceNumber, status: "error", message: `Supplier "${supplierName}" tidak ditemukan` }); continue;
         }
 
         // Parse items
-        const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number }[] = [];
+        const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number; rollLengths: number[] }[] = [];
         const itemErrors: string[] = [];
-
         for (const row of rows) {
           const prodName = String(row["Produk / Barang"] || "").trim();
           if (!prodName) continue;
           const prod = findProduct(prodName);
           if (!prod) { itemErrors.push(`Produk "${prodName}" tidak ditemukan`); continue; }
-
-          const rolls = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
+          const rollsCount = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
           const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
           const pricePerMeter = parseFloat(String(row["Harga / Meter"]).replace(",", ".")) || 0;
           const subtotal = parseFloat(String(row["Subtotal"]).replace(",", ".")) || Math.round(meters * pricePerMeter);
-          items.push({ productId: prod.id, rolls, meters, pricePerMeter, subtotal });
+          const rollLengths: number[] = [];
+          for (const key of Object.keys(row)) {
+            if (key.startsWith("Roll ") && key !== "Roll") {
+              const val = parseFloat(String(row[key]).replace(",", "."));
+              if (!isNaN(val) && val > 0) {
+                const rollIndex = parseInt(key.replace("Roll ", "").trim(), 10);
+                if (!isNaN(rollIndex) && rollIndex > 0) rollLengths[rollIndex - 1] = val;
+              }
+            }
+          }
+          items.push({ productId: prod.id, rolls: rollsCount, meters, pricePerMeter, subtotal, rollLengths: rollLengths.filter(r => r !== undefined) });
         }
-
-        if (itemErrors.length > 0) {
-          results.push({ invoice: invoiceNumber, status: "error", message: itemErrors.join("; ") }); continue;
-        }
-        if (items.length === 0) {
-          results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" }); continue;
-        }
+        if (itemErrors.length > 0) { results.push({ invoice: invoiceNumber, status: "error", message: itemErrors.join("; ") }); continue; }
+        if (items.length === 0) { results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" }); continue; }
 
         const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
         const isKredit = paymentType === "kredit" || paymentType === "tempo";
         const paidAmount = isKredit ? 0 : totalAmount;
         const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
 
-        const [purchase] = await db.insert(purchasesTable).values({
-          invoiceNumber,
-          supplierId: supplier.id,
-          paymentType,
-          totalAmount: totalAmount.toString(),
-          paidAmount: paidAmount.toString(),
-          status,
-          notes: notes || null,
-          ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
-        } as any).returning();
+        let purchaseId: number;
 
+        if (existingList.length > 0) {
+          // ── UPSERT: existing invoice → delete old data, refresh with new ──
+          purchaseId = existingList[0].id;
+
+          // 1. Get old items to know which products to clean rolls for
+          const oldItems = await db.select({ productId: purchaseItemsTable.productId })
+            .from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
+          const oldProductIds = [...new Set(oldItems.map(i => i.productId))];
+
+          // 2. Delete all available rolls for affected products (full data refresh)
+          for (const productId of oldProductIds) {
+            await db.delete(productRollsTable).where(
+              and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available"))
+            );
+          }
+
+          // 3. Delete old purchase items and payables
+          await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
+          await db.delete(payablesTable).where(eq(payablesTable.purchaseId, purchaseId));
+
+          // 4. Update purchase header (paidAmount reset to reflect new import)
+          await db.update(purchasesTable).set({
+            supplierId: supplier.id, paymentType,
+            totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
+            status, notes: notes || null, updatedAt: new Date(),
+            ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
+          } as any).where(eq(purchasesTable.id, purchaseId));
+
+        } else {
+          // ── INSERT: new invoice ──
+          const [newPurchase] = await db.insert(purchasesTable).values({
+            invoiceNumber, supplierId: supplier.id, paymentType,
+            totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
+            status, notes: notes || null,
+            ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
+          } as any).returning();
+          purchaseId = newPurchase.id;
+        }
+
+        // ── Insert items + rolls (same for both insert and upsert) ──
         for (const item of items) {
           const avgLength = item.rolls > 0 ? item.meters / item.rolls : 0;
           const [prod] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId));
           const baseBarcode = prod?.barcode || `PRD-${item.productId}`;
           let insertedRollId: number | null = null;
+          
+          const rollLengthsToUse = item.rollLengths || [];
+          const ts = Date.now();
 
           for (let i = 0; i < item.rolls; i++) {
-            const barcodeToSave = `${baseBarcode}-R${Date.now()}-${i}`;
+            const barcodeToSave = `${baseBarcode}-R${ts}-${i}-${Math.floor(Math.random() * 9999)}`;
+            const lengthToUse = rollLengthsToUse[i] !== undefined ? rollLengthsToUse[i] : avgLength;
             const [roll] = await db.insert(productRollsTable).values({
               productId: item.productId, barcode: barcodeToSave,
-              originalLength: avgLength.toString(), currentLength: avgLength.toString(), status: "available",
+              originalLength: lengthToUse.toString(), currentLength: lengthToUse.toString(), status: "available",
             }).returning();
             if (i === 0) insertedRollId = roll.id;
           }
 
           await db.insert(purchaseItemsTable).values({
-            purchaseId: purchase.id, productId: item.productId,
+            purchaseId: purchaseId, productId: item.productId,
             rollId: insertedRollId, rolls: item.rolls.toString(),
             meters: item.meters.toString(), pricePerMeter: item.pricePerMeter.toString(),
             subtotal: item.subtotal.toString(),
+            rollLengthsJson: item.rollLengths && item.rollLengths.length > 0 ? JSON.stringify(item.rollLengths) : null,
           } as any);
 
           // Sync stock
@@ -312,14 +371,14 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
 
         if (status !== "lunas") {
           await db.insert(payablesTable).values({
-            purchaseId: purchase.id, supplierId: supplier.id,
+            purchaseId: purchaseId, supplierId: supplier.id,
             totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
             status: status === "partial" ? "partial" : "unpaid",
           });
         }
 
         successCount++;
-        results.push({ invoice: invoiceNumber, status: "ok", message: `${items.length} item berhasil diimport` });
+        results.push({ invoice: invoiceNumber, status: "ok", message: `${items.length} item berhasil diproses` });
       } catch (err: any) {
         results.push({ invoice: invoiceNumber, status: "error", message: err.message || "Error tidak diketahui" });
       }
@@ -612,14 +671,17 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
       productId: purchaseItemsTable.productId,
       productName: productsTable.name,
       categoryId: productsTable.categoryId,
+      categoryName: categoriesTable.name,
       rollId: purchaseItemsTable.rollId,
       rolls: purchaseItemsTable.rolls,
       meters: purchaseItemsTable.meters,
       pricePerMeter: purchaseItemsTable.pricePerMeter,
       subtotal: purchaseItemsTable.subtotal,
+      rollLengthsJson: purchaseItemsTable.rollLengthsJson,
     })
     .from(purchaseItemsTable)
     .leftJoin(productsTable, eq(purchaseItemsTable.productId, productsTable.id))
+    .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(purchaseItemsTable.purchaseId, id));
 
   const itemsWithRolls = await Promise.all(items.map(async (i) => {

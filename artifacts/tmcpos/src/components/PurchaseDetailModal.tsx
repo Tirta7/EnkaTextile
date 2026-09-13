@@ -114,6 +114,11 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                         <div className="grid grid-cols-12 gap-2 items-center">
                           <div className="col-span-12 md:col-span-5 flex flex-col mb-2 md:mb-0">
                             <span className="font-bold text-slate-900">{item.productName}</span>
+                            {item.categoryName && (
+                              <span className="inline-flex items-center mt-0.5 w-fit px-1.5 py-0.5 rounded text-[9px] font-semibold bg-violet-50 text-violet-600 border border-violet-100">
+                                {item.categoryName}
+                              </span>
+                            )}
                             {item.barcode && <span className="text-[10px] text-slate-400 font-mono mt-0.5">Kode: {item.barcode}</span>}
                           </div>
                           

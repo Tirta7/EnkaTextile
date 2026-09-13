@@ -5,7 +5,111 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Alat EnkaTextile')
     .addItem('Cari & Pindah Roll', 'showDialog')
+    .addItem('Cek Otomatis (Pembelian vs Barang)', 'autoCheckMutasi')
     .addToUi();
+}
+
+/**
+ * Fungsi untuk mencocokkan rentangan roll di sheet Pembelian dengan sheet Barang
+ * Jika cocok, berikan warna kuning pada roll di sheet Barang.
+ */
+function autoCheckMutasi() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPembelian = ss.getSheetByName("Pembelian");
+  var sheetBarang = ss.getSheetByName("Barang");
+  
+  if (!sheetPembelian || !sheetBarang) {
+    SpreadsheetApp.getUi().alert("Sheet 'Pembelian' atau 'Barang' tidak ditemukan!");
+    return;
+  }
+  
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('Konfirmasi', 'Proses ini akan membaca semua baris di Pembelian dan mencari deret roll yang sama di Barang, lalu mewarnainya kuning. Lanjutkan?', ui.ButtonSet.YES_NO);
+  if (response !== ui.Button.YES) return;
+  
+  var dataPembelian = sheetPembelian.getDataRange().getValues();
+  var dataBarang = sheetBarang.getDataRange().getValues();
+  
+  // Ambil warna background saat ini agar tidak mengecek cell yang sudah dikuningkan sebelumnya
+  var bgBarang = sheetBarang.getDataRange().getBackgrounds();
+  
+  var matchCount = 0;
+  
+  // Looping data Pembelian mulai baris 2 (indeks 1)
+  for (var i = 1; i < dataPembelian.length; i++) {
+    var pRow = dataPembelian[i];
+    var pNama = String(pRow[5]).trim().toLowerCase(); // Kolom F (index 5)
+    if (!pNama) continue;
+    
+    // Kumpulkan roll dari Pembelian (mulai dari kolom J / index 9)
+    var pRolls = [];
+    for (var j = 9; j < pRow.length; j++) {
+      var cv = pRow[j];
+      var nv = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : cv;
+      if (cv !== "" && cv !== null && !isNaN(nv)) {
+        pRolls.push(nv);
+      }
+    }
+    
+    if (pRolls.length === 0) continue; // Lewati jika tidak ada roll
+    
+    var foundMatchForThisPembelian = false;
+    
+    // Cari di data Barang
+    for (var b = 1; b < dataBarang.length; b++) {
+      if (foundMatchForThisPembelian) break;
+      
+      var bRow = dataBarang[b];
+      var bNama = String(bRow[2]).trim().toLowerCase(); // Kolom C (index 2)
+      
+      if (bNama !== pNama) continue;
+      
+      // Kumpulkan roll dari Barang (mulai kolom J / index 9)
+      var bNumericCols = [];
+      for (var c = 9; c < bRow.length; c++) {
+        var bcv = bRow[c];
+        var bnv = (typeof bcv === 'string') ? parseFloat(bcv.replace(',', '.')) : bcv;
+        if (bcv !== "" && bcv !== null && !isNaN(bnv)) {
+          bNumericCols.push({ value: bnv, col: c });
+        }
+      }
+      
+      // Cari apakah pRolls ada di dalam bNumericCols (Sliding window)
+      for (var s = 0; s <= bNumericCols.length - pRolls.length; s++) {
+        var isMatch = true;
+        var hasYellow = false;
+        
+        for (var k = 0; k < pRolls.length; k++) {
+          var bColIndex = bNumericCols[s + k].col;
+          // Cek nilai (toleransi 0.01)
+          if (Math.abs(bNumericCols[s + k].value - pRolls[k]) > 0.01) {
+            isMatch = false;
+            break;
+          }
+          // Cek apakah cell ini sudah dikuningkan sebelumnya
+          if (bgBarang[b][bColIndex] === "#ffff00") {
+            hasYellow = true;
+            isMatch = false;
+            break;
+          }
+        }
+        
+        if (isMatch) {
+          // Ketemu! Warnai kuning pada cell tersebut
+          for (var k = 0; k < pRolls.length; k++) {
+            var bColIndex = bNumericCols[s + k].col;
+            sheetBarang.getRange(b + 1, bColIndex + 1).setBackground("#ffff00");
+            bgBarang[b][bColIndex] = "#ffff00"; // Update state memory
+          }
+          matchCount++;
+          foundMatchForThisPembelian = true;
+          break; // Lanjut ke baris Pembelian berikutnya
+        }
+      }
+    }
+  }
+  
+  ui.alert("Selesai", "Berhasil menemukan dan menandai kuning " + matchCount + " deret roll di sheet Barang.", ui.ButtonSet.OK);
 }
 
 function showDialog() {

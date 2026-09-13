@@ -388,6 +388,16 @@ router.post("/products/import", async (req, res): Promise<void> => {
              }));
              await db.insert(productRollsTable).values(rollsToInsert as any);
           }
+          
+          // Sinkronisasi ulang stok di productsTable agar sesuai dengan jumlah roll sebenarnya yang ada di database
+          // (karena mungkin ada roll dari nota pembelian yang gagal dihapus)
+          const actualRolls = await db.select().from(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
+          const actualRollCount = actualRolls.length;
+          const actualMeterCount = actualRolls.reduce((a, b) => a + (parseFloat(b.currentLength) || 0), 0);
+          
+          await db.update(productsTable)
+            .set({ rollStock: String(actualRollCount), meterStock: String(actualMeterCount) })
+            .where(eq(productsTable.id, prodId));
         }
 
         successCount++;

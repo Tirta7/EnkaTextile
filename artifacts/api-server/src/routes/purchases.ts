@@ -446,6 +446,17 @@ router.post("/purchases", async (req, res): Promise<void> => {
 
   const invoiceNumber = parsed.data.invoiceNumber || `PO-${Date.now()}`;
 
+  // ── Cek duplikat nomor nota ──
+  if (parsed.data.invoiceNumber) {
+    const [dup] = await db.select({ id: purchasesTable.id })
+      .from(purchasesTable)
+      .where(eq(purchasesTable.invoiceNumber, invoiceNumber));
+    if (dup) {
+      res.status(409).json({ error: `Nomor nota "${invoiceNumber}" sudah ada. Gunakan nomor nota yang berbeda.` });
+      return;
+    }
+  }
+
   const [purchase] = await db.insert(purchasesTable).values({
     invoiceNumber,
     supplierId,

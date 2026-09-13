@@ -144,7 +144,7 @@ export type SaleItem = typeof saleItemsTable.$inferSelect;
 // Purchases (Pembelian)
 export const purchasesTable = pgTable("purchases", {
   id: serial("id").primaryKey(),
-  invoiceNumber: text("invoice_number").notNull(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
   supplierId: integer("supplier_id").notNull().references(() => suppliersTable.id),
   paymentType: text("payment_type").notNull().default("tunai"),
   totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).notNull().default("0"),

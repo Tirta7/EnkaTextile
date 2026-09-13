@@ -340,16 +340,16 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
             .from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
           const oldProductIds = [...new Set(oldItems.map(i => i.productId))];
 
-          // 2. Delete all available rolls for affected products (full data refresh)
+          // 2. Delete old purchase items and payables (child records) FIRST
+          await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
+          await db.delete(payablesTable).where(eq(payablesTable.purchaseId, purchaseId));
+
+          // 3. Delete all available rolls for affected products (full data refresh) NOW THAT FK IS REMOVED
           for (const productId of oldProductIds) {
             await db.delete(productRollsTable).where(
               and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available"))
             );
           }
-
-          // 3. Delete old purchase items and payables
-          await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
-          await db.delete(payablesTable).where(eq(payablesTable.purchaseId, purchaseId));
 
           // 4. Update purchase header (paidAmount reset to reflect new import)
           await db.update(purchasesTable).set({

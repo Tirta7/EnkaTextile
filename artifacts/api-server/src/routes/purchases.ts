@@ -272,10 +272,10 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
     let successCount = 0;
 
     for (const [invKey, rows] of invoiceMap) {
+      const firstRow = rows[0];
+      const invoiceNumber = firstRow["_ParsedInvoice"] || String(firstRow["No Invoice"] || "").trim();
       try {
         // ── Parse common data from Excel rows ──
-        const firstRow = rows[0];
-        const invoiceNumber = firstRow["_ParsedInvoice"] || String(firstRow["No Invoice"] || "").trim();
         const supplierName = String(firstRow["Supplier"] || "").trim();
         const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
         const notes = String(firstRow["Catatan"] || "").trim();

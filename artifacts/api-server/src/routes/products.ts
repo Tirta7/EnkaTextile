@@ -255,8 +255,30 @@ router.post("/products/import", async (req, res): Promise<void> => {
 
     const buffer = Buffer.concat(chunks);
     const wb = XLSX.read(buffer, { type: "buffer" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    
+    // Cari sheet yang tepat (prioritaskan yang namanya mengandung "Barang")
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    for (const name of wb.SheetNames) {
+      if (name.toLowerCase().includes("barang")) {
+        ws = wb.Sheets[name];
+        break;
+      }
+    }
+    
+    let rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    // Jika tidak ada kolom "Nama Barang", coba cari di sheet lain
+    if (rawRows.length > 0 && !Object.keys(rawRows[0]).some(k => k.toLowerCase().includes("nama barang"))) {
+      for (const name of wb.SheetNames) {
+        const tempWs = wb.Sheets[name];
+        const tempRows: any[] = XLSX.utils.sheet_to_json(tempWs, { defval: "" });
+        if (tempRows.length > 0 && Object.keys(tempRows[0]).some(k => k.toLowerCase().includes("nama barang"))) {
+          ws = tempWs;
+          rawRows = tempRows;
+          break;
+        }
+      }
+    }
 
     if (rawRows.length === 0) {
       res.json({ success: 0, failed: 0, message: "File kosong" }); return;

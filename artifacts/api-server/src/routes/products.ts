@@ -314,7 +314,9 @@ router.post("/products/import", async (req, res): Promise<void> => {
         const meterStock = cleanRollLengths.reduce((a, b) => a + b, 0);
         const rollStock = cleanRollLengths.length;
 
-        // Base Data — stok selalu di-set sesuai isi file (0 jika tidak ada kolom Roll)
+        const hasRollColumns = Object.keys(row).some(key => key.startsWith("Roll ") && key !== "Roll");
+
+        // Base Data
         const prodData: any = {
           name, barcode, categoryId,
           primaryUnit: String(row["Unit 1"] || "METER").trim(),
@@ -325,32 +327,45 @@ router.post("/products/import", async (req, res): Promise<void> => {
           pricePerRoll: String(parseFloat(String(row["Harga Jual (R)"] || "0").replace(",", ".")) || 0),
           minStock: String(parseFloat(String(row["Min Stok"] || "0").replace(",", ".")) || 0),
           description: String(row["Deskripsi"] || "").trim(),
-          rollStock: String(rollStock),
-          meterStock: String(meterStock),
         };
+
+        if (hasRollColumns) {
+          prodData.rollStock = String(rollStock);
+          prodData.meterStock = String(meterStock);
+        }
 
         let prodId;
         if (existingProd) {
           await db.update(productsTable).set({ ...prodData, updatedAt: new Date() }).where(eq(productsTable.id, existingProd.id));
           prodId = existingProd.id;
         } else {
+          if (!hasRollColumns) {
+            prodData.rollStock = "0";
+            prodData.meterStock = "0";
+          }
           const [newProd] = await db.insert(productsTable).values(prodData as any).returning();
           prodId = newProd.id;
         }
 
-        // Hapus semua roll yang ada, lalu insert ulang sesuai data dari Excel
-        await db.delete(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
+        // Hapus & re-insert roll hanya jika Excel memang berisi data Roll
+        if (hasRollColumns) {
+          try {
+            await db.delete(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
+          } catch (e) {
+            // Ignore FK errors if we can't delete rolls tied to purchases
+          }
 
-        if (rollStock > 0) {
-           const ts = Date.now();
-           const rollsToInsert = cleanRollLengths.map((len, i) => ({
-             productId: prodId,
-             barcode: `${barcode}-R${ts}-${i + 1}-${Math.floor(Math.random() * 9999)}`,
-             originalLength: String(len),
-             currentLength: String(len),
-             status: "available"
-           }));
-           await db.insert(productRollsTable).values(rollsToInsert as any);
+          if (rollStock > 0) {
+             const ts = Date.now();
+             const rollsToInsert = cleanRollLengths.map((len, i) => ({
+               productId: prodId,
+               barcode: `${barcode}-R${ts}-${i + 1}-${Math.floor(Math.random() * 9999)}`,
+               originalLength: String(len),
+               currentLength: String(len),
+               status: "available"
+             }));
+             await db.insert(productRollsTable).values(rollsToInsert as any);
+          }
         }
 
         successCount++;

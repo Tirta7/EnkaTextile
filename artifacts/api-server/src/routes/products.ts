@@ -35,10 +35,60 @@ async function syncPurchaseTotals(purchaseId: number, keepPaid: boolean = true) 
     } else if (newStatus !== "lunas") {
       await db.insert(payablesTable).values({ purchaseId, supplierId: purchase.supplierId, totalAmount: String(newTotal), paidAmount: String(existingPaid), status: newStatus === "partial" ? "partial" : "unpaid" } as any);
     }
-  } catch (e) { console.error("syncPurchaseTotals error:", e); }
+// Helper: After a specific roll is changed/deleted, update ONLY the purchase item that originally created it.
+async function syncPurchaseItemForSpecificRoll(productId: number, modifiedRollId: number) {
+  try {
+    const purchaseItems = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.productId, productId));
+    let targetItem = null;
+    let originalRollIndex = -1;
+    let originalRollCount = 0;
+    
+    for (const item of purchaseItems) {
+      if (!item.rollId) continue;
+      const startRollId = item.rollId as number;
+      
+      let count = Number(item.rolls) || 0;
+      if (item.rollLengthsJson) {
+        try {
+          const parsed = JSON.parse(item.rollLengthsJson);
+          if (Array.isArray(parsed) && parsed.length > count) count = parsed.length;
+        } catch(e){}
+      }
+      
+      if (modifiedRollId >= startRollId && modifiedRollId < startRollId + count) {
+        targetItem = item;
+        originalRollIndex = modifiedRollId - startRollId;
+        originalRollCount = count;
+        break;
+      }
+    }
+    
+    if (!targetItem) return; 
+    
+    const rollIds = Array.from({ length: originalRollCount }, (_, i) => (targetItem.rollId as number) + i);
+    const existingRolls = await db.select().from(productRollsTable).where(inArray(productRollsTable.id, rollIds));
+    
+    const rollLengths: number[] = [];
+    for (const rollId of rollIds) {
+      const roll = existingRolls.find(r => r.id === rollId);
+      if (roll) rollLengths.push(parseFloat(roll.currentLength));
+    }
+    
+    const newMeters = rollLengths.reduce((a,b) => a + b, 0);
+    const newRolls = rollLengths.length;
+    const pricePerMeter = parseFloat(targetItem.pricePerMeter || "0");
+    const newSubtotal = Math.round(newMeters * pricePerMeter);
+    
+    await db.update(purchaseItemsTable).set({
+      rollLengthsJson: JSON.stringify(rollLengths),
+      meters: String(newMeters),
+      rolls: String(newRolls),
+      subtotal: String(newSubtotal)
+    } as any).where(eq(purchaseItemsTable.id, targetItem.id));
+    
+    await syncPurchaseTotals(targetItem.purchaseId, true);
+  } catch (e) { console.error("syncPurchaseItemForSpecificRoll error:", e); }
 }
-
-// syncPurchaseItemFromCurrentRolls removed to prevent rewriting historical purchases with total available rolls
 
 router.get("/products", async (req, res): Promise<void> => {
   const { categoryId, search, lowStock } = req.query;
@@ -559,6 +609,7 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   if (!updatedRoll) { res.status(404).json({ error: "Roll not found" }); return; }
 
   await syncProductStockFromRolls(id);
+  await syncPurchaseItemForSpecificRoll(id, rollId);
 
   res.json({
     ...updatedRoll,
@@ -573,13 +624,63 @@ router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => 
   const rollId = parseInt(req.params.rollId);
 
   try {
+    // Find the purchase item this roll belongs to before nullifying its rollId
+    const purchaseItems = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.productId, id));
+    let targetPurchaseItemId = null;
+    let originalRollCountForTarget = 0;
+    for (const item of purchaseItems) {
+      if (!item.rollId) continue;
+      const startRollId = item.rollId as number;
+      let count = Number(item.rolls) || 0;
+      if (item.rollLengthsJson) {
+        try {
+          const parsed = JSON.parse(item.rollLengthsJson);
+          if (Array.isArray(parsed) && parsed.length > count) count = parsed.length;
+        } catch(e){}
+      }
+      if (rollId >= startRollId && rollId < startRollId + count) {
+        targetPurchaseItemId = item.id;
+        originalRollCountForTarget = count;
+        break;
+      }
+    }
+
     // Nullify rollId references in sale_items and purchase_items to avoid FK constraint
     await db.update(saleItemsTable).set({ rollId: null }).where(eq(saleItemsTable.rollId, rollId));
+    // Soft nullify in purchaseItems by doing nothing, wait, if we nullify it, we can't find the range again.
+    // Actually, purchaseItemsTable.rollId CAN be nullified because we already stored targetPurchaseItemId.
     await db.update(purchaseItemsTable).set({ rollId: null }).where(eq(purchaseItemsTable.rollId, rollId));
 
     await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
 
     await syncProductStockFromRolls(id);
+    
+    if (targetPurchaseItemId) {
+      // Re-fetch the item because its rollId might have been nullified
+      const [tItem] = await db.select().from(purchaseItemsTable).where(eq(purchaseItemsTable.id, targetPurchaseItemId));
+      if (tItem) {
+        // If its rollId was just nullified, we use the deleted rollId as the start
+        const startRollId = (tItem.rollId as number) || rollId;
+        const rollIds = Array.from({ length: originalRollCountForTarget }, (_, i) => startRollId + i);
+        const existingRolls = await db.select().from(productRollsTable).where(inArray(productRollsTable.id, rollIds));
+        const rollLengths: number[] = [];
+        for (const rid of rollIds) {
+          const r = existingRolls.find(x => x.id === rid);
+          if (r) rollLengths.push(parseFloat(r.currentLength));
+        }
+        const newMeters = rollLengths.reduce((a,b) => a + b, 0);
+        const newRolls = rollLengths.length;
+        const pricePerMeter = parseFloat(tItem.pricePerMeter || "0");
+        const newSubtotal = Math.round(newMeters * pricePerMeter);
+        await db.update(purchaseItemsTable).set({
+          rollLengthsJson: JSON.stringify(rollLengths),
+          meters: String(newMeters),
+          rolls: String(newRolls),
+          subtotal: String(newSubtotal)
+        } as any).where(eq(purchaseItemsTable.id, tItem.id));
+        await syncPurchaseTotals(tItem.purchaseId, true);
+      }
+    }
 
     res.status(204).send();
   } catch (err: any) {

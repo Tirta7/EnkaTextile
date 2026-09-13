@@ -38,26 +38,7 @@ async function syncPurchaseTotals(purchaseId: number, keepPaid: boolean = true) 
   } catch (e) { console.error("syncPurchaseTotals error:", e); }
 }
 
-// Helper: After any roll change, sync the most recent purchase item for this product
-async function syncPurchaseItemFromCurrentRolls(productId: number) {
-  try {
-    const currentRolls = await db.select().from(productRollsTable)
-      .where(and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available")))
-      .orderBy(productRollsTable.createdAt);
-    const purchaseItems = await db.select().from(purchaseItemsTable)
-      .where(eq(purchaseItemsTable.productId, productId))
-      .orderBy(desc(purchaseItemsTable.id));
-    if (purchaseItems.length === 0) return;
-    const latestItem = purchaseItems[0];
-    const rollLengths = currentRolls.map(r => parseFloat(r.currentLength));
-    const newMeters = rollLengths.reduce((a, b) => a + b, 0);
-    const newRolls = currentRolls.length;
-    const pricePerMeter = parseFloat(latestItem.pricePerMeter || "0");
-    const newSubtotal = Math.round(newMeters * pricePerMeter);
-    await db.update(purchaseItemsTable).set({ rollLengthsJson: JSON.stringify(rollLengths), meters: String(newMeters), rolls: String(newRolls), subtotal: String(newSubtotal) } as any).where(eq(purchaseItemsTable.id, latestItem.id));
-    await syncPurchaseTotals(latestItem.purchaseId, true);
-  } catch (e) { console.error("syncPurchaseItemFromCurrentRolls error:", e); }
-}
+// syncPurchaseItemFromCurrentRolls removed to prevent rewriting historical purchases with total available rolls
 
 router.get("/products", async (req, res): Promise<void> => {
   const { categoryId, search, lowStock } = req.query;
@@ -578,7 +559,6 @@ router.patch("/products/:id/rolls/:rollId", async (req, res): Promise<void> => {
   if (!updatedRoll) { res.status(404).json({ error: "Roll not found" }); return; }
 
   await syncProductStockFromRolls(id);
-  await syncPurchaseItemFromCurrentRolls(id);
 
   res.json({
     ...updatedRoll,
@@ -600,7 +580,6 @@ router.delete("/products/:id/rolls/:rollId", async (req, res): Promise<void> => 
     await db.delete(productRollsTable).where(and(eq(productRollsTable.id, rollId), eq(productRollsTable.productId, id)));
 
     await syncProductStockFromRolls(id);
-    await syncPurchaseItemFromCurrentRolls(id);
 
     res.status(204).send();
   } catch (err: any) {

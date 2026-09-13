@@ -332,33 +332,9 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         let purchaseId: number;
 
         if (existingList.length > 0) {
-          // ── UPSERT: existing invoice → delete old data, refresh with new ──
-          purchaseId = existingList[0].id;
-
-          // 1. Get old items to know which products to clean rolls for
-          const oldItems = await db.select({ productId: purchaseItemsTable.productId })
-            .from(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
-          const oldProductIds = [...new Set(oldItems.map(i => i.productId))];
-
-          // 2. Delete old purchase items and payables (child records) FIRST
-          await db.delete(purchaseItemsTable).where(eq(purchaseItemsTable.purchaseId, purchaseId));
-          await db.delete(payablesTable).where(eq(payablesTable.purchaseId, purchaseId));
-
-          // 3. Delete all available rolls for affected products (full data refresh) NOW THAT FK IS REMOVED
-          for (const productId of oldProductIds) {
-            await db.delete(productRollsTable).where(
-              and(eq(productRollsTable.productId, productId), eq(productRollsTable.status, "available"))
-            );
-          }
-
-          // 4. Update purchase header (paidAmount reset to reflect new import)
-          await db.update(purchasesTable).set({
-            supplierId: supplier.id, paymentType,
-            totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
-            status, notes: notes || null, updatedAt: new Date(),
-            ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
-          } as any).where(eq(purchasesTable.id, purchaseId));
-
+          // SKIP existing invoice to prevent stock destruction and FK errors
+          results.push({ invoice: invoiceNumber, status: "skip", message: "Invoice sudah ada, dilewati agar riwayat stok tidak rusak" });
+          continue;
         } else {
           // ── INSERT: new invoice ──
           const [newPurchase] = await db.insert(purchasesTable).values({

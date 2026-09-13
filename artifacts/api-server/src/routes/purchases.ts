@@ -481,8 +481,8 @@ router.post("/purchases", async (req, res): Promise<void> => {
       const baseBarcode = prod?.barcode || `PRD-${item.productId}`;
       
       for (let i = 0; i < rollCount; i++) {
-        // Only use the user-provided barcode for the first roll if specified, otherwise generate
-        const barcodeToSave = (item.barcode && i === 0) ? item.barcode : `${baseBarcode}-R${Date.now()}-${i}`;
+        // Auto-generate barcode unik untuk setiap roll (hindari constraint violation)
+        const barcodeToSave = `${baseBarcode}-R${Date.now()}-${i}-${Math.floor(Math.random() * 9999)}`;
         
         // @ts-ignore - rollLengths exists on our updated schema
         const lengthToUse = (item.rollLengths && item.rollLengths[i]) ? item.rollLengths[i] : avgLength;

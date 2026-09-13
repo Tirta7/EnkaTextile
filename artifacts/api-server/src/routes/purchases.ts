@@ -48,6 +48,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
         .select({
           purchaseId: purchaseItemsTable.purchaseId,
           productName: productsTable.name,
+          categoryName: categoriesTable.name,
           barcode: productsTable.barcode,
           rolls: purchaseItemsTable.rolls,
           meters: purchaseItemsTable.meters,
@@ -57,6 +58,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
         })
         .from(purchaseItemsTable)
         .leftJoin(productsTable, eq(purchaseItemsTable.productId, productsTable.id))
+        .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
         .where(inArray(purchaseItemsTable.purchaseId, purchaseIds));
     }
 
@@ -90,8 +92,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
       if (items.length === 0) {
         const row: any = {
           "No": rowNo++, "Tanggal": tanggal,
-          "No Invoice": p.invoiceNumber, "Supplier": p.supplierName || "",
-          "Barcode": "", "Produk / Barang": "",
+          "Barcode": "", "Kategori": "", "Produk / Barang": "",
           "Roll": 0, "Meter/Yard": 0
         };
         for (let i = 1; i <= maxRolls; i++) row[`Roll ${i}`] = "";
@@ -112,6 +113,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
             "No Invoice": idx === 0 ? p.invoiceNumber : "",
             "Supplier": idx === 0 ? (p.supplierName || "") : "",
             "Barcode": item.barcode || "",
+            "Kategori": item.categoryName || "",
             "Produk / Barang": item.productName || "",
             "Roll": parseFloat(item.rolls) || 0,
             "Meter/Yard": parseFloat(item.meters) || 0,
@@ -141,7 +143,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
 
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
-      { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 22 }, { wch: 14 }, { wch: 24 },
+      { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 24 },
       { wch: 8 }, { wch: 12 }, { wch: 40 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
       { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 24 },
     ];

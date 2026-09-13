@@ -698,7 +698,15 @@ router.get("/purchases/:id", async (req, res): Promise<void> => {
   const itemsWithRolls = await Promise.all(items.map(async (i) => {
     const rollCount = Number(i.rolls) || 0;
     let rollLengths: number[] = [];
-    if (rollCount > 0 && i.rollId) {
+    
+    // Prioritaskan dari snapshot JSON (karena ini tetap ada meski roll dihapus/cancelled)
+    if (i.rollLengthsJson) {
+      try {
+        rollLengths = JSON.parse(i.rollLengthsJson);
+      } catch (e) {}
+    } 
+    // Fallback query ke productRollsTable untuk data lama yang belum punya JSON
+    else if (rollCount > 0 && i.rollId) {
       const rollIds = Array.from({ length: rollCount }, (_, idx) => (i.rollId as number) + idx);
       const rolls = await db.select({ length: productRollsTable.originalLength }).from(productRollsTable).where(inArray(productRollsTable.id, rollIds));
       rollLengths = rolls.map(r => parseFloat(r.length));

@@ -291,10 +291,8 @@ router.post("/products/import", async (req, res): Promise<void> => {
         if (row["Barcode"]) {
            const bc = String(row["Barcode"]).trim();
            existingProd = (await db.select().from(productsTable).where(eq(productsTable.barcode, bc)))[0];
-        }
-        
-        // Fallback: cari berdasarkan nama jika barcode tidak ketemu atau tidak ada
-        if (!existingProd) {
+        } else {
+           // Hanya fallback ke Nama jika Barcode kosong di file Excel
            existingProd = (await db.select().from(productsTable).where(eq(productsTable.name, name)))[0];
         }
 

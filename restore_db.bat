@@ -8,7 +8,8 @@ REM ==========================================
 
 REM ── Kredensial Database ──────────────────
 set DB_USER=postgres
-set DB_NAME=vocpos
+set DB_NAME_DOCKER=vocpos
+set DB_NAME_LOCAL=avocpos
 
 REM ── Konfigurasi Docker (PC Client) ───────
 set CONTAINER_NAME=vocpos-db
@@ -16,7 +17,7 @@ set PGPASSWORD_DOCKER=vocpos2026
 
 REM ── Konfigurasi Lokal (PC Dev/Server) ────
 set DB_HOST=localhost
-set DB_PORT=5432
+set DB_PORT=4538
 set PGPASSWORD_LOCAL=vocpos2026
 set PG_PSQL_EXE=C:\Program Files\PostgreSQL\18\bin\psql.exe
 
@@ -118,11 +119,17 @@ if not exist "%BACKUP_PATH%" (
     exit /b
 )
 
+if "!USE_DOCKER!"=="yes" (
+    set DB_TARGET_NAME=%DB_NAME_DOCKER%
+) else (
+    set DB_TARGET_NAME=%DB_NAME_LOCAL%
+)
+
 echo.
 echo =======================================================
 echo                   !! PERINGATAN !!
 echo =======================================================
-echo  Database '%DB_NAME%' akan di-REPLACE dengan isi file:
+echo  Database '!DB_TARGET_NAME!' akan di-REPLACE dengan isi file:
 echo  !TARGET_FILE!
 echo.
 echo  Semua data yang ada saat ini akan TERTIMPA!
@@ -147,9 +154,9 @@ if "!USE_DOCKER!"=="yes" (
 
     REM === LANGKAH 1: Drop & Recreate database di dalam container ===
     echo [1/3] Menghapus database lama dan membuat ulang...
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME%' AND pid <> pg_backend_pid();" >nul 2>&1
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME%;" >nul 2>&1
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" >nul 2>&1
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME_DOCKER%' AND pid <> pg_backend_pid();" >nul 2>&1
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME_DOCKER%;" >nul 2>&1
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME_DOCKER%;" >nul 2>&1
     if %ERRORLEVEL% neq 0 (
         echo [GAGAL] Tidak bisa reset database. Pastikan container berjalan.
         goto :error_end
@@ -167,7 +174,7 @@ if "!USE_DOCKER!"=="yes" (
 
     REM === LANGKAH 3: Jalankan restore dari dalam container ===
     echo [3/3] Memuat data backup ke database...
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d %DB_NAME% -f /tmp/restore_target.sql
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d %DB_NAME_DOCKER% -f /tmp/restore_target.sql
     set RESTORE_ERR=%ERRORLEVEL%
 
     REM Bersihkan file temp di container
@@ -191,7 +198,7 @@ if "!USE_DOCKER!"=="yes" (
         echo.
         echo Coba cari psql di PATH sistem...
         where psql >nul 2>&1
-        if %ERRORLEVEL% equ 0 (
+        if !ERRORLEVEL! equ 0 (
             echo Ditemukan psql di PATH. Menggunakan versi tersebut...
             set PG_PSQL_EXE=psql
         ) else (
@@ -204,18 +211,18 @@ if "!USE_DOCKER!"=="yes" (
 
     REM === LANGKAH 1: Drop & Recreate database ===
     echo [1/2] Menghapus database lama dan membuat ulang...
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME%' AND pid <> pg_backend_pid();" >nul 2>&1
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME%;" >nul 2>&1
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" >nul 2>&1
-    if %ERRORLEVEL% neq 0 (
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME_LOCAL%' AND pid <> pg_backend_pid();" >nul 2>&1
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME_LOCAL%;" >nul 2>&1
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME_LOCAL%;" >nul 2>&1
+    if !ERRORLEVEL! neq 0 (
         echo [GAGAL] Tidak bisa reset database. Pastikan PostgreSQL berjalan.
         goto :error_end
     )
     echo  -> Database berhasil direset.
 
     echo [2/2] Memuat data backup ke database...
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BACKUP_PATH%"
-    if %ERRORLEVEL% neq 0 (
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME_LOCAL% -f "%BACKUP_PATH%"
+    if !ERRORLEVEL! neq 0 (
         goto :error_end
     )
 )

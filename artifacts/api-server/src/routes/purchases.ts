@@ -195,8 +195,30 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
 
     const buffer = Buffer.concat(chunks);
     const wb = XLSX.read(buffer, { type: "buffer" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    
+    // Cari sheet yang tepat (prioritaskan yang namanya mengandung "Pembelian")
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    for (const name of wb.SheetNames) {
+      if (name.toLowerCase().includes("pembelian")) {
+        ws = wb.Sheets[name];
+        break;
+      }
+    }
+    
+    let rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    // Jika tidak ada kolom "No Invoice" di sheet ini, coba cari di sheet lain
+    if (rawRows.length > 0 && !Object.keys(rawRows[0]).some(k => k.toLowerCase().includes("invoice"))) {
+      for (const name of wb.SheetNames) {
+        const tempWs = wb.Sheets[name];
+        const tempRows: any[] = XLSX.utils.sheet_to_json(tempWs, { defval: "" });
+        if (tempRows.length > 0 && Object.keys(tempRows[0]).some(k => k.toLowerCase().includes("invoice"))) {
+          ws = tempWs;
+          rawRows = tempRows;
+          break;
+        }
+      }
+    }
 
     if (rawRows.length === 0) {
       res.json({ success: 0, failed: 0, skipped: 0, total: 0, details: [] }); return;
@@ -214,13 +236,32 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       return allSuppliers.find(s => s.name.toLowerCase() === n);
     };
 
-    // Group rows by invoice number
+    // Group rows by invoice number (carry over if blank)
     const invoiceMap = new Map<string, any[]>();
+    let currentInv = "";
+    
     for (const row of rawRows) {
       const inv = String(row["No Invoice"] || "").trim();
-      if (!inv) continue;
-      if (!invoiceMap.has(inv)) invoiceMap.set(inv, []);
-      invoiceMap.get(inv)!.push(row);
+      if (inv) {
+        currentInv = inv;
+      }
+      
+      if (!currentInv) continue;
+      
+      // Jika baris ini memiliki invoice kosong, salin Supplier dan Tanggal dari currentInv agar tidak hilang
+      if (!inv) {
+        if (!row["Supplier"]) {
+           const parentRows = invoiceMap.get(currentInv);
+           if (parentRows && parentRows.length > 0) row["Supplier"] = parentRows[0]["Supplier"];
+        }
+        if (!row["Tanggal"]) {
+           const parentRows = invoiceMap.get(currentInv);
+           if (parentRows && parentRows.length > 0) row["Tanggal"] = parentRows[0]["Tanggal"];
+        }
+      }
+      
+      if (!invoiceMap.has(currentInv)) invoiceMap.set(currentInv, []);
+      invoiceMap.get(currentInv)!.push(row);
     }
 
     const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];

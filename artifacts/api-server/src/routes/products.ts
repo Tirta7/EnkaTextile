@@ -310,8 +310,11 @@ router.post("/products/import", async (req, res): Promise<void> => {
         const meterStock = cleanRollLengths.reduce((a, b) => a + b, 0);
         const rollStock = cleanRollLengths.length;
 
+        // Cek apakah ada kolom Roll sama sekali di file Excel
+        const hasRollColumns = Object.keys(row).some(key => key.startsWith("Roll ") && key !== "Roll");
+
         // Base Data
-        const prodData = {
+        const prodData: any = {
           name, barcode, categoryId,
           primaryUnit: String(row["Unit 1"] || "METER").trim(),
           secondaryUnit: String(row["Unit 2"] || "ROLL").trim(),
@@ -321,32 +324,43 @@ router.post("/products/import", async (req, res): Promise<void> => {
           pricePerRoll: String(parseFloat(String(row["Harga Jual (R)"] || "0").replace(",", ".")) || 0),
           minStock: String(parseFloat(String(row["Min Stok"] || "0").replace(",", ".")) || 0),
           description: String(row["Deskripsi"] || "").trim(),
-          rollStock: String(rollStock),
-          meterStock: String(meterStock),
         };
+
+        // Hanya update stok jika file Excel mengandung kolom Roll
+        if (hasRollColumns) {
+          prodData.rollStock = String(rollStock);
+          prodData.meterStock = String(meterStock);
+        }
 
         let prodId;
         if (existingProd) {
           await db.update(productsTable).set({ ...prodData, updatedAt: new Date() }).where(eq(productsTable.id, existingProd.id));
           prodId = existingProd.id;
         } else {
+          // Jika produk baru tapi tidak ada kolom Roll, set stok default ke 0
+          if (!hasRollColumns) {
+            prodData.rollStock = "0";
+            prodData.meterStock = "0";
+          }
           const [newProd] = await db.insert(productsTable).values(prodData as any).returning();
           prodId = newProd.id;
         }
 
-        // Sync rolls
-        await db.delete(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
+        // Sync rolls (hanya jika kolom Roll ada di Excel)
+        if (hasRollColumns) {
+          await db.delete(productRollsTable).where(and(eq(productRollsTable.productId, prodId), eq(productRollsTable.status, "available")));
 
-        if (rollStock > 0) {
-           const ts = Date.now();
-           const rollsToInsert = cleanRollLengths.map((len, i) => ({
-             productId: prodId,
-             barcode: `${barcode}-R${ts}-${i + 1}-${Math.floor(Math.random() * 9999)}`,
-             originalLength: String(len),
-             currentLength: String(len),
-             status: "available"
-           }));
-           await db.insert(productRollsTable).values(rollsToInsert as any);
+          if (rollStock > 0) {
+             const ts = Date.now();
+             const rollsToInsert = cleanRollLengths.map((len, i) => ({
+               productId: prodId,
+               barcode: `${barcode}-R${ts}-${i + 1}-${Math.floor(Math.random() * 9999)}`,
+               originalLength: String(len),
+               currentLength: String(len),
+               status: "available"
+             }));
+             await db.insert(productRollsTable).values(rollsToInsert as any);
+          }
         }
 
         successCount++;

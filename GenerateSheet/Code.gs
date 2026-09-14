@@ -5,7 +5,8 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Alat EnkaTextile')
     .addItem('Cari & Pindah Roll', 'showDialog')
-    .addItem('Cek Otomatis (Pembelian vs Barang)', 'autoCheckMutasi')
+    .addItem('Cek Otomatis (Tandai Kuning)', 'autoCheckMutasi')
+    .addItem('Hapus Roll Terpasang (Geser Kiri)', 'hapusRollTerpasang')
     .addItem('[DEBUG] Cek Struktur Kolom', 'debugStrukturKolom')
     .addItem('[DEBUG] Cek Barcode Match', 'debugBarcodeMatch')
     .addToUi();
@@ -150,6 +151,156 @@ function debugBarcodeMatch() {
   
   SpreadsheetApp.getUi().alert("DEBUG Barcode Match (5 baris pertama)", msg, SpreadsheetApp.getUi().ButtonSet.OK);
 
+}
+
+/**
+ * Hapus Roll Terpasang: Cocokkan roll Pembelian dengan Barang berdasarkan Barcode,
+ * lalu HAPUS nilai roll yang cocok dan GESER sisanya ke kiri tanpa ada sel kosong.
+ * Gunakan fungsi ini SETELAH menjalankan "Cek Otomatis" untuk konfirmasi match.
+ */
+function hapusRollTerpasang() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPembelian = ss.getSheetByName("Pembelian");
+  var sheetBarang    = ss.getSheetByName("Barang");
+  
+  if (!sheetPembelian || !sheetBarang) {
+    SpreadsheetApp.getUi().alert("Sheet 'Pembelian' atau 'Barang' tidak ditemukan!");
+    return;
+  }
+  
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert(
+    '⚠️ Konfirmasi HAPUS',
+    'Proses ini akan MENGHAPUS nilai roll yang cocok di sheet Barang dan menggeser sisa roll ke kiri.\n\nAksi ini TIDAK BISA DIBATALKAN!\n\nLanjutkan?',
+    ui.ButtonSet.YES_NO
+  );
+  if (response !== ui.Button.YES) return;
+  
+  var dataPembelian = sheetPembelian.getDataRange().getValues();
+  var dataBarang    = sheetBarang.getDataRange().getValues();
+  
+  // Deteksi kolom "Roll N" berdasarkan header
+  var headerP = dataPembelian[0];
+  var pRollCols = [];
+  for (var h = 0; h < headerP.length; h++) {
+    if (/^Roll \d+$/.test(String(headerP[h]).trim())) pRollCols.push(h);
+  }
+  
+  var headerB = dataBarang[0];
+  var bRollCols = [];
+  for (var h = 0; h < headerB.length; h++) {
+    if (/^Roll \d+$/.test(String(headerB[h]).trim())) bRollCols.push(h);
+  }
+  
+  if (bRollCols.length === 0) {
+    ui.alert("Tidak ditemukan kolom Roll di sheet Barang!"); return;
+  }
+  
+  // Buat index Barang: barcode → [{rowIdx, rolls:[{value,col}]}]
+  var barangIndex = {};
+  for (var b = 1; b < dataBarang.length; b++) {
+    var bcode = String(dataBarang[b][1]).trim();
+    if (!bcode || bcode.toLowerCase() === "barcode") continue;
+    
+    var bRolls = [];
+    for (var ri = 0; ri < bRollCols.length; ri++) {
+      var c  = bRollCols[ri];
+      var cv = dataBarang[b][c];
+      var nv = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : Number(cv);
+      if (cv !== "" && !isNaN(nv) && nv > 0) bRolls.push({ value: nv, col: c });
+    }
+    
+    if (!barangIndex[bcode]) barangIndex[bcode] = [];
+    barangIndex[bcode].push({ rowIdx: b, rolls: bRolls });
+  }
+  
+  // Track kolom mana saja yang akan dihapus per baris Barang
+  var toDelete = {};     // { "rowIdx": { col: true } }
+  var deletedKeys = {};  // "rowIdx_col" → true (untuk cegah reuse)
+  var matchCount = 0;
+  
+  for (var i = 1; i < dataPembelian.length; i++) {
+    var pRow     = dataPembelian[i];
+    var pBarcode = String(pRow[4]).trim();
+    if (!pBarcode) continue;
+    
+    var pRolls = [];
+    for (var ri = 0; ri < pRollCols.length; ri++) {
+      var pv = pRow[pRollCols[ri]];
+      var pn = (typeof pv === 'string') ? parseFloat(pv.replace(',', '.')) : Number(pv);
+      if (pv !== "" && !isNaN(pn) && pn > 0) pRolls.push(pn);
+    }
+    if (pRolls.length === 0) continue;
+    
+    var barangRows = barangIndex[pBarcode];
+    if (!barangRows) continue;
+    
+    for (var bi = 0; bi < barangRows.length; bi++) {
+      var entry    = barangRows[bi];
+      var bRollArr = entry.rolls;
+      var bRowIdx  = entry.rowIdx;
+      
+      if (bRollArr.length < pRolls.length) continue;
+      
+      // Sliding window
+      for (var s = 0; s <= bRollArr.length - pRolls.length; s++) {
+        var isMatch = true;
+        for (var k = 0; k < pRolls.length; k++) {
+          var cellKey = bRowIdx + "_" + bRollArr[s+k].col;
+          if (deletedKeys[cellKey]) { isMatch = false; break; }
+          if (Math.abs(bRollArr[s+k].value - pRolls[k]) > 0.11) { isMatch = false; break; }
+        }
+        
+        if (isMatch) {
+          if (!toDelete[bRowIdx]) toDelete[bRowIdx] = {};
+          for (var k = 0; k < pRolls.length; k++) {
+            var colIdx = bRollArr[s+k].col;
+            toDelete[bRowIdx][colIdx] = true;
+            deletedKeys[bRowIdx + "_" + colIdx] = true;
+          }
+          matchCount++;
+          break; // lanjut ke Pembelian berikutnya
+        }
+      }
+    }
+  }
+  
+  // Terapkan penghapusan: kumpulkan sisa roll, tulis ulang dari kiri
+  var rowsAffected = 0;
+  for (var rowIdxStr in toDelete) {
+    var rowIdx = parseInt(rowIdxStr);
+    var deletedColSet = toDelete[rowIdxStr];
+    
+    // Kumpulkan nilai roll yang TIDAK dihapus
+    var remaining = [];
+    for (var ri = 0; ri < bRollCols.length; ri++) {
+      var c = bRollCols[ri];
+      if (!deletedColSet[c]) {
+        var cv = dataBarang[rowIdx][c];
+        var nv = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : Number(cv);
+        if (cv !== "" && !isNaN(nv) && nv > 0) remaining.push(nv);
+      }
+    }
+    
+    // Tulis ulang seluruh kolom Roll: sisa dari kiri, lalu kosongkan yang sudah tidak ada
+    var firstRollCol = bRollCols[0] + 1; // 1-based untuk getRange
+    var numRollCols  = bRollCols.length;
+    var newRow = [];
+    for (var ri = 0; ri < numRollCols; ri++) {
+      newRow.push(ri < remaining.length ? remaining[ri] : "");
+    }
+    sheetBarang.getRange(rowIdx + 1, firstRollCol, 1, numRollCols).setValues([newRow]);
+    rowsAffected++;
+  }
+  
+  ui.alert(
+    "Selesai",
+    "Berhasil mencocokkan " + matchCount + " deret roll.\n" +
+    rowsAffected + " baris Barang telah diperbarui:\n" +
+    "• Roll yang terpasang di Pembelian → DIHAPUS\n" +
+    "• Sisa roll → DIGESER ke kiri (tanpa sel kosong)",
+    ui.ButtonSet.OK
+  );
 }
 
 /**

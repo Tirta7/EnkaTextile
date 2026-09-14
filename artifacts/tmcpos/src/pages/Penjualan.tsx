@@ -1212,39 +1212,40 @@ export default function Penjualan() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DrawerContent className="max-h-[96vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">{editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}</DrawerTitle>
           <DrawerDescription className="sr-only">Form for adding or editing a sale</DrawerDescription>
 
-          {/* ── Gradient Header ── */}
-          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-white" strokeWidth={1.5} />
+          <DrawerHeader className="pb-3 px-0 shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="w-5 h-5 text-violet-600" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <h2 className="text-[15px] font-bold text-slate-800 leading-tight">
+                    {editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    {editingSaleId ? "Perbarui data transaksi penjualan" : "Catat transaksi penjualan baru"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-white leading-tight">
-                  {editingSaleId ? `Edit Nota — ${invoiceNumber}` : "Buat Penjualan Baru"}
-                </h2>
-                <p className="text-violet-200 text-xs">
-                  {editingSaleId ? "Perbarui data transaksi penjualan" : "Catat transaksi penjualan baru"}
-                </p>
+              {/* Invoice number badge */}
+              <div className="hidden sm:block text-right shrink-0">
+                {editingSaleId ? (
+                  <span className="font-mono text-xs font-bold text-violet-700 bg-violet-100 px-2.5 py-1 rounded-lg">{invoiceNumber}</span>
+                ) : (
+                  <span className="text-[10px] text-slate-400 italic">No. invoice ditetapkan saat bayar</span>
+                )}
               </div>
             </div>
-            {/* Invoice number badge */}
-            <div className="hidden sm:block text-right">
-              {editingSaleId ? (
-                <span className="font-mono text-sm font-bold text-white bg-white/20 px-3 py-1 rounded-lg">{invoiceNumber}</span>
-              ) : (
-                <span className="text-xs text-violet-200 italic">No. invoice ditetapkan saat bayar</span>
-              )}
-            </div>
-          </div>
+          </DrawerHeader>
 
           <div id="drawer-portal-target" />
 
           {/* ── Scrollable Body ── */}
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-100" style={{ maxHeight: 'calc(96vh - 9rem)' }}>
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
 
             {/* Section: Info Transaksi */}
             <div className="px-6 py-4 space-y-3">
@@ -1404,13 +1405,13 @@ export default function Penjualan() {
        
       {/* ── Drawer: Bayar Cicilan dari Penjualan ── */}
       <Drawer open={cicilanOpen} onOpenChange={(open) => { if (!open) setCicilanOpen(false); }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
+        <DrawerContent className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerHeader>
             <DrawerTitle className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-violet-600" /> Bayar Cicilan Piutang
             </DrawerTitle>
           </DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] space-y-4 px-1">
+          <div className="overflow-y-auto flex-1 space-y-4 px-1">
             {cicilanSaleData && (
               <>
                 <div className="p-3 bg-slate-50 rounded-xl text-sm space-y-2 border border-slate-100">

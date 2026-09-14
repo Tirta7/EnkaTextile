@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Combobox } from "@/components/ui/combobox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, PlusCircle, LayoutGrid, Download, SlidersHorizontal, MoreVertical, AlertCircle, CheckCircle2, AlertTriangle, X, Ruler } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
@@ -290,8 +290,8 @@ export default function Barang() {
           })()}
         </div>
 
-        {/* Row 4: Summary strip — 3-col compact, no shadow */}
-        <div className="grid grid-cols-3 gap-1.5">
+        {/* Row 4: Summary strip — 4-col compact, no shadow */}
+        <div className="grid grid-cols-4 gap-1.5">
           <div className="bg-white border border-slate-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.5} />
             <div className="min-w-0">
@@ -317,6 +317,15 @@ export default function Barang() {
               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Roll</p>
               <p className="text-xs font-black text-slate-800 leading-tight truncate">
                 {formatNumber(summaryProducts?.reduce((s, p) => s + (Number(p.rollStock) || 0), 0) ?? 0)}
+              </p>
+            </div>
+          </div>
+          <div className="bg-violet-50 border border-violet-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
+            <Ruler className="w-3.5 h-3.5 text-violet-400 shrink-0" strokeWidth={1.5} />
+            <div className="min-w-0">
+              <p className="text-[8px] font-bold text-violet-400 uppercase tracking-wider">Yard</p>
+              <p className="text-xs font-black text-violet-800 leading-tight truncate">
+                {formatNumber(summaryProducts?.reduce((s, p) => s + (Number(p.meterStock) || 0), 0) ?? 0)}
               </p>
             </div>
           </div>

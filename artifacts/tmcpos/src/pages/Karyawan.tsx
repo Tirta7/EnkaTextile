@@ -119,48 +119,49 @@ export default function Karyawan() {
   );
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-[800px] mx-auto pb-4">
-      {/* Mobile-optimized Header */}
-      <div className="flex items-center justify-between pt-2 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Karyawan</h1>
-          <p className="text-sm text-slate-500">Kelola akses akun dan role</p>
+    <div className="w-full">
+      {/* Top Strip */}
+      <div className="pb-3 space-y-2.5">
+        {/* Row 1: Title + Tambah */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none">Karyawan</h1>
+            <p className="text-[11px] text-slate-400 mt-0.5">Kelola akses akun dan role</p>
+          </div>
+          <Button onClick={openCreate} size="sm" className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-xs font-bold">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
+          </Button>
         </div>
-        <Button onClick={openCreate} className="rounded-full shadow-sm bg-violet-600 hover:bg-violet-700">
-          <Plus className="mr-2 h-4 w-4" /> Tambah
-        </Button>
-      </div>
 
-      {/* Filter & Search */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Cari nama atau username..." 
-            className="pl-9 bg-white border-slate-200 rounded-full h-10 shadow-sm focus-visible:ring-violet-500" 
-            value={search} 
-            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
+        {/* Row 2: Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            placeholder="Cari nama atau username..."
+            className="pl-8 h-9 rounded-xl bg-white border-slate-200 text-sm focus-visible:ring-violet-500"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
           />
         </div>
       </div>
 
-      {/* Activity Feed List */}
-      <div className="space-y-4">
+      {/* Karyawan List */}
+      <div className="space-y-2 mt-3">
         {isLoading ? (
           Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex gap-4">
-              <Skeleton className="w-14 h-14 rounded-2xl" />
+            <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 flex gap-3">
+              <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
               <div className="flex-1 space-y-2 py-1">
-                <Skeleton className="h-5 w-1/3" />
-                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             </div>
           ))
         ) : filteredUsers?.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-slate-100 shadow-sm">
-            <UserIcon className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} />
-            <h3 className="text-lg font-bold text-slate-700">Tidak ada karyawan</h3>
-            <p className="text-sm text-slate-500 mt-1">Belum ada data karyawan yang ditambahkan.</p>
+          <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
+            <UserIcon className="mx-auto mb-3 h-10 w-10 text-slate-200" strokeWidth={1.5} />
+            <h3 className="text-sm font-bold text-slate-500">Tidak ada karyawan</h3>
+            <p className="text-xs text-slate-400 mt-1">Belum ada data karyawan.</p>
           </div>
         ) : (
           <>
@@ -169,7 +170,7 @@ export default function Karyawan() {
               const isCurrentUser = u.id === currentUser?.id;
               
               return (
-                <div key={u.id} className="bg-white rounded-3xl p-4 shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col gap-3 relative overflow-hidden">
+                <div key={u.id} className="bg-white rounded-2xl p-4 border border-slate-100 flex flex-col gap-3 relative overflow-hidden">
                   {/* Current User Highlight */}
                   {isCurrentUser && (
                     <div className="absolute top-0 right-0 bg-violet-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
@@ -252,11 +253,14 @@ export default function Karyawan() {
           setEditingUser(null);
         }
       }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl px-4 sm:px-6 pb-6 pt-2">
-          <DrawerHeader>
-            <DrawerTitle>{editingUser ? 'Edit Karyawan' : 'Tambah Karyawan'}</DrawerTitle>
+        <DrawerContent
+          className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2"
+          style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
+        >
+          <DrawerHeader className="pb-3 px-0">
+            <DrawerTitle className="text-[15px] font-bold">{editingUser ? 'Edit Karyawan' : 'Tambah Karyawan'}</DrawerTitle>
           </DrawerHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] px-4 sm:px-2 -mx-4 sm:mx-0">
+          <div className="overflow-y-auto flex-1">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField

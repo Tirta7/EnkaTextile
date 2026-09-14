@@ -108,20 +108,31 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, color = "slate" }: { label: string; value: string; sub?: string; color?: string }) {
+function KpiCard({ label, value, sub, color = "slate", icon }: { label: string; value: string; sub?: string; color?: string; icon?: React.ReactNode }) {
   const colors: Record<string, string> = {
-    violet: "bg-violet-50 border-violet-100 text-violet-900",
-    emerald: "bg-emerald-50 border-emerald-100 text-emerald-900",
-    rose: "bg-rose-50 border-rose-100 text-rose-900",
-    amber: "bg-amber-50 border-amber-100 text-amber-900",
-    slate: "bg-white border-slate-200 text-slate-900",
-    blue: "bg-blue-50 border-blue-100 text-blue-900",
+    violet: "bg-violet-50 border-violet-100",
+    emerald: "bg-emerald-50 border-emerald-100",
+    rose: "bg-rose-50 border-rose-100",
+    amber: "bg-amber-50 border-amber-100",
+    slate: "bg-white border-slate-200",
+    blue: "bg-blue-50 border-blue-100",
+  };
+  const textColors: Record<string, string> = {
+    violet: "text-violet-600", emerald: "text-emerald-600", rose: "text-rose-600",
+    amber: "text-amber-600", slate: "text-slate-500", blue: "text-blue-600",
+  };
+  const valColors: Record<string, string> = {
+    violet: "text-violet-900", emerald: "text-emerald-900", rose: "text-rose-900",
+    amber: "text-amber-900", slate: "text-slate-900", blue: "text-blue-900",
   };
   return (
-    <div className={`rounded-2xl p-4 border flex flex-col gap-1 ${colors[color] ?? colors.slate}`}>
-      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
-      <span className="text-xl font-black leading-tight">{value}</span>
-      {sub && <span className="text-xs text-slate-400">{sub}</span>}
+    <div className={`rounded-2xl p-3.5 border flex flex-col gap-1.5 ${colors[color] ?? colors.slate}`}>
+      <div className="flex items-center justify-between">
+        <span className={`text-[9px] font-bold uppercase tracking-wider ${textColors[color]}`}>{label}</span>
+        {icon && <span className={`opacity-60 ${textColors[color]}`}>{icon}</span>}
+      </div>
+      <span className={`text-lg font-black leading-tight ${valColors[color]}`}>{value}</span>
+      {sub && <span className="text-[10px] text-slate-400 leading-tight">{sub}</span>}
     </div>
   );
 }
@@ -139,12 +150,40 @@ function LaporanFilterBar({
   showSearch, search, setSearch,
 }: LaporanFilterBarProps) {
   return (
-    <div className="flex gap-2 items-center flex-wrap">
+    <div className="flex gap-1.5 items-center flex-wrap">
       <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-        className="w-34 rounded-lg border-slate-200 h-8 text-xs bg-slate-50 focus-visible:ring-violet-500" />
-      <span className="text-slate-400 text-xs">—</span>
+        className="w-32 rounded-xl border-slate-200 h-8 text-xs bg-white focus-visible:ring-violet-500" />
+      <span className="text-slate-300 text-xs">—</span>
       <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-        className="w-34 rounded-lg border-slate-200 h-8 text-xs bg-slate-50 focus-visible:ring-violet-500" />
+        className="w-32 rounded-xl border-slate-200 h-8 text-xs bg-white focus-visible:ring-violet-500" />
+      {showStatus && setStatusFilter && (
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-24 h-8 rounded-xl border-slate-200 bg-white text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="semua">Semua</SelectItem>
+            <SelectItem value="lunas">Lunas</SelectItem>
+            <SelectItem value="tempo">Tempo</SelectItem>
+            <SelectItem value="partial">Partial</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
+      {showSearch && setSearch !== undefined && (
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+          <Input
+            value={search ?? ""}
+            onChange={e => setSearch!(e.target.value)}
+            placeholder="Cari nota / pelanggan..."
+            className="pl-7 w-44 h-8 rounded-xl border-slate-200 bg-white text-xs focus-visible:ring-violet-500"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
       {showStatus && setStatusFilter && (
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-28 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs">
@@ -247,8 +286,8 @@ export default function Laporan() {
   }), [filteredTransactions]);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col min-h-0">
+    <div className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
         {/* SINGLE ROW HEADER (Desktop) */}
         <div className="flex-none flex flex-col xl:flex-row gap-3 xl:items-center justify-between pb-3 mb-2 border-b border-slate-100">
@@ -292,24 +331,24 @@ export default function Laporan() {
         </div>
 
         {/* ══════════════════════ TAB: RINGKASAN ══════════════════════ */}
-        <TabsContent value="penjualan" className="space-y-4 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
+        <TabsContent value="penjualan" className="space-y-4 outline-none pb-6">
           {loadingSales ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}
             </div>
           ) : salesReport ? (
             <>
-              {/* KPI Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <KpiCard color="slate" label="Penjualan Kotor" value={formatRupiah((salesReport as any).totalRevenue || 0)} sub={`${(salesReport as any).totalTransactions} transaksi`} />
-                <KpiCard color="violet" label="Pendapatan Bersih" value={formatRupiah((salesReport as any).netRevenue || 0)} />
-                <KpiCard color="emerald" label="Rata-rata / Trx" value={formatRupiah((salesReport as any).averageTransaction || 0)} />
+              {/* KPI Grid — 2x2 mobile, 4-col desktop */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                <KpiCard color="slate" label="Penjualan Kotor" value={formatRupiah((salesReport as any).totalRevenue || 0)} sub={`${(salesReport as any).totalTransactions} transaksi`} icon={<TrendingUp className="w-4 h-4" />} />
+                <KpiCard color="violet" label="Pendapatan Bersih" value={formatRupiah((salesReport as any).netRevenue || 0)} icon={<Receipt className="w-4 h-4" />} />
+                <KpiCard color="emerald" label="Rata-rata / Trx" value={formatRupiah((salesReport as any).averageTransaction || 0)} icon={<BarChart2 className="w-4 h-4" />} />
                 <KpiCard color="amber" label="Dampak Retur" value={formatRupiah((salesReport as any).netReturnImpact || 0)}
-                  sub={`Kembali: ${formatRupiah((salesReport as any).totalReturnDeposit || 0)}`} />
+                  sub={`Kembali: ${formatRupiah((salesReport as any).totalReturnDeposit || 0)}`} icon={<ArrowDownToLine className="w-4 h-4" />} />
               </div>
 
               {/* Tren Harian */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <div className="p-4 border-b border-slate-100">
                   <h3 className="font-bold text-slate-800">Tren Penjualan Harian</h3>
                   <p className="text-xs text-slate-400 mt-0.5">Revenue dan jumlah transaksi per hari</p>
@@ -348,7 +387,7 @@ export default function Laporan() {
 
               {/* Per Produk */}
               {(salesReport as any).byProduct?.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                   <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-slate-800">Penjualan per Produk</h3>
@@ -393,10 +432,8 @@ export default function Laporan() {
                       </Table>
                     </div>
                     {(salesReport as any).byProduct?.length > PAGE_SIZE && (
-                      <div className="flex justify-center pt-2">
-                        <div className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-slate-100 rounded-full px-2 py-0.5">
-                          <PaginationControl currentPage={currentSalesPage} totalPages={Math.ceil((salesReport as any).byProduct.length / PAGE_SIZE)} onPageChange={setCurrentSalesPage} />
-                        </div>
+                      <div className="flex justify-center pt-3">
+                        <PaginationControl currentPage={currentSalesPage} totalPages={Math.ceil((salesReport as any).byProduct.length / PAGE_SIZE)} onPageChange={setCurrentSalesPage} />
                       </div>
                     )}
                   </div>
@@ -405,7 +442,7 @@ export default function Laporan() {
 
               {/* Per Kategori */}
               {(salesReport as any).byCategory?.length > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                   <div className="p-4 border-b border-slate-100">
                     <h3 className="font-bold text-slate-800">Penjualan per Kategori</h3>
                     <p className="text-xs text-slate-400 mt-0.5">Kontribusi setiap kategori</p>
@@ -439,28 +476,28 @@ export default function Laporan() {
         </TabsContent>
 
         {/* ══════════════════════ TAB: DETAIL TRANSAKSI ══════════════════════ */}
-        <TabsContent value="detail" className="space-y-3 outline-none flex flex-col flex-1 min-h-0 data-[state=inactive]:hidden">
+        <TabsContent value="detail" className="space-y-3 outline-none pb-6">
           {loadingDetail ? (
             <div className="space-y-2">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
           ) : detailReport ? (
             <>
-              {/* Summary strip — ultra compact */}
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-white border border-slate-100 rounded-lg px-3 py-1 flex flex-col justify-center">
-                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Transaksi</span>
-                  <span className="text-sm font-black text-slate-900 leading-tight">{filteredSummary.totalTransactions}</span>
+              {/* Summary strip — ultra compact 2x2 mobile */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="bg-white border border-slate-100 rounded-xl px-3 py-2 flex flex-col justify-center">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Transaksi</span>
+                  <span className="text-base font-black text-slate-900 leading-tight">{filteredSummary.totalTransactions}</span>
                 </div>
-                <div className="bg-violet-50 border border-violet-100 rounded-lg px-3 py-1 flex flex-col justify-center">
-                  <span className="text-[9px] font-semibold text-violet-400 uppercase tracking-wider">Total Penjualan</span>
-                  <span className="text-sm font-black text-violet-900 leading-tight">{formatRupiah(filteredSummary.totalGross)}</span>
+                <div className="bg-violet-50 border border-violet-100 rounded-xl px-3 py-2 flex flex-col justify-center">
+                  <span className="text-[9px] font-bold text-violet-500 uppercase tracking-wider">Total Penjualan</span>
+                  <span className="text-xs font-black text-violet-900 leading-tight">{formatRupiah(filteredSummary.totalGross)}</span>
                 </div>
-                <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1 flex flex-col justify-center">
-                  <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">Total Dibayar</span>
-                  <span className="text-sm font-black text-emerald-900 leading-tight">{formatRupiah(filteredSummary.totalPaid)}</span>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2 flex flex-col justify-center">
+                  <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Total Dibayar</span>
+                  <span className="text-xs font-black text-emerald-900 leading-tight">{formatRupiah(filteredSummary.totalPaid)}</span>
                 </div>
-                <div className="bg-rose-50 border border-rose-100 rounded-lg px-3 py-1 flex flex-col justify-center">
-                  <span className="text-[9px] font-semibold text-rose-400 uppercase tracking-wider">Sisa Piutang</span>
-                  <span className="text-sm font-black text-rose-700 leading-tight">{formatRupiah(filteredSummary.totalRemaining)}</span>
+                <div className="bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 flex flex-col justify-center">
+                  <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider">Sisa Piutang</span>
+                  <span className="text-xs font-black text-rose-700 leading-tight">{formatRupiah(filteredSummary.totalRemaining)}</span>
                 </div>
               </div>
 
@@ -551,10 +588,8 @@ export default function Laporan() {
                 </div>
 
                 {filteredTransactions.length > PAGE_SIZE && (
-                  <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-                    <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-2 py-0.5 flex items-center justify-center pointer-events-auto">
-                      <PaginationControl currentPage={currentDetailPage} totalPages={Math.ceil(filteredTransactions.length / PAGE_SIZE)} onPageChange={setCurrentDetailPage} />
-                    </div>
+                  <div className="flex justify-center py-3">
+                    <PaginationControl currentPage={currentDetailPage} totalPages={Math.ceil(filteredTransactions.length / PAGE_SIZE)} onPageChange={setCurrentDetailPage} />
                   </div>
                 )}
               </div>
@@ -568,16 +603,16 @@ export default function Laporan() {
         </TabsContent>
 
         {/* ══════════════════════ TAB: LAPORAN PPN ══════════════════════ */}
-        <TabsContent value="pajak" className="space-y-5 outline-none flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pb-10">
+        <TabsContent value="pajak" className="space-y-5 outline-none pb-6">
           {loadingTax ? (
             <div className="space-y-2">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
           ) : taxReport ? (
             <>
               {/* Summary PPN */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <KpiCard color="slate" label="Total Transaksi" value={String(taxReport.summary.totalTransactions)} />
-                <KpiCard color="violet" label={`DPP (Harga sebelum PPN ${taxReport.ppnRate}%)`} value={formatRupiah(taxReport.summary.totalDPP)} />
-                <KpiCard color="blue" label={`Total PPN ${taxReport.ppnRate}%`} value={formatRupiah(taxReport.summary.totalPPN)} />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                <KpiCard color="slate" label="Total Transaksi" value={String(taxReport.summary.totalTransactions)} icon={<Receipt className="w-4 h-4" />} />
+                <KpiCard color="violet" label={`DPP (Harga sebelum PPN ${taxReport.ppnRate}%)`} value={formatRupiah(taxReport.summary.totalDPP)} icon={<FileText className="w-4 h-4" />} />
+                <KpiCard color="blue" label={`Total PPN ${taxReport.ppnRate}%`} value={formatRupiah(taxReport.summary.totalPPN)} icon={<TrendingUp className="w-4 h-4" />} />
               </div>
 
               {/* Accurate POS-style Tax Table */}

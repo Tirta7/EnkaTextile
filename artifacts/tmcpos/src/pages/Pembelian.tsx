@@ -400,7 +400,7 @@ export default function Pembelian() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-[95vw] xl:max-w-7xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">Buat Pembelian Baru</DrawerTitle>
           <DrawerDescription className="sr-only">Form to create a new purchase</DrawerDescription>
           

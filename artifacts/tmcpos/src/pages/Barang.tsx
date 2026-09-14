@@ -527,7 +527,7 @@ export default function Barang() {
           }
         }}
       >
-        <DrawerContent className="mx-auto w-full max-w-4xl p-0 overflow-hidden"
+        <DrawerContent className="mx-auto w-full max-w-4xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}
           style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}>
           <DrawerTitle className="sr-only">{editingId ? "Edit Barang" : "Tambah Barang Baru"}</DrawerTitle>
           <DrawerDescription className="sr-only">Form for adding or editing a product</DrawerDescription>

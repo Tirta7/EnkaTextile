@@ -294,7 +294,7 @@ export default function Retur() {
           setIsDrawerOpen(true);
         }
       }}>
-        <DrawerContent className="max-h-[95vh] h-full mx-auto w-full max-w-5xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-5xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">Form Retur / Tukar Barang</DrawerTitle>
           
           <div className="flex flex-col h-full" style={{ maxHeight: 'calc(95vh - 5rem)' }}>

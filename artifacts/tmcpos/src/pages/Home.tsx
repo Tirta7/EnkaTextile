@@ -215,11 +215,14 @@ export default function Home() {
                 </span>
               </div>
             </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="text-left border-b pb-4">
-                <DrawerTitle>Semua Fitur</DrawerTitle>
+            <DrawerContent
+              className="mx-auto w-full max-w-2xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2"
+              style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
+            >
+              <DrawerHeader className="text-left border-b pb-3 px-0">
+                <DrawerTitle className="text-[15px] font-bold text-slate-800">Semua Fitur</DrawerTitle>
               </DrawerHeader>
-              <div className="p-4 pb-[max(2rem,env(safe-area-inset-bottom))] grid grid-cols-4 gap-y-6 gap-x-2">
+              <div className="overflow-y-auto flex-1 py-4 grid grid-cols-4 gap-y-6 gap-x-2">
                 {allMenuItems.map((item) => (
                   <Link key={item.name} href={item.href}>
                     <div className="flex flex-col items-center gap-2 cursor-pointer group relative">

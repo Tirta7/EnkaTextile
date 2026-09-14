@@ -213,81 +213,76 @@ export default function Barang() {
   const lowStockCount = baseProducts.filter(p => p.isLowStock).length;
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {/* Static Top Strip */}
-      <div className="flex-none space-y-3 pb-3 relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none">Barang</h1>
-            <p className="text-xs font-medium text-slate-500 mt-1">Kelola inventaris dan stok gudang</p>
+    <div className="w-full">
+
+      {/* ── TOP STRIP (mobile-first redesign) ── */}
+      <div className="flex-none pb-3 space-y-2.5 relative z-10">
+
+        {/* Row 1: Title + Action buttons */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none">Barang</h1>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 hidden sm:block">Kelola inventaris dan stok gudang</p>
           </div>
-          
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-              <Input 
-                placeholder="Cari barang / lot..." 
-                className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
-                value={search} 
-                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} 
-              />
-            </div>
-            
-            <Button onClick={handleExport} variant="outline" className="h-8 px-3 rounded-lg text-xs font-bold border-slate-200 text-slate-700">
-              <Download className="mr-1.5 h-3 w-3" /> Export
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button onClick={handleExport} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600">
+              <Download className="h-3.5 w-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Export</span>
             </Button>
-            <Button onClick={() => document.getElementById("import-file-product")?.click()} variant="outline" className="h-8 px-3 rounded-lg text-xs font-bold border-slate-200 text-slate-700">
-              <PlusCircle className="mr-1.5 h-3 w-3" /> Import
+            <Button onClick={() => document.getElementById("import-file-product")?.click()} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600">
+              <PlusCircle className="h-3.5 w-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Import</span>
             </Button>
             <input type="file" id="import-file-product" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-
-            <Button onClick={openCreate} className="h-8 px-3 rounded-lg bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
-              <Plus className="mr-1.5 h-3 w-3" /> Tambah
+            <Button onClick={openCreate} size="sm" className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
             </Button>
           </div>
         </div>
 
-        {/* Category Filter — Searchable Combobox */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Row 2: Search — full width on mobile */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            placeholder="Cari barang / lot..."
+            className="pl-9 h-9 rounded-xl border-slate-200 bg-white text-xs shadow-sm focus-visible:ring-violet-500"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+
+        {/* Row 3: Category filter + chip */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-            className={`h-7 px-3 rounded-lg text-[11px] font-bold border transition-all whitespace-nowrap ${
+            className={`h-7 px-3 rounded-full text-[11px] font-bold border transition-all whitespace-nowrap shrink-0 ${
               selectedCategoryId === null
-                ? 'bg-violet-50 text-violet-700 border-violet-200 shadow-sm'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:text-slate-700'
+                ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                : 'bg-white text-slate-500 border-slate-200'
             }`}
           >
             Semua ({products?.length || 0})
           </button>
-
           <Combobox
             items={(categories ?? [])
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
-              .map(c => ({
-                value: c.id.toString(),
-                label: `${c.name} (${products?.filter(p => p.categoryId === c.id).length || 0})`,
-              }))}
+              .map(c => ({ value: c.id.toString(), label: `${c.name} (${products?.filter(p => p.categoryId === c.id).length || 0})` }))}
             value={selectedCategoryId?.toString() ?? ""}
             onValueChange={(v) => { setSelectedCategoryId(v ? parseInt(v) : null); setCurrentPage(1); }}
             placeholder="Pilih Kategori..."
             searchPlaceholder="Cari kategori..."
             emptyText="Kategori tidak ditemukan"
-            className="h-7 text-[11px] border-slate-200 rounded-lg bg-white min-w-[180px] max-w-[220px] px-2.5"
+            className="h-7 text-[11px] border-slate-200 rounded-full bg-white min-w-[160px] max-w-[200px] px-2.5 shrink-0"
           />
-
-          {/* Active category chip */}
           {selectedCategoryId !== null && (() => {
             const activeCat = categories?.find(c => c.id === selectedCategoryId);
             const count = products?.filter(p => p.categoryId === selectedCategoryId).length || 0;
             return activeCat ? (
-              <div className="flex items-center gap-1.5 px-2.5 h-7 bg-violet-50 text-violet-700 border border-violet-200 rounded-lg text-[11px] font-bold">
-                <span>{activeCat.name}</span>
-                <span className="text-[9px] bg-violet-200/50 px-1 py-0.5 rounded-full">{count}</span>
-                <button
-                  onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
-                  className="ml-0.5 hover:text-violet-900 transition-colors"
-                >
+              <div className="flex items-center gap-1 px-2.5 h-7 bg-violet-50 text-violet-700 border border-violet-200 rounded-full text-[11px] font-bold shrink-0">
+                <span className="truncate max-w-[100px]">{activeCat.name}</span>
+                <span className="text-[9px] bg-violet-200 px-1 py-0.5 rounded-full">{count}</span>
+                <button onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }} className="ml-0.5">
                   <X size={10} />
                 </button>
               </div>
@@ -295,129 +290,225 @@ export default function Barang() {
           })()}
         </div>
 
-        {/* Rekap Summary (Ultra Compact Strip) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 shrink-0">
-                <Package className="w-3 h-3" strokeWidth={1.5} />
-              </div>
-              <div className="flex flex-col justify-center">
-                <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Barang</span>
-                <span className="text-xs font-black text-slate-900 leading-tight">{summaryProducts?.length || 0} Item</span>
-              </div>
+        {/* Row 4: Summary strip — 3-col compact, no shadow */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <div className="bg-white border border-slate-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
+            <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.5} />
+            <div className="min-w-0">
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Barang</p>
+              <p className="text-xs font-black text-slate-800 leading-tight truncate">{summaryProducts?.length || 0} item</p>
             </div>
-            <button 
-              onClick={() => { setShowLowStock(!showLowStock); setCurrentPage(1); }}
-              className={`border rounded-lg px-3 py-1.5 flex flex-col justify-center text-left transition-colors ${showLowStock ? 'bg-amber-100 border-amber-300 shadow-inner' : lowStockCount > 0 ? 'bg-amber-50 border-amber-100 hover:bg-amber-100/50' : 'bg-slate-50 border-slate-100'}`}
-            >
-              <span className={`text-[9px] font-semibold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>Stok Tipis</span>
-              <span className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} Item</span>
-            </button>
-            <div className="bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex flex-col justify-center">
-              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Total Roll & YARD</span>
-              <span className="text-xs font-black text-slate-900 leading-tight">
-                {formatNumber(summaryProducts?.reduce((sum, p) => sum + (Number(p.rollStock) || 0), 0) ?? 0)} Roll <span className="text-muted-foreground font-medium">({formatNumber(summaryProducts?.reduce((sum, p) => sum + (Number(p.meterStock) || 0), 0) ?? 0)} yds)</span>
-              </span>
+          </div>
+          <button
+            onClick={() => { setShowLowStock(!showLowStock); setCurrentPage(1); }}
+            className={`border rounded-xl px-2.5 py-2 flex items-center gap-1.5 text-left transition-colors ${
+              showLowStock ? 'bg-amber-50 border-amber-200' : lowStockCount > 0 ? 'bg-amber-50/50 border-amber-100' : 'bg-white border-slate-100'
+            }`}
+          >
+            <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-300'}`} strokeWidth={1.5} />
+            <div className="min-w-0">
+              <p className={`text-[8px] font-bold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Tipis</p>
+              <p className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} item</p>
             </div>
-        </div>
-      </div>
-
-      {/* Scrollable List */}
-      <div className="flex-1 overflow-auto min-h-0 pb-10">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-w-0">
-          {selectedCategoryId === null && !search && !showLowStock ? (
-            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Pilih Kategori</h3><p className="text-[13px] text-slate-500 mt-1">Pilih kategori di atas untuk melihat barang.</p></div>
-          ) : isLoading ? (
-            <div className="p-6 space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-lg" />)}</div>
-          ) : filtered?.length === 0 ? (
-            <div className="text-center py-16"><Package className="mx-auto mb-4 h-12 w-12 text-slate-300" strokeWidth={1.5} /><h3 className="text-lg font-bold text-slate-700">Tidak ada barang</h3><p className="text-[13px] text-slate-500 mt-1">Belum ada barang pada kategori ini atau kata kunci tidak cocok.</p></div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead className="bg-slate-50 sticky top-0 z-10 shadow-sm">
-                  <tr>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100 w-10">#</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Barang</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Harga Jual</th>
-                    <th className="h-8 px-4 text-left align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Harga Beli</th>
-                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Stok</th>
-                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Status</th>
-                    <th className="h-8 px-4 text-center align-middle font-semibold text-slate-600 text-[11px] whitespace-nowrap border-b border-slate-100">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
-                    const isLowStock = p.isLowStock;
-                    const badgeClass = isLowStock ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200';
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle text-[11px] text-slate-400 font-medium whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-7 h-7 rounded-md flex items-center justify-center border shrink-0 ${isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-                              <Package className="w-3.5 h-3.5" strokeWidth={1.5} />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-800 text-[12px]">{p.name}</span>
-                              <span className="text-[10px] text-slate-400 font-medium">{p.barcode || p.lotNumber || "-"}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
-                          <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
-                          <span className="text-[9px] text-slate-400 ml-1">/{p.primaryUnit}</span>
-                        </td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap">
-                          <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
-                        </td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
-                          <div className="flex flex-col items-center">
-                            <span className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</span>
-                            <span className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${badgeClass}`}>
-                              {isLowStock ? 'Stok Rendah' : 'Aman'}
-                            </span>
-                            <span className="text-[9px] text-slate-400 font-medium">Min: {formatNumber(p.minStock)}</span>
-                          </div>
-                        </td>
-                        <td className="py-2 px-4 border-b border-slate-50 align-middle whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-1 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-md" onClick={() => openViewRolls(p)} title="Detail Roll">
-                              <LayoutGrid className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md" onClick={() => openEdit(p)} title="Edit Barang">
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }} title="Hapus Barang">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          </button>
+          <div className="bg-white border border-slate-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
+            <LayoutGrid className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.5} />
+            <div className="min-w-0">
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Roll</p>
+              <p className="text-xs font-black text-slate-800 leading-tight truncate">
+                {formatNumber(summaryProducts?.reduce((s, p) => s + (Number(p.rollStock) || 0), 0) ?? 0)}
+              </p>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pagination Bar */}
-      {filtered && filtered.length > 20 && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-          <div className="bg-white/90 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.12)] border border-slate-200/60 rounded-full px-3 py-0.5 flex items-center justify-center gap-3 pointer-events-auto">
-            <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
-              {filtered.length} barang
-            </span>
-            <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
           </div>
         </div>
+      </div>
+
+      {/* List Area */}
+      <div>
+        {selectedCategoryId === null && !search && !showLowStock ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <Package className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-bold text-slate-700">Pilih Kategori</h3>
+            <p className="text-sm text-slate-400 mt-1">Pilih kategori di atas untuk melihat barang.</p>
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-2 p-1">
+            {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          </div>
+        ) : filtered?.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-12">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <Package className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-base font-bold text-slate-700">Tidak ada barang</h3>
+            <p className="text-sm text-slate-400 mt-1">Kata kunci tidak cocok atau kategori kosong.</p>
+          </div>
+        ) : (
+          <>
+            {/* ─── MOBILE: Seamless list (divider style) ─── */}
+            <div className="md:hidden bg-white rounded-2xl border border-slate-100">
+              {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                const isLowStock = p.isLowStock;
+                return (
+                  <div
+                    key={p.id}
+                    className={`px-3.5 py-3 flex items-center gap-3 ${
+                      idx > 0 ? 'border-t border-slate-50' : ''
+                    } ${
+                      isLowStock ? 'bg-amber-50/30' : 'bg-white'
+                    } active:bg-slate-50 transition-colors`}
+                  >
+                    {/* No */}
+                    <span className="text-[10px] text-slate-300 font-bold w-5 shrink-0 text-center">
+                      {(currentPage - 1) * 20 + idx + 1}
+                    </span>
+
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                      isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-100 text-slate-400'
+                    }`}>
+                      <Package className="w-5 h-5" strokeWidth={1.5} />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-800 text-sm leading-tight truncate">{p.name}</span>
+                        {isLowStock && (
+                          <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 uppercase tracking-wide">Tipis</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] text-slate-400 font-mono truncate max-w-[100px]">{p.barcode || p.lotNumber || '—'}</span>
+                        <span className="text-[10px] text-slate-200">·</span>
+                        <span className={`text-[10px] font-semibold ${
+                          isLowStock ? 'text-amber-500' : 'text-slate-500'
+                        }`}>{formatNumber(p.rollStock)} roll</span>
+                        <span className="text-[10px] text-slate-200">·</span>
+                        <span className="text-[11px] font-bold text-violet-700">
+                          {formatRupiah(p.pricePerMeter)}<span className="text-[9px] text-slate-300 font-normal">/yd</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => openViewRolls(p)}
+                        className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center active:scale-95 transition-transform border border-violet-100"
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="w-9 h-9 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center active:scale-95 transition-transform border border-slate-100">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem onClick={() => openEdit(p)} className="text-sm gap-2">
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}
+                            className="text-sm gap-2 text-rose-600 focus:text-rose-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Hapus
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ─── DESKTOP: Full Table ─── */}
+            <div className="hidden md:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-slate-50 sticky top-0 z-10">
+                    <tr>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-10">#</th>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Barang</th>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Harga Jual</th>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Harga Beli</th>
+                      <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Stok</th>
+                      <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Status</th>
+                      <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                      const isLowStock = p.isLowStock;
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-2.5 px-4 text-[11px] text-slate-400 font-medium">{(currentPage - 1) * 20 + idx + 1}</td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                                <Package className="w-3.5 h-3.5" strokeWidth={1.5} />
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-800 text-xs">{p.name}</div>
+                                <div className="text-[10px] text-slate-400">{p.barcode || p.lotNumber || '—'}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
+                            <span className="text-[9px] text-slate-400 ml-1">/{p.primaryUnit}</span>
+                          </td>
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <div className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</div>
+                            <div className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</div>
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${isLowStock ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
+                              {isLowStock ? 'Tipis' : 'Aman'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-violet-600 hover:bg-violet-50 rounded-md" onClick={() => openViewRolls(p)}>
+                                <LayoutGrid className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:bg-slate-100 rounded-md" onClick={() => openEdit(p)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:bg-rose-50 rounded-md" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Pagination — inline, di bawah list */}
+      {filtered && filtered.length > 20 && (
+        <div className="flex items-center justify-center gap-2 pt-4 pb-2">
+          <span className="text-[10px] text-slate-400 font-medium">
+            {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filtered.length)}
+            <span className="text-slate-300 mx-1">/</span>
+            {filtered.length}
+          </span>
+          <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filtered.length / 20)} onPageChange={setCurrentPage} />
+        </div>
       )}
+
 
       <Drawer 
         open={isOpen} 
@@ -436,7 +527,8 @@ export default function Barang() {
           }
         }}
       >
-        <DrawerContent className="max-h-[95vh] mx-auto w-full max-w-4xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-4xl p-0 overflow-hidden"
+          style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}>
           <DrawerTitle className="sr-only">{editingId ? "Edit Barang" : "Tambah Barang Baru"}</DrawerTitle>
           <DrawerDescription className="sr-only">Form for adding or editing a product</DrawerDescription>
           {/* iOS Style Header */}

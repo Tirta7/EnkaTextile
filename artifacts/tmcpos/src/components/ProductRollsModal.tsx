@@ -233,21 +233,28 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[95vh] h-[95vh] flex flex-col mx-auto w-full max-w-[95vw] px-4 sm:px-6 pb-6 pt-2">
-        <DrawerHeader className="pb-2 shrink-0">
-          <DrawerTitle className="text-base">Daftar Roll/Gulungan - {productName}</DrawerTitle>
-          {/* Summary row */}
-          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-            <span>Total Roll: <span className="font-semibold text-foreground">{totalRolls}</span></span>
-            <span>|</span>
-            <span>Total Sisa: <span className="font-semibold text-foreground">{formatNumber(totalYds)}</span> yds</span>
+      <DrawerContent
+        className="flex flex-col mx-auto w-full max-w-[95vw] px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2"
+        style={{ height: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
+      >
+        <DrawerHeader className="pb-2 shrink-0 px-0">
+          {/* Title + Tambah */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <DrawerTitle className="text-[15px] font-bold leading-tight truncate">{productName}</DrawerTitle>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs text-slate-500">Roll: <span className="font-bold text-slate-700">{totalRolls}</span></span>
+                <span className="text-slate-300">·</span>
+                <span className="text-xs text-slate-500">Sisa: <span className="font-bold text-slate-700">{formatNumber(totalYds)} yds</span></span>
+              </div>
+            </div>
             <Button
               size="sm"
               onClick={() => { setIsAdding(true); setEditingRollId(null); }}
-              className="ml-auto h-7 text-xs px-3"
+              className="h-8 text-xs px-3 rounded-xl bg-violet-600 hover:bg-violet-700 shrink-0"
               disabled={isAdding}
             >
-              <Plus className="h-3 w-3 mr-1" /> Tambah Roll
+              <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
             </Button>
           </div>
 
@@ -534,9 +541,9 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
           <div className="flex-1 overflow-y-auto min-h-0 border border-primary/40 rounded-lg flex flex-col bg-slate-50/50">
             <div className="flex-1 overflow-y-auto p-1.5">
               {isLoading ? (
-                <div className={`grid ${isAdding || editingRoll || isEditingBulk ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1.5 p-1`}>
-                  {Array(16).fill(0).map((_, i) => (
-                    <Skeleton key={i} className="h-20 rounded-lg" />
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-1">
+                  {Array(12).fill(0).map((_, i) => (
+                    <Skeleton key={i} className="h-24 rounded-xl" />
                   ))}
                 </div>
               ) : !rolls || rolls.length === 0 ? (
@@ -545,7 +552,11 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                   <span className="text-sm">Tidak ada roll tersedia</span>
                 </div>
               ) : (
-                <div className={`grid ${isAdding || editingRoll || isEditingBulk ? 'grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8'} gap-1`}>
+                <div className={`grid gap-1.5 ${
+                  isAdding || editingRoll || isEditingBulk
+                    ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3'
+                    : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7'
+                }`}>
                     {sortedRolls.length === 0 ? (
                       <div className="col-span-full flex flex-col items-center justify-center py-10 text-muted-foreground h-full">
                         <Filter className="mb-2 h-6 w-6 opacity-30" />
@@ -582,12 +593,14 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
                             }
                           }}
                           className={[
-                            "flex flex-col gap-0.5 text-left px-2.5 py-2 text-xs transition-all relative group",
-                            "hover:bg-primary/5",
+                            "flex flex-col gap-1 text-left p-2.5 text-xs transition-all relative rounded-xl border",
+                            "active:scale-95",
                             isEditing
-                              ? "bg-blue-50 dark:bg-blue-900/30 ring-2 ring-inset ring-blue-400"
-                              : "",
-                            selectedRollIds.includes(r.id) ? "bg-red-50/50" : "",
+                              ? "bg-blue-50 border-blue-300 ring-1 ring-blue-400"
+                              : isAvailable
+                              ? "bg-white border-slate-100 hover:border-violet-200 hover:bg-violet-50/30"
+                              : "bg-slate-50 border-slate-100 opacity-60",
+                            selectedRollIds.includes(r.id) ? "border-red-300 bg-red-50/60" : "",
                           ].join(" ")}
                         >
                           {/* Row 1: Nomor + Status badge */}

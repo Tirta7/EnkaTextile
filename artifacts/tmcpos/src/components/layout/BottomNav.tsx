@@ -6,49 +6,87 @@ export function BottomNav() {
   const [location] = useLocation();
 
   const navItems = [
-    { name: "Beranda", href: "/", icon: Home },
-    { name: "Retur", href: "/retur", icon: RefreshCcw },
-    { name: "Penjualan", href: "/penjualan", icon: Receipt, isMain: true },
-    { name: "Laporan", href: "/laporan", icon: BarChart3 },
+    { name: "Beranda",    href: "/",          icon: Home },
+    { name: "Retur",      href: "/retur",      icon: RefreshCcw },
+    { name: "Penjualan",  href: "/penjualan",  icon: Receipt,   isPrimary: true },
+    { name: "Laporan",    href: "/laporan",    icon: BarChart3 },
     { name: "Pengaturan", href: "/pengaturan", icon: Settings },
   ];
 
   return (
-    <div className="md:hidden flex-none w-full z-40 bg-background border-t border-border/50 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-      <div className="flex items-center justify-around">
+    <nav
+      className={cn(
+        "md:hidden flex-none w-full z-40",
+        "bg-white/95 backdrop-blur-xl",
+        "border-t border-slate-100",
+        // safe area bottom iOS
+        "pb-[env(safe-area-inset-bottom)]"
+      )}
+    >
+      <div className="flex items-stretch justify-around h-[56px]">
         {navItems.map((item) => {
-          const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-          
-          if (item.isMain) {
-            return (
-              <Link key={item.name} href={item.href}>
-                <div className="relative -top-5 flex flex-col items-center justify-center cursor-pointer w-16 group z-40">
-                  <div className="w-14 h-14 bg-gradient-to-tr from-violet-600 to-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/40 ring-4 ring-background transform transition-transform group-hover:scale-105 group-active:scale-95">
-                    <item.icon className="h-6 w-6 relative z-10" strokeWidth={2.5} />
-                  </div>
-                  <span className={cn("text-[10px] font-bold mt-1 transition-colors", isActive ? "text-primary" : "text-slate-500")}>
-                    {item.name}
-                  </span>
-                </div>
-              </Link>
-            )
-          }
+          const isActive =
+            location === item.href ||
+            (item.href !== "/" && location.startsWith(item.href));
 
           return (
             <Link key={item.name} href={item.href}>
-              <div className="flex flex-col items-center justify-center gap-1 cursor-pointer w-16">
-                <div
-                  className={cn(
-                    "p-1.5 rounded-full transition-all duration-300",
-                    isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <item.icon className="h-6 w-6" strokeWidth={isActive ? 2.5 : 2} />
-                </div>
+              <div
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-0.5",
+                  "w-full h-full px-1 cursor-pointer select-none",
+                  "transition-all duration-200 active:opacity-70",
+                  // touch feedback
+                  "tap-highlight-transparent"
+                )}
+              >
+                {/* Active indicator bar di atas */}
                 <span
                   className={cn(
-                    "text-[10px] font-medium transition-colors",
-                    isActive ? "text-primary font-bold" : "text-muted-foreground"
+                    "absolute top-0 left-1/2 -translate-x-1/2 h-0.5 rounded-b-full transition-all duration-300",
+                    isActive
+                      ? item.isPrimary
+                        ? "w-8 bg-violet-600"
+                        : "w-6 bg-violet-500"
+                      : "w-0 bg-transparent"
+                  )}
+                />
+
+                {/* Icon container */}
+                <div
+                  className={cn(
+                    "flex items-center justify-center rounded-xl transition-all duration-200",
+                    item.isPrimary
+                      ? cn(
+                          "w-10 h-10",
+                          isActive
+                            ? "bg-violet-600 text-white"
+                            : "bg-violet-50 text-violet-600"
+                        )
+                      : cn(
+                          "w-8 h-8",
+                          isActive
+                            ? "text-violet-600"
+                            : "text-muted-foreground"
+                        )
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "transition-all duration-200",
+                      item.isPrimary ? "h-5 w-5" : "h-5 w-5"
+                    )}
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                  />
+                </div>
+
+                {/* Label */}
+                <span
+                  className={cn(
+                    "text-[9px] font-semibold tracking-tight leading-none transition-colors duration-200",
+                    isActive
+                      ? "text-violet-600"
+                      : "text-muted-foreground"
                   )}
                 >
                   {item.name}
@@ -58,6 +96,7 @@ export function BottomNav() {
           );
         })}
       </div>
-    </div>
+    </nav>
   );
 }
+

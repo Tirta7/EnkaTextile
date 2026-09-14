@@ -181,9 +181,9 @@ export default function Kategori() {
 
       {/* ── Pagination Bar ── */}
       {filteredCategories && filteredCategories.length > 20 && (
-        <div className="flex-none border-t border-slate-200 bg-white px-4 py-2.5 flex items-center justify-between rounded-b-2xl shadow-sm">
-          <span className="text-xs text-slate-400">
-            Menampilkan {(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filteredCategories.length)} dari {filteredCategories.length} kategori
+        <div className="flex-none border-t border-slate-200 bg-white px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-2 rounded-b-2xl shadow-sm">
+          <span className="text-xs text-slate-400 font-medium">
+            Menampilkan <span className="font-bold text-slate-600">{(currentPage - 1) * 20 + 1}–{Math.min(currentPage * 20, filteredCategories.length)}</span> dari <span className="font-bold text-slate-600">{filteredCategories.length}</span> kategori
           </span>
           <PaginationControl currentPage={currentPage} totalPages={Math.ceil(filteredCategories.length / 20)} onPageChange={setCurrentPage} />
         </div>

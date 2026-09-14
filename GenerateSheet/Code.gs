@@ -10,13 +10,18 @@ function onOpen() {
 }
 
 /**
- * Fungsi untuk mencocokkan rentangan roll di sheet Pembelian dengan sheet Barang
- * Jika cocok, berikan warna kuning pada roll di sheet Barang.
+ * Cek Otomatis: Cocokkan roll di Sheet Pembelian dengan Sheet Barang berdasarkan BARCODE.
+ * Logika:
+ *   1. Baca setiap baris di Sheet Pembelian (mulai baris 2).
+ *   2. Ambil Barcode dari kolom B dan nilai roll dari kolom J ke kanan.
+ *   3. Cari baris di Sheet Barang yang memiliki Barcode yang sama (kolom B).
+ *   4. Gunakan sliding-window untuk menemukan urutan roll yang cocok di Barang.
+ *   5. Jika urutan cocok dan belum pernah dikuningkan → warnai kuning.
  */
 function autoCheckMutasi() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetPembelian = ss.getSheetByName("Pembelian");
-  var sheetBarang = ss.getSheetByName("Barang");
+  var sheetBarang    = ss.getSheetByName("Barang");
   
   if (!sheetPembelian || !sheetBarang) {
     SpreadsheetApp.getUi().alert("Sheet 'Pembelian' atau 'Barang' tidak ditemukan!");
@@ -24,93 +29,118 @@ function autoCheckMutasi() {
   }
   
   var ui = SpreadsheetApp.getUi();
-  var response = ui.alert('Konfirmasi', 'Proses ini akan membaca semua baris di Pembelian dan mencari deret roll yang sama di Barang, lalu mewarnainya kuning. Lanjutkan?', ui.ButtonSet.YES_NO);
+  var response = ui.alert(
+    'Konfirmasi',
+    'Proses ini akan mencocokkan roll di Pembelian dengan Barang berdasarkan Barcode, lalu mewarnai kuning posisi roll yang ditemukan. Lanjutkan?',
+    ui.ButtonSet.YES_NO
+  );
   if (response !== ui.Button.YES) return;
   
+  // ── Baca semua data sekaligus (efisien) ──
   var dataPembelian = sheetPembelian.getDataRange().getValues();
-  var dataBarang = sheetBarang.getDataRange().getValues();
+  var dataBarang    = sheetBarang.getDataRange().getValues();
+  var bgBarang      = sheetBarang.getDataRange().getBackgrounds();
   
-  // Ambil warna background saat ini agar tidak mengecek cell yang sudah dikuningkan sebelumnya
-  var bgBarang = sheetBarang.getDataRange().getBackgrounds();
-  
-  var matchCount = 0;
-  
-  // Looping data Pembelian mulai baris 2 (indeks 1)
-  for (var i = 1; i < dataPembelian.length; i++) {
-    var pRow = dataPembelian[i];
-    var pNama = String(pRow[5]).trim().toLowerCase(); // Kolom F (index 5)
-    if (!pNama) continue;
+  // ── Buat index Barang: barcode → [{rowIdx, rolls:[{value,col}]}] ──
+  // Sheet Barang: Kolom B (index 1) = Barcode, Kolom J+ (index 9+) = Roll
+  var barangIndex = {};
+  for (var b = 1; b < dataBarang.length; b++) {
+    var bcode = String(dataBarang[b][1]).trim();
+    if (!bcode || bcode === "" || bcode.toLowerCase() === "barcode") continue;
     
-    // Kumpulkan roll dari Pembelian (mulai dari kolom J / index 9)
-    var pRolls = [];
-    for (var j = 9; j < pRow.length; j++) {
-      var cv = pRow[j];
-      var nv = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : cv;
-      if (cv !== "" && cv !== null && !isNaN(nv)) {
-        pRolls.push(nv);
+    var bRolls = [];
+    for (var c = 9; c < dataBarang[b].length; c++) {
+      var cv  = dataBarang[b][c];
+      var nv  = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : Number(cv);
+      if (cv !== "" && cv !== null && !isNaN(nv) && nv > 0) {
+        bRolls.push({ value: nv, col: c }); // col = 0-based index
       }
     }
     
-    if (pRolls.length === 0) continue; // Lewati jika tidak ada roll
+    if (!barangIndex[bcode]) barangIndex[bcode] = [];
+    barangIndex[bcode].push({ rowIdx: b, rolls: bRolls });
+  }
+  
+  // ── Loop setiap baris Pembelian ──
+  // Sheet Pembelian: Kolom E (index 4) = Barcode, Kolom J+ (index 9+) = Roll 1, Roll 2...
+  // Urutan kolom: No(0), Tanggal(1), No Invoice(2), Supplier(3), Barcode(4), Kategori(5), Produk(6), Roll(7), Meter(8), Roll 1(9)...
+  var matchCount = 0;
+  var batchUpdates = []; // kumpulkan dulu, baru tulis sekaligus
+  
+  for (var i = 1; i < dataPembelian.length; i++) {
+    var pRow    = dataPembelian[i];
+    var pBarcode = String(pRow[4]).trim(); // Kolom E (index 4) = Barcode di sheet Pembelian
+    if (!pBarcode || pBarcode === "") continue;
     
-    var foundMatchForThisPembelian = false;
-    
-    // Cari di data Barang
-    for (var b = 1; b < dataBarang.length; b++) {
-      if (foundMatchForThisPembelian) break;
-      
-      var bRow = dataBarang[b];
-      var bNama = String(bRow[2]).trim().toLowerCase(); // Kolom C (index 2)
-      
-      if (bNama !== pNama) continue;
-      
-      // Kumpulkan roll dari Barang (mulai kolom J / index 9)
-      var bNumericCols = [];
-      for (var c = 9; c < bRow.length; c++) {
-        var bcv = bRow[c];
-        var bnv = (typeof bcv === 'string') ? parseFloat(bcv.replace(',', '.')) : bcv;
-        if (bcv !== "" && bcv !== null && !isNaN(bnv)) {
-          bNumericCols.push({ value: bnv, col: c });
-        }
+    // Ambil nilai roll dari baris Pembelian ini
+    var pRolls = [];
+    for (var j = 9; j < pRow.length; j++) {
+      var pv = pRow[j];
+      var pn = (typeof pv === 'string') ? parseFloat(pv.replace(',', '.')) : Number(pv);
+      if (pv !== "" && pv !== null && !isNaN(pn) && pn > 0) {
+        pRolls.push(pn);
       }
+    }
+    if (pRolls.length === 0) continue;
+    
+    // Cari baris Barang dengan Barcode yang sama
+    var barangRows = barangIndex[pBarcode];
+    if (!barangRows || barangRows.length === 0) continue;
+    
+    for (var bi = 0; bi < barangRows.length; bi++) {
+      var entry  = barangRows[bi];
+      var bRollArr = entry.rolls;
+      var bRowIdx  = entry.rowIdx; // 0-based row index di dataBarang
       
-      // Cari apakah pRolls ada di dalam bNumericCols (Sliding window)
-      for (var s = 0; s <= bNumericCols.length - pRolls.length; s++) {
-        var isMatch = true;
+      if (bRollArr.length < pRolls.length) continue;
+      
+      // ── Sliding window: cari urutan pRolls di dalam bRollArr ──
+      for (var s = 0; s <= bRollArr.length - pRolls.length; s++) {
+        var isMatch  = true;
         var hasYellow = false;
         
         for (var k = 0; k < pRolls.length; k++) {
-          var bColIndex = bNumericCols[s + k].col;
-          // Cek nilai (toleransi 0.01)
-          if (Math.abs(bNumericCols[s + k].value - pRolls[k]) > 0.01) {
-            isMatch = false;
+          var bColIdx = bRollArr[s + k].col; // 0-based
+          
+          // Sudah dikuningkan sebelumnya? Anggap bukan kandidat
+          if (bgBarang[bRowIdx] && bgBarang[bRowIdx][bColIdx] === "#ffff00") {
+            hasYellow = true;
+            isMatch   = false;
             break;
           }
-          // Cek apakah cell ini sudah dikuningkan sebelumnya
-          if (bgBarang[b][bColIndex] === "#ffff00") {
-            hasYellow = true;
+          // Toleransi 0.11 yard
+          if (Math.abs(bRollArr[s + k].value - pRolls[k]) > 0.11) {
             isMatch = false;
             break;
           }
         }
         
         if (isMatch) {
-          // Ketemu! Warnai kuning pada cell tersebut
+          // Tandai juga di memori bgBarang agar baris Pembelian berikutnya tidak mengklaim lagi
           for (var k = 0; k < pRolls.length; k++) {
-            var bColIndex = bNumericCols[s + k].col;
-            sheetBarang.getRange(b + 1, bColIndex + 1).setBackground("#ffff00");
-            bgBarang[b][bColIndex] = "#ffff00"; // Update state memory
+            var bColIdx = bRollArr[s + k].col;
+            bgBarang[bRowIdx][bColIdx] = "#ffff00";
+            batchUpdates.push({ row: bRowIdx + 1, col: bColIdx + 1 }); // 1-based
           }
           matchCount++;
-          foundMatchForThisPembelian = true;
-          break; // Lanjut ke baris Pembelian berikutnya
+          break; // Window ditemukan, tidak perlu scan lagi untuk baris Pembelian ini
         }
       }
     }
   }
   
-  ui.alert("Selesai", "Berhasil menemukan dan menandai kuning " + matchCount + " deret roll di sheet Barang.", ui.ButtonSet.OK);
+  // ── Tulis warna kuning sekaligus (batch) ── 
+  for (var u = 0; u < batchUpdates.length; u++) {
+    sheetBarang.getRange(batchUpdates[u].row, batchUpdates[u].col).setBackground("#ffff00");
+  }
+  
+  ui.alert(
+    "Selesai",
+    "Berhasil mencocokkan dan menandai kuning " + matchCount + " deret roll di sheet Barang (berdasarkan Barcode).",
+    ui.ButtonSet.OK
+  );
 }
+
 
 function showDialog() {
   var html = HtmlService.createHtmlOutputFromFile('Index')

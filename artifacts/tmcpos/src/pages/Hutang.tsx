@@ -261,7 +261,7 @@ export default function Hutang() {
           setIsOpen(true);
         }
       }}>
-        <DrawerContent className="max-h-[95vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">Bayar Hutang</DrawerTitle>
           <DrawerDescription className="sr-only">Form to pay debt to supplier</DrawerDescription>
           

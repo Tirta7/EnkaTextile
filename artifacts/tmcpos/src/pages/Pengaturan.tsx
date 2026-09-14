@@ -848,7 +848,7 @@ export default function Pengaturan() {
 
       {/* Add Dialog */}
       <Drawer open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+        <DrawerContent className="mx-auto w-full max-w-sm px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerHeader>
             <DrawerTitle>Tambah Metode Pembayaran</DrawerTitle>
           </DrawerHeader>
@@ -893,7 +893,7 @@ export default function Pengaturan() {
 
       {/* Edit Dialog */}
       <Drawer open={!!editItem} onOpenChange={() => setEditItem(null)}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+        <DrawerContent className="mx-auto w-full max-w-sm px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerHeader>
             <DrawerTitle>Edit Metode Pembayaran</DrawerTitle>
           </DrawerHeader>
@@ -934,7 +934,7 @@ export default function Pengaturan() {
 
       {/* Add Unit Dialog */}
       <Drawer open={isAddUnitOpen} onOpenChange={setIsAddUnitOpen}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+        <DrawerContent className="mx-auto w-full max-w-sm px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerHeader>
             <DrawerTitle>Tambah Satuan</DrawerTitle>
           </DrawerHeader>
@@ -971,7 +971,7 @@ export default function Pengaturan() {
 
       {/* Edit Unit Dialog */}
       <Drawer open={!!editUnitItem} onOpenChange={() => setEditUnitItem(null)}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-sm px-4 sm:px-6 pb-6 pt-2">
+        <DrawerContent className="mx-auto w-full max-w-sm px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerHeader>
             <DrawerTitle>Edit Satuan</DrawerTitle>
           </DrawerHeader>

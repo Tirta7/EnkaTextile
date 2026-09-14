@@ -38,7 +38,7 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-4xl px-4 sm:px-6 pb-6 pt-2 flex flex-col">
+      <DrawerContent className="mx-auto w-full max-w-4xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
         <DrawerHeader className="px-0 pt-0 pb-4 border-b">
           <div className="flex items-center justify-between">
             <div>

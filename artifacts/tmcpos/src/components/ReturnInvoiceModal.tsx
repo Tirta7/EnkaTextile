@@ -134,7 +134,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
   if (!returnDoc && !isLoading) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="h-[90vh]">
+        <DrawerContent className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <div className="flex items-center justify-center h-full">Data nota retur tidak ditemukan.</div>
         </DrawerContent>
       </Drawer>
@@ -147,7 +147,7 @@ export function ReturnInvoiceModal({ open, onOpenChange, returnId }: ReturnInvoi
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[95vh] max-h-screen bg-slate-100 flex flex-col p-0">
+      <DrawerContent className="mx-auto w-full max-w-4xl pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-0 bg-slate-100 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
         <DrawerTitle className="sr-only">Preview Nota Retur</DrawerTitle>
         
         {/* Gradient Header */}

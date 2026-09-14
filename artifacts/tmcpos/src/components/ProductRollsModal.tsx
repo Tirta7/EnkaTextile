@@ -234,8 +234,8 @@ export function ProductRollsModal({ productId, productName, isOpen, onClose }: P
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DrawerContent
-        className="flex flex-col mx-auto w-full max-w-[95vw] px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-2"
-        style={{ height: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
+        className="flex flex-col mx-auto w-full max-w-[95vw] xl:max-w-5xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2"
+        style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
       >
         <DrawerHeader className="pb-2 shrink-0 px-0">
           {/* Title + Tambah */}

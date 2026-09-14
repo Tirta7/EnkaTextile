@@ -212,22 +212,21 @@ export default function Mutasi() {
       )}
 
       <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); } }}>
-        <DrawerContent className="max-h-[90vh] mx-auto w-full max-w-2xl p-0 overflow-hidden">
+        <DrawerContent className="mx-auto w-full max-w-2xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">Catat Mutasi Stok</DrawerTitle>
-          <DrawerDescription className="sr-only">Form to record a stock mutation</DrawerDescription>
-          
-          {/* Gradient Header */}
-          <div className="bg-gradient-to-r from-violet-600 via-violet-500 to-indigo-600 px-6 py-4 flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Package className="w-5 h-5 text-white" strokeWidth={1.5} />
+          <DrawerDescription className="sr-only">Form pencatatan mutasi stok</DrawerDescription>
+          <DrawerHeader className="pb-3 px-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
+                <Package className="w-5 h-5 text-violet-600" strokeWidth={1.5} />
+              </div>
+              <div>
+                <h2 className="text-[15px] font-bold text-slate-800 leading-tight">Catat Mutasi Stok</h2>
+                <p className="text-xs text-slate-400">Isi formulir untuk mencatat mutasi stok barang</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white leading-tight">Catat Mutasi Stok</h2>
-              <p className="text-violet-200 text-xs">Isi formulir untuk mencatat mutasi stok barang</p>
-            </div>
-          </div>
-          
-          <div className="overflow-y-auto max-h-[calc(90vh-5rem)] p-6">
+          </DrawerHeader>
+          <div className="overflow-y-auto flex-1">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
               <FormField control={form.control} name="productId" render={({ field }) => (

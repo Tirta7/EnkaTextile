@@ -357,7 +357,10 @@ export function InvoicePreviewModal({ open, onOpenChange, data, saleId }: Invoic
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-w-4xl mx-auto w-full max-h-[90vh] overflow-y-auto p-0 bg-white">
+        <DrawerContent
+          className="max-w-4xl mx-auto w-full px-0 pb-[max(1rem,env(safe-area-inset-bottom,0px))] pt-0 flex flex-col bg-white"
+          style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
+        >
           <DrawerTitle className="sr-only">Preview Invoice</DrawerTitle>
           <DrawerDescription className="sr-only">Preview of your invoice</DrawerDescription>
           {/* ── Gradient Header ── */}

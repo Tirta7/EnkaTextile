@@ -6,7 +6,128 @@ function onOpen() {
     .createMenu('Alat EnkaTextile')
     .addItem('Cari & Pindah Roll', 'showDialog')
     .addItem('Cek Otomatis (Pembelian vs Barang)', 'autoCheckMutasi')
+    .addItem('[DEBUG] Cek Struktur Kolom', 'debugStrukturKolom')
+    .addItem('[DEBUG] Cek Barcode Match', 'debugBarcodeMatch')
     .addToUi();
+}
+
+/**
+ * DEBUG: Tampilkan struktur kolom sheet Pembelian dan Barang
+ * Jalankan ini untuk memastikan index kolom sudah benar sebelum menjalankan Cek Otomatis
+ */
+function debugStrukturKolom() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPembelian = ss.getSheetByName("Pembelian");
+  var sheetBarang    = ss.getSheetByName("Barang");
+  
+  var msg = "=== SHEET PEMBELIAN (Baris 1 = Header) ===\n";
+  if (sheetPembelian) {
+    var hP = sheetPembelian.getRange(1, 1, 1, Math.min(15, sheetPembelian.getLastColumn())).getValues()[0];
+    for (var i = 0; i < hP.length; i++) {
+      msg += "Kolom " + (i) + " (Kol " + String.fromCharCode(65+i) + "): [" + hP[i] + "]\n";
+    }
+    // Sampel baris data ke-2
+    var r2P = sheetPembelian.getRange(2, 1, 1, Math.min(15, sheetPembelian.getLastColumn())).getValues()[0];
+    msg += "\nBaris 2 (data):\n";
+    for (var i = 0; i < r2P.length; i++) {
+      msg += "  idx " + i + ": [" + r2P[i] + "]\n";
+    }
+  } else {
+    msg += "Sheet Pembelian TIDAK DITEMUKAN!\n";
+  }
+  
+  msg += "\n=== SHEET BARANG (Baris 1 = Header) ===\n";
+  if (sheetBarang) {
+    var hB = sheetBarang.getRange(1, 1, 1, Math.min(15, sheetBarang.getLastColumn())).getValues()[0];
+    for (var i = 0; i < hB.length; i++) {
+      msg += "Kolom " + (i) + " (Kol " + String.fromCharCode(65+i) + "): [" + hB[i] + "]\n";
+    }
+    // Sampel baris data ke-2
+    var r2B = sheetBarang.getRange(2, 1, 1, Math.min(15, sheetBarang.getLastColumn())).getValues()[0];
+    msg += "\nBaris 2 (data):\n";
+    for (var i = 0; i < r2B.length; i++) {
+      msg += "  idx " + i + ": [" + r2B[i] + "]\n";
+    }
+  } else {
+    msg += "Sheet Barang TIDAK DITEMUKAN!\n";
+  }
+  
+  SpreadsheetApp.getUi().alert("DEBUG Struktur Kolom", msg, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * DEBUG LANJUT: Cek apakah barcode di Pembelian ada di Barang dan cocokkan roll-nya
+ */
+function debugBarcodeMatch() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPembelian = ss.getSheetByName("Pembelian");
+  var sheetBarang    = ss.getSheetByName("Barang");
+  
+  if (!sheetPembelian || !sheetBarang) {
+    SpreadsheetApp.getUi().alert("Sheet tidak ditemukan!"); return;
+  }
+  
+  var dataPembelian = sheetPembelian.getDataRange().getValues();
+  var dataBarang    = sheetBarang.getDataRange().getValues();
+  
+  // Buat index barcode Barang
+  var barangBarcodes = {};
+  for (var b = 1; b < dataBarang.length; b++) {
+    var bc = String(dataBarang[b][1]).trim();
+    if (bc) barangBarcodes[bc] = b;
+  }
+  
+  var msg = "";
+  var checked = 0;
+  
+  for (var i = 1; i < dataPembelian.length && checked < 5; i++) {
+    var pBarcode = String(dataPembelian[i][4]).trim();
+    if (!pBarcode) continue;
+    
+    // Kumpulkan roll Pembelian
+    var pRolls = [];
+    for (var j = 9; j < dataPembelian[i].length; j++) {
+      var v = dataPembelian[i][j];
+      var n = (typeof v === 'string') ? parseFloat(v.replace(',','.')) : Number(v);
+      if (v !== "" && !isNaN(n) && n > 0) pRolls.push(n);
+    }
+    
+    var bIdx = barangBarcodes[pBarcode];
+    msg += "Pembelian baris " + (i+1) + ":\n";
+    msg += "  Barcode: " + pBarcode + "\n";
+    msg += "  Roll Pembelian (" + pRolls.length + "): " + pRolls.slice(0,5).join(", ") + (pRolls.length > 5 ? "..." : "") + "\n";
+    
+    if (bIdx !== undefined) {
+      // Kumpulkan roll Barang
+      var bRolls = [];
+      for (var c = 9; c < dataBarang[bIdx].length; c++) {
+        var bv = dataBarang[bIdx][c];
+        var bn = (typeof bv === 'string') ? parseFloat(bv.replace(',','.')) : Number(bv);
+        if (bv !== "" && !isNaN(bn) && bn > 0) bRolls.push(bn);
+      }
+      msg += "  ✅ Barcode DITEMUKAN di Barang baris " + (bIdx+1) + "\n";
+      msg += "  Roll Barang (" + bRolls.length + "): " + bRolls.slice(0,5).join(", ") + (bRolls.length > 5 ? "..." : "") + "\n";
+      
+      // Cek sliding window manual
+      var found = false;
+      if (pRolls.length > 0 && bRolls.length >= pRolls.length) {
+        for (var s = 0; s <= bRolls.length - pRolls.length; s++) {
+          var ok = true;
+          for (var k = 0; k < pRolls.length; k++) {
+            if (Math.abs(bRolls[s+k] - pRolls[k]) > 0.11) { ok = false; break; }
+          }
+          if (ok) { found = true; break; }
+        }
+      }
+      msg += "  Sliding window match: " + (found ? "✅ COCOK!" : "❌ Tidak cocok") + "\n";
+    } else {
+      msg += "  ❌ Barcode TIDAK ADA di sheet Barang\n";
+    }
+    msg += "\n";
+    checked++;
+  }
+  
+  SpreadsheetApp.getUi().alert("DEBUG Barcode Match (5 baris pertama)", msg, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**

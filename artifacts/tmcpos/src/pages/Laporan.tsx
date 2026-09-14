@@ -184,34 +184,6 @@ function LaporanFilterBar({
   );
 }
 
-      {showStatus && setStatusFilter && (
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-28 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="semua">Semua</SelectItem>
-            <SelectItem value="lunas">Lunas</SelectItem>
-            <SelectItem value="tempo">Tempo</SelectItem>
-            <SelectItem value="partial">Partial</SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-      {showSearch && setSearch !== undefined && (
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-          <Input
-            value={search ?? ""}
-            onChange={e => setSearch!(e.target.value)}
-            placeholder="Cari nota / pelanggan..."
-            className="pl-7 w-48 h-8 rounded-lg border-slate-200 bg-slate-50 text-xs focus-visible:ring-violet-500"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function Laporan() {
   const today = new Date();
@@ -289,44 +261,63 @@ export default function Laporan() {
     <div className="w-full">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         
-        {/* SINGLE ROW HEADER (Desktop) */}
-        <div className="flex-none flex flex-col xl:flex-row gap-3 xl:items-center justify-between pb-3 mb-2 border-b border-slate-100">
-          
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="shrink-0 mr-2">
+        {/* HEADER */}
+        <div className="flex-none pb-3 mb-2 border-b border-slate-100 space-y-2">
+
+          {/* Row 1: Title + (desktop filter) */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="shrink-0">
               <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-tight">Laporan</h1>
               <p className="text-[11px] text-slate-400">Analisa performa bisnis</p>
             </div>
-            
-            <TabsList className="flex h-9 w-fit justify-start rounded-xl bg-slate-100 p-1 gap-1">
-              <TabsTrigger value="penjualan" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+            {/* Filter bar — desktop only inline */}
+            <div className="hidden xl:block">
+              {activeTab !== "stok" && activeTab !== "refunds" && (
+                <LaporanFilterBar
+                  startDate={startDate} setStartDate={setStartDate}
+                  endDate={endDate} setEndDate={setEndDate}
+                  showStatus={activeTab === "detail"}
+                  statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+                  showSearch={activeTab === "detail" || activeTab === "pajak"}
+                  search={search} setSearch={setSearch}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Tab bar — scrollable horizontal */}
+          <div className="overflow-x-auto pb-0.5 -mx-3 px-3 md:-mx-4 md:px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <TabsList className="inline-flex h-9 w-max min-w-full justify-start rounded-xl bg-slate-100 p-1 gap-0.5">
+              <TabsTrigger value="penjualan" className="flex items-center gap-1.5 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap shrink-0">
                 <TrendingUp className="h-3.5 w-3.5" /> Ringkasan
               </TabsTrigger>
-              <TabsTrigger value="detail" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+              <TabsTrigger value="detail" className="flex items-center gap-1.5 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap shrink-0">
                 <FileText className="h-3.5 w-3.5" /> Detail Transaksi
               </TabsTrigger>
-              <TabsTrigger value="pajak" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+              <TabsTrigger value="pajak" className="flex items-center gap-1.5 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap shrink-0">
                 <Receipt className="h-3.5 w-3.5" /> Laporan PPN
               </TabsTrigger>
-              <TabsTrigger value="stok" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+              <TabsTrigger value="stok" className="flex items-center gap-1.5 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap shrink-0">
                 <Package className="h-3.5 w-3.5" /> Stok
               </TabsTrigger>
-              <TabsTrigger value="refunds" className="flex items-center gap-1 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap">
+              <TabsTrigger value="refunds" className="flex items-center gap-1.5 rounded-lg px-3 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-xs font-semibold text-slate-500 h-7 whitespace-nowrap shrink-0">
                 <ArrowDownToLine className="h-3.5 w-3.5" /> Refund
               </TabsTrigger>
             </TabsList>
           </div>
 
-          {/* Global Filter Bar */}
+          {/* Row 3: Filter bar — mobile (sembunyikan di desktop row 1) */}
           {activeTab !== "stok" && activeTab !== "refunds" && (
-            <LaporanFilterBar
-              startDate={startDate} setStartDate={setStartDate}
-              endDate={endDate} setEndDate={setEndDate}
-              showStatus={activeTab === "detail"}
-              statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-              showSearch={activeTab === "detail" || activeTab === "pajak"}
-              search={search} setSearch={setSearch}
-            />
+            <div className="xl:hidden">
+              <LaporanFilterBar
+                startDate={startDate} setStartDate={setStartDate}
+                endDate={endDate} setEndDate={setEndDate}
+                showStatus={activeTab === "detail"}
+                statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+                showSearch={activeTab === "detail" || activeTab === "pajak"}
+                search={search} setSearch={setSearch}
+              />
+            </div>
           )}
         </div>
 

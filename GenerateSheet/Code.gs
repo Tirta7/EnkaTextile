@@ -122,18 +122,25 @@ function debugBarcodeMatch() {
       msg += "  \u2705 Barcode DITEMUKAN di Barang baris " + (bIdx+1) + "\n";
       msg += "  Roll Barang (" + bRolls.length + "): " + bRolls.slice(0,5).join(", ") + (bRolls.length > 5 ? "..." : "") + "\n";
       
-      // Cek sliding window manual
+      // Cek sliding window manual — cari posisi yang cocok
       var found = false;
+      var matchPos = -1;
       if (pRolls.length > 0 && bRolls.length >= pRolls.length) {
         for (var s = 0; s <= bRolls.length - pRolls.length; s++) {
           var ok = true;
           for (var k = 0; k < pRolls.length; k++) {
             if (Math.abs(bRolls[s+k] - pRolls[k]) > 0.11) { ok = false; break; }
           }
-          if (ok) { found = true; break; }
+          if (ok) { found = true; matchPos = s; break; }
         }
       }
-      msg += "  Sliding window match: " + (found ? "\u2705 COCOK!" : "\u274c Tidak cocok") + "\n";
+      if (found) {
+        var matchedVals = bRolls.slice(matchPos, matchPos + Math.min(pRolls.length, 5));
+        msg += "  \u2705 COCOK! Posisi di Barang: Roll ke-" + (matchPos+1) + " s/d Roll ke-" + (matchPos+pRolls.length) + "\n";
+        msg += "  Nilai yang cocok: " + matchedVals.join(", ") + (pRolls.length > 5 ? "..." : "") + "\n";
+      } else {
+        msg += "  \u274c Tidak cocok\n";
+      }
     } else {
       msg += "  \u274c Barcode TIDAK ADA di sheet Barang\n";
     }

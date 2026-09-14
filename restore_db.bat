@@ -3,21 +3,21 @@ setlocal enabledelayedexpansion
 
 REM ==========================================
 REM RESTORE POSTGRESQL - ENKATEXTILE SYSTEM
-REM Mendukung mode: Docker (PC Client) & Lokal
+REM v2 - Safe Restore: DATA ONLY (schema tetap dari migrasi)
 REM ==========================================
 
 REM ── Kredensial Database ──────────────────
 set DB_USER=postgres
-set DB_NAME_DOCKER=vocpos
-set DB_NAME_LOCAL=avocpos
+set DB_NAME=vocpos
 
-REM ── Konfigurasi Docker (PC Client) ───────
+REM ── Konfigurasi Docker ───────────────────
 set CONTAINER_NAME=vocpos-db
+set APP_CONTAINER=vocpos-app
 set PGPASSWORD_DOCKER=vocpos2026
 
-REM ── Konfigurasi Lokal (PC Dev/Server) ────
+REM ── Konfigurasi Lokal ────────────────────
 set DB_HOST=localhost
-set DB_PORT=4538
+set DB_PORT=5432
 set PGPASSWORD_LOCAL=vocpos2026
 set PG_PSQL_EXE=C:\Program Files\PostgreSQL\18\bin\psql.exe
 
@@ -28,53 +28,73 @@ REM ==========================================
 REM AUTO-DETECT: Docker atau Lokal?
 REM ==========================================
 set USE_DOCKER=no
-
-REM Cek apakah Docker ada dulu
 where docker >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo  Info: Docker tidak ditemukan, menggunakan mode LOKAL.
-    goto :start_menu
-)
-
-REM Cek apakah container vocpos-db sedang berjalan
-docker inspect --format="{{.State.Running}}" %CONTAINER_NAME% >nul 2>&1
 if %ERRORLEVEL% equ 0 (
     for /f "delims=" %%R in ('docker inspect --format={{.State.Running}} %CONTAINER_NAME% 2^>nul') do set DOCKER_RUNNING=%%R
-    if "!DOCKER_RUNNING!"=="true" (
-        set USE_DOCKER=yes
-    )
+    if "!DOCKER_RUNNING!"=="true" set USE_DOCKER=yes
 )
 
 :start_menu
 cls
 echo.
 echo =======================================================
-echo         MENU RESTORE DATABASE - ENKATEXTILE
+echo      MENU RESTORE DATABASE - ENKATEXTILE v2
 echo =======================================================
 if "!USE_DOCKER!"=="yes" (
-    echo  Mode    : DOCKER ^(Container: %CONTAINER_NAME%^)
+    echo  Mode    : DOCKER (Container: %CONTAINER_NAME%)
 ) else (
-    echo  Mode    : LOKAL ^(Host: %DB_HOST%:%DB_PORT%^)
+    echo  Mode    : LOKAL (Host: %DB_HOST%:%DB_PORT%)
 )
 echo =======================================================
 echo.
+echo  [1] Restore AMAN    - data saja, schema dari migrasi (DIREKOMENDASIKAN)
+echo  [2] Restore PENUH   - data + schema dari file backup (versi lama saja)
+echo  [3] Keluar
+echo.
+set /p PILIHAN="Pilih menu [1/2/3]: "
 
+if "!PILIHAN!"=="3" exit /b
+if "!PILIHAN!"=="1" goto :mode_safe
+if "!PILIHAN!"=="2" goto :mode_full
+goto :start_menu
+
+REM ==========================================
+REM MODE 1: RESTORE AMAN (data-only)
+REM Cocok untuk restore backup lama ke versi aplikasi terbaru
+REM ==========================================
+:mode_safe
+cls
+echo.
+echo =======================================================
+echo   RESTORE AMAN - Data Only
+echo   Schema tabel tetap dari migrasi versi terbaru.
+echo   Cocok untuk: backup lama ke aplikasi versi baru.
+echo =======================================================
+echo.
+goto :pilih_file
+
+REM ==========================================
+REM MODE 2: RESTORE PENUH (schema + data)
+REM Hanya cocok jika backup dari versi yang SAMA
+REM ==========================================
+:mode_full
+cls
+echo.
+echo =======================================================
+echo   RESTORE PENUH - Schema + Data
+echo   PERINGATAN: Hanya gunakan jika backup dari
+echo   versi aplikasi yang SAMA persis!
+echo =======================================================
+echo.
+goto :pilih_file
+
+:pilih_file
 REM Cek folder backups
 if not exist "%BACKUP_DIR%" (
     echo [ERROR] Folder backups tidak ditemukan!
-    echo.
-    echo Kemungkinan penyebab:
-    echo  - Belum ada backup yang dibuat
-    echo  - File backup ada di folder lain
-    echo.
-    echo Silakan buat backup terlebih dahulu menggunakan:
-    echo   backup_db.bat
-    echo.
-    pause
-    exit /b
+    pause & exit /b
 )
 
-REM Daftar file backup tersedia
 echo DAFTAR FILE BACKUP YANG TERSEDIA:
 echo -------------------------------------------------------
 set FILE_COUNT=0
@@ -84,184 +104,144 @@ for %%F in ("%BACKUP_DIR%\*.sql") do (
 )
 echo -------------------------------------------------------
 echo.
-
 if !FILE_COUNT! equ 0 (
     echo [ERROR] Tidak ada file .sql di folder backups!
-    echo Lokasi folder: %BACKUP_DIR%
-    echo.
-    pause
-    exit /b
+    pause & exit /b
 )
 
 echo Ketik/Paste nama file yang ingin di-restore (lengkap dengan .sql):
 set /p TARGET_FILE="> "
-
 if "!TARGET_FILE!"=="" (
-    echo.
     echo [BATAL] Tidak ada file yang dipilih.
-    pause
-    exit /b
+    pause & exit /b
 )
-
-REM Auto-tambahkan .sql jika user lupa mengetikkan ekstensinya
-if /i "!TARGET_FILE:~-4!" neq ".sql" (
-    set TARGET_FILE=!TARGET_FILE!.sql
-)
+if /i "!TARGET_FILE:~-4!" neq ".sql" set TARGET_FILE=!TARGET_FILE!.sql
 
 set BACKUP_PATH=%BACKUP_DIR%\%TARGET_FILE%
-
 if not exist "%BACKUP_PATH%" (
-    echo.
-    echo [ERROR] File '!TARGET_FILE!' tidak ditemukan di folder backups!
-    echo Lokasi yang dicari: %BACKUP_PATH%
-    echo.
-    pause
-    exit /b
-)
-
-if "!USE_DOCKER!"=="yes" (
-    set DB_TARGET_NAME=%DB_NAME_DOCKER%
-) else (
-    set DB_TARGET_NAME=%DB_NAME_LOCAL%
+    echo [ERROR] File '!TARGET_FILE!' tidak ditemukan!
+    pause & exit /b
 )
 
 echo.
 echo =======================================================
 echo                   !! PERINGATAN !!
 echo =======================================================
-echo  Database '!DB_TARGET_NAME!' akan di-REPLACE dengan isi file:
-echo  !TARGET_FILE!
+if "!PILIHAN!"=="1" (
+    echo  Mode     : AMAN - hanya data, schema dari migrasi
+) else (
+    echo  Mode     : PENUH - schema + data dari file backup
+    echo  RISIKO   : Jika backup dari versi lama, kolom baru
+    echo             akan hilang setelah restore!
+)
+echo  File     : !TARGET_FILE!
+echo  Database : %DB_NAME%
 echo.
 echo  Semua data yang ada saat ini akan TERTIMPA!
-echo  Pastikan Anda sudah backup data terbaru!
 echo =======================================================
 echo.
-set /p CONFIRM="Ketik YES untuk lanjutkan (atau tekan Enter untuk batal): "
+set /p CONFIRM="Ketik YES untuk lanjutkan: "
 if /i "!CONFIRM!" neq "YES" (
-    echo.
     echo [BATAL] Proses restore dibatalkan.
-    pause
-    exit /b
+    pause & exit /b
 )
 
 echo.
-echo Sedang memproses restore database... Mohon tunggu...
+echo Sedang memproses restore... Mohon tunggu...
 echo.
 
 if "!USE_DOCKER!"=="yes" (
-    echo Mode: DOCKER ^(Container: %CONTAINER_NAME%^)
-    echo.
-
-    REM === LANGKAH 1: Drop & Recreate database di dalam container ===
-    echo [1/3] Menghapus database lama dan membuat ulang...
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME_DOCKER%' AND pid <> pg_backend_pid();" >nul 2>&1
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME_DOCKER%;" >nul 2>&1
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME_DOCKER%;" >nul 2>&1
-    if %ERRORLEVEL% neq 0 (
-        echo [GAGAL] Tidak bisa reset database. Pastikan container berjalan.
-        goto :error_end
-    )
-    echo  -> Database berhasil direset.
-
-    REM === LANGKAH 2: Copy file backup ke dalam container ===
-    echo [2/3] Menyalin file backup ke container...
-    docker cp "%BACKUP_PATH%" %CONTAINER_NAME%:/tmp/restore_target.sql
-    if %ERRORLEVEL% neq 0 (
-        echo [GAGAL] Tidak bisa copy file ke container.
-        goto :error_end
-    )
-    echo  -> File berhasil disalin.
-
-    REM === LANGKAH 3: Jalankan restore dari dalam container ===
-    echo [3/3] Memuat data backup ke database...
-    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d %DB_NAME_DOCKER% -f /tmp/restore_target.sql
-    set RESTORE_ERR=%ERRORLEVEL%
-
-    REM Bersihkan file temp di container
-    docker exec %CONTAINER_NAME% rm -f /tmp/restore_target.sql >nul 2>&1
-
-    if !RESTORE_ERR! neq 0 (
-        echo.
-        echo [GAGAL] Terjadi kesalahan saat memuat data.
-        echo Cek pesan error di atas. Error kecil seperti 'already exists' bisa diabaikan.
-        goto :check_end
-    )
-
+    goto :docker_restore
 ) else (
-    echo Mode: LOKAL ^(Host: %DB_HOST%, Port: %DB_PORT%^)
-    echo.
-
-    REM Cek apakah psql.exe ada
-    if not exist "%PG_PSQL_EXE%" (
-        echo [ERROR] psql.exe tidak ditemukan di:
-        echo   %PG_PSQL_EXE%
-        echo.
-        echo Coba cari psql di PATH sistem...
-        where psql >nul 2>&1
-        if !ERRORLEVEL! equ 0 (
-            echo Ditemukan psql di PATH. Menggunakan versi tersebut...
-            set PG_PSQL_EXE=psql
-        ) else (
-            echo [GAGAL] psql tidak ditemukan. Install PostgreSQL client tools.
-            goto :error_end
-        )
-    )
-
-    set PGPASSWORD=%PGPASSWORD_LOCAL%
-
-    REM === LANGKAH 1: Drop & Recreate database ===
-    echo [1/2] Menghapus database lama dan membuat ulang...
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME_LOCAL%' AND pid <> pg_backend_pid();" >nul 2>&1
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME_LOCAL%;" >nul 2>&1
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME_LOCAL%;" >nul 2>&1
-    if !ERRORLEVEL! neq 0 (
-        echo [GAGAL] Tidak bisa reset database. Pastikan PostgreSQL berjalan.
-        goto :error_end
-    )
-    echo  -> Database berhasil direset.
-
-    echo [2/2] Memuat data backup ke database...
-    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME_LOCAL% -f "%BACKUP_PATH%"
-    if !ERRORLEVEL! neq 0 (
-        goto :error_end
-    )
+    goto :local_restore
 )
 
-:check_end
+REM ─── DOCKER RESTORE ───────────────────────────────────────────────────────
+:docker_restore
+echo Mode: DOCKER (Container: %CONTAINER_NAME%)
+echo.
+
+if "!PILIHAN!"=="1" (
+    REM === RESTORE AMAN: hapus data saja, schema tetap ===
+    echo [1/4] Menghentikan app sementara...
+    docker stop %APP_CONTAINER% >nul 2>&1
+
+    echo [2/4] Menghapus data lama (TRUNCATE semua tabel)...
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d %DB_NAME% -c ^
+        "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename != '__drizzle_migrations') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;" >nul 2>&1
+    echo  -> Data lama dihapus, tabel dan schema tetap ada.
+
+    echo [3/4] Menyalin file backup ke container...
+    docker cp "%BACKUP_PATH%" %CONTAINER_NAME%:/tmp/restore_target.sql
+
+    echo [4/4] Memuat data saja dari backup...
+    REM Extract hanya INSERT statements dari backup
+    docker exec %CONTAINER_NAME% sh -c "grep -E '^(INSERT INTO|COPY |\\\\.)' /tmp/restore_target.sql > /tmp/data_only.sql; psql -U %DB_USER% -d %DB_NAME% -f /tmp/data_only.sql; rm -f /tmp/restore_target.sql /tmp/data_only.sql" 2>nul
+    set RESTORE_ERR=!ERRORLEVEL!
+
+    echo  -> Memulai ulang aplikasi...
+    docker start %APP_CONTAINER% >nul 2>&1
+
+) else (
+    REM === RESTORE PENUH: drop + recreate ===
+    echo [1/3] Menghapus database lama dan membuat ulang...
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='%DB_NAME%' AND pid <> pg_backend_pid();" >nul 2>&1
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME%;" >nul 2>&1
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" >nul 2>&1
+    echo  -> Database direset.
+
+    echo [2/3] Menyalin file backup ke container...
+    docker cp "%BACKUP_PATH%" %CONTAINER_NAME%:/tmp/restore_target.sql
+
+    echo [3/3] Memuat backup penuh...
+    docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% psql -U %DB_USER% -d %DB_NAME% -f /tmp/restore_target.sql
+    set RESTORE_ERR=!ERRORLEVEL!
+    docker exec %CONTAINER_NAME% rm -f /tmp/restore_target.sql >nul 2>&1
+
+    echo  -> Menjalankan migrasi untuk sinkronisasi schema...
+    docker restart %APP_CONTAINER% >nul 2>&1
+)
+
+goto :selesai
+
+REM ─── LOCAL RESTORE ────────────────────────────────────────────────────────
+:local_restore
+echo Mode: LOKAL (Host: %DB_HOST%, Port: %DB_PORT%)
+echo.
+if not exist "%PG_PSQL_EXE%" (
+    where psql >nul 2>&1
+    if %ERRORLEVEL% equ 0 (set PG_PSQL_EXE=psql) else (
+        echo [ERROR] psql tidak ditemukan. Install PostgreSQL client.
+        pause & exit /b
+    )
+)
+set PGPASSWORD=%PGPASSWORD_LOCAL%
+
+if "!PILIHAN!"=="1" (
+    echo [1/2] Menghapus data lama (TRUNCATE semua tabel)...
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c ^
+        "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename != '__drizzle_migrations') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;" >nul 2>&1
+    echo [2/2] Memuat data dari backup...
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -c "\i %BACKUP_PATH%"
+) else (
+    echo [1/2] Menghapus dan membuat ulang database...
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "DROP DATABASE IF EXISTS %DB_NAME%;" >nul 2>&1
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d postgres -c "CREATE DATABASE %DB_NAME%;" >nul 2>&1
+    echo [2/2] Memuat backup penuh...
+    "%PG_PSQL_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BACKUP_PATH%"
+)
+
+:selesai
 echo.
 echo =======================================================
 echo  [SELESAI] Proses restore selesai!
-echo  File  : !TARGET_FILE!
+echo  File    : !TARGET_FILE!
+echo  Mode    : !PILIHAN!
 echo =======================================================
 echo.
-echo  PENTING: Restart aplikasi agar data terbaru aktif.
-if "!USE_DOCKER!"=="yes" (
-    echo  Jalankan perintah berikut:
-    echo    docker restart vocpos-app
-)
-echo.
-pause
-exit /b
-
-:error_end
-echo.
-echo =======================================================
-echo  [GAGAL] Terjadi kesalahan saat proses restore!
-echo =======================================================
-echo.
-echo Kemungkinan penyebab:
-if "!USE_DOCKER!"=="yes" (
-    echo  1. Container '%CONTAINER_NAME%' tidak berjalan
-    echo     Solusi: Buka Docker Desktop, pastikan vocpos-db Running
-    echo     Atau jalankan: docker start %CONTAINER_NAME%
-    echo  2. Password Docker salah
-    echo     Cek: file .env di folder instalasi (DB_PASSWORD)
-    echo  3. File backup rusak atau tidak kompatibel
-) else (
-    echo  1. PostgreSQL tidak berjalan di port %DB_PORT%
-    echo  2. Password salah (cek file .env)
-    echo  3. psql.exe tidak ditemukan atau versi tidak sesuai
-    echo  4. File backup rusak
+if "!PILIHAN!"=="2" (
+    echo  PENTING: Restart aplikasi agar schema tersinkronisasi:
+    if "!USE_DOCKER!"=="yes" echo    docker restart %APP_CONTAINER%
 )
 echo.
 pause

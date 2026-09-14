@@ -70,6 +70,19 @@ function debugBarcodeMatch() {
   var dataPembelian = sheetPembelian.getDataRange().getValues();
   var dataBarang    = sheetBarang.getDataRange().getValues();
   
+  // Deteksi kolom "Roll N" berdasarkan header
+  var headerP = dataPembelian[0];
+  var pRollCols = [];
+  for (var h = 0; h < headerP.length; h++) {
+    if (/^Roll \d+$/.test(String(headerP[h]).trim())) pRollCols.push(h);
+  }
+  
+  var headerB = dataBarang[0];
+  var bRollCols = [];
+  for (var h = 0; h < headerB.length; h++) {
+    if (/^Roll \d+$/.test(String(headerB[h]).trim())) bRollCols.push(h);
+  }
+  
   // Buat index barcode Barang
   var barangBarcodes = {};
   for (var b = 1; b < dataBarang.length; b++) {
@@ -77,17 +90,18 @@ function debugBarcodeMatch() {
     if (bc) barangBarcodes[bc] = b;
   }
   
-  var msg = "";
+  var msg = "Kolom Roll di Pembelian: " + pRollCols.length + " (idx: " + pRollCols.slice(0,3).join(",") + "...)\n";
+  msg += "Kolom Roll di Barang: " + bRollCols.length + " (idx: " + bRollCols.slice(0,3).join(",") + "...)\n\n";
   var checked = 0;
   
   for (var i = 1; i < dataPembelian.length && checked < 5; i++) {
     var pBarcode = String(dataPembelian[i][4]).trim();
     if (!pBarcode) continue;
     
-    // Kumpulkan roll Pembelian
+    // Kumpulkan roll Pembelian hanya dari kolom "Roll N"
     var pRolls = [];
-    for (var j = 9; j < dataPembelian[i].length; j++) {
-      var v = dataPembelian[i][j];
+    for (var ri = 0; ri < pRollCols.length; ri++) {
+      var v = dataPembelian[i][pRollCols[ri]];
       var n = (typeof v === 'string') ? parseFloat(v.replace(',','.')) : Number(v);
       if (v !== "" && !isNaN(n) && n > 0) pRolls.push(n);
     }
@@ -98,14 +112,14 @@ function debugBarcodeMatch() {
     msg += "  Roll Pembelian (" + pRolls.length + "): " + pRolls.slice(0,5).join(", ") + (pRolls.length > 5 ? "..." : "") + "\n";
     
     if (bIdx !== undefined) {
-      // Kumpulkan roll Barang
+      // Kumpulkan roll Barang hanya dari kolom "Roll N"
       var bRolls = [];
-      for (var c = 9; c < dataBarang[bIdx].length; c++) {
-        var bv = dataBarang[bIdx][c];
+      for (var ri = 0; ri < bRollCols.length; ri++) {
+        var bv = dataBarang[bIdx][bRollCols[ri]];
         var bn = (typeof bv === 'string') ? parseFloat(bv.replace(',','.')) : Number(bv);
         if (bv !== "" && !isNaN(bn) && bn > 0) bRolls.push(bn);
       }
-      msg += "  ✅ Barcode DITEMUKAN di Barang baris " + (bIdx+1) + "\n";
+      msg += "  \u2705 Barcode DITEMUKAN di Barang baris " + (bIdx+1) + "\n";
       msg += "  Roll Barang (" + bRolls.length + "): " + bRolls.slice(0,5).join(", ") + (bRolls.length > 5 ? "..." : "") + "\n";
       
       // Cek sliding window manual
@@ -119,15 +133,16 @@ function debugBarcodeMatch() {
           if (ok) { found = true; break; }
         }
       }
-      msg += "  Sliding window match: " + (found ? "✅ COCOK!" : "❌ Tidak cocok") + "\n";
+      msg += "  Sliding window match: " + (found ? "\u2705 COCOK!" : "\u274c Tidak cocok") + "\n";
     } else {
-      msg += "  ❌ Barcode TIDAK ADA di sheet Barang\n";
+      msg += "  \u274c Barcode TIDAK ADA di sheet Barang\n";
     }
     msg += "\n";
     checked++;
   }
   
   SpreadsheetApp.getUi().alert("DEBUG Barcode Match (5 baris pertama)", msg, SpreadsheetApp.getUi().ButtonSet.OK);
+
 }
 
 /**
@@ -162,15 +177,33 @@ function autoCheckMutasi() {
   var dataBarang    = sheetBarang.getDataRange().getValues();
   var bgBarang      = sheetBarang.getDataRange().getBackgrounds();
   
+  // ── Cari kolom "Roll N" di header Pembelian (baris 1) ──
+  // Hanya kolom dengan header "Roll 1", "Roll 2", dst yang dianggap sebagai roll
+  var headerP = dataPembelian[0];
+  var pRollCols = []; // index kolom di Pembelian yang merupakan "Roll N"
+  for (var h = 0; h < headerP.length; h++) {
+    var hname = String(headerP[h]).trim();
+    if (/^Roll \d+$/.test(hname)) pRollCols.push(h);
+  }
+  
+  // ── Cari kolom "Roll N" di header Barang (baris 1) ──
+  var headerB = dataBarang[0];
+  var bRollCols = []; // index kolom di Barang yang merupakan "Roll N"
+  for (var h = 0; h < headerB.length; h++) {
+    var hname = String(headerB[h]).trim();
+    if (/^Roll \d+$/.test(hname)) bRollCols.push(h);
+  }
+  
   // ── Buat index Barang: barcode → [{rowIdx, rolls:[{value,col}]}] ──
-  // Sheet Barang: Kolom B (index 1) = Barcode, Kolom J+ (index 9+) = Roll
+  // Hanya ambil nilai dari kolom Roll N yang sudah teridentifikasi
   var barangIndex = {};
   for (var b = 1; b < dataBarang.length; b++) {
     var bcode = String(dataBarang[b][1]).trim();
     if (!bcode || bcode === "" || bcode.toLowerCase() === "barcode") continue;
     
     var bRolls = [];
-    for (var c = 9; c < dataBarang[b].length; c++) {
+    for (var ri = 0; ri < bRollCols.length; ri++) {
+      var c   = bRollCols[ri];
       var cv  = dataBarang[b][c];
       var nv  = (typeof cv === 'string') ? parseFloat(cv.replace(',', '.')) : Number(cv);
       if (cv !== "" && cv !== null && !isNaN(nv) && nv > 0) {
@@ -183,8 +216,6 @@ function autoCheckMutasi() {
   }
   
   // ── Loop setiap baris Pembelian ──
-  // Sheet Pembelian: Kolom E (index 4) = Barcode, Kolom J+ (index 9+) = Roll 1, Roll 2...
-  // Urutan kolom: No(0), Tanggal(1), No Invoice(2), Supplier(3), Barcode(4), Kategori(5), Produk(6), Roll(7), Meter(8), Roll 1(9)...
   var matchCount = 0;
   var batchUpdates = []; // kumpulkan dulu, baru tulis sekaligus
   
@@ -193,16 +224,17 @@ function autoCheckMutasi() {
     var pBarcode = String(pRow[4]).trim(); // Kolom E (index 4) = Barcode di sheet Pembelian
     if (!pBarcode || pBarcode === "") continue;
     
-    // Ambil nilai roll dari baris Pembelian ini
+    // Ambil nilai roll HANYA dari kolom "Roll N" yang sudah teridentifikasi di header
     var pRolls = [];
-    for (var j = 9; j < pRow.length; j++) {
-      var pv = pRow[j];
+    for (var ri = 0; ri < pRollCols.length; ri++) {
+      var pv = pRow[pRollCols[ri]];
       var pn = (typeof pv === 'string') ? parseFloat(pv.replace(',', '.')) : Number(pv);
       if (pv !== "" && pv !== null && !isNaN(pn) && pn > 0) {
         pRolls.push(pn);
       }
     }
     if (pRolls.length === 0) continue;
+
     
     // Cari baris Barang dengan Barcode yang sama
     var barangRows = barangIndex[pBarcode];

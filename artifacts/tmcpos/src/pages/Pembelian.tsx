@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { PageHeader } from "../components/PageHeader";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListPurchases, useCreatePurchase, useListSuppliers, useListProducts, useListPaymentMethods, useListCategories, getListPurchasesQueryKey, getListSuppliersQueryKey, getListProductsQueryKey, getListPaymentMethodsQueryKey, getListCategoriesQueryKey } from "@workspace/api-client-react";
+import { sessionExpiredEvent } from "@/hooks/useAuth";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,7 +16,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle, RotateCcw, Download, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle, RotateCcw, Download, Upload, FileSpreadsheet, X as XIcon, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -29,6 +30,9 @@ const STATUS_COLORS: Record<string, string> = {
   partial: "bg-amber-100 text-amber-700 border-amber-200",
   kredit: "bg-blue-100 text-blue-700 border-blue-200",
 };
+
+// Key localStorage untuk draft form pembelian
+const DRAFT_KEY = "pembelian_draft_v1";
 
 export default function Pembelian() {
   const [activeTab, setActiveTab] = useState<"semua" | "lunas" | "kredit" | "partial">("semua");
@@ -46,6 +50,8 @@ export default function Pembelian() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreSourceInvoice, setRestoreSourceInvoice] = useState("");
+  const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
+  const [hasDraftRestored, setHasDraftRestored] = useState(false);
   // ─── Export/Import state ───────────────────────────────────────
   const [isExporting, setIsExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -68,8 +74,29 @@ export default function Pembelian() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey({}) });
+        // Hapus draft setelah submit sukses
+        try { localStorage.removeItem(DRAFT_KEY); } catch {}
         setIsOpen(false); resetForm();
         toast({ title: "Pembelian berhasil dicatat" });
+      },
+      onError: (error: any) => {
+        const status = error?.response?.status || error?.status;
+        const message = error?.response?.data?.error || error?.message || "";
+
+        if (status === 401) {
+          // Session expired — arahkan ke login
+          toast({ title: "Sesi telah berakhir", description: "Silakan login kembali. Data Anda tidak hilang, coba submit ulang setelah login.", variant: "destructive" });
+          window.dispatchEvent(new Event(sessionExpiredEvent));
+          return;
+        }
+        if (status === 409) {
+          // Duplicate invoice — generate ulang otomatis dan coba lagi
+          toast({ title: "Nomor nota duplikat", description: message || "Nomor nota sudah ada, coba submit ulang.", variant: "destructive" });
+          // Reset invoice number supaya generate ulang saat retry
+          setInvoiceNumber("");
+          return;
+        }
+        toast({ title: "Gagal menyimpan pembelian", description: message || "Terjadi kesalahan, silakan coba lagi.", variant: "destructive" });
       }
     }
   });
@@ -90,7 +117,21 @@ export default function Pembelian() {
     }
   });
 
-  const resetForm = () => { setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes(""); setIsRestoring(false); setRestoreSourceInvoice(""); };
+  // Reset state form saja — draft localStorage TIDAK dihapus
+  // Dipakai saat drawer tutup tidak sengaja (backdrop, Escape, navigasi)
+  const resetFormState = () => {
+    setItems([]); setSupplierId(""); setPaymentType("tunai"); setDueDate(""); setNotes("");
+    setIsRestoring(false); setRestoreSourceInvoice(""); setDraftSavedAt(null);
+    // Reset hasDraftRestored supaya draft bisa di-restore lagi saat form dibuka kembali
+    setHasDraftRestored(false);
+  };
+
+  // Reset penuh — reset state + hapus draft localStorage
+  // Dipakai hanya saat: (1) tombol Batal ditekan eksplisit, (2) submit berhasil
+  const resetForm = () => {
+    resetFormState();
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
+  };
 
   // ── Restore dari URL param ──────────────────────────────────────────
   useEffect(() => {
@@ -140,6 +181,46 @@ export default function Pembelian() {
 
     fetchAndRestore();
   }, [location]);
+
+  // ── Auto-save draft ke localStorage saat form terbuka & ada perubahan ──
+  useEffect(() => {
+    if (!isOpen || isRestoring) return;
+    // Jangan save jika form kosong
+    if (items.length === 0 && !supplierId) return;
+    const draft = { items, supplierId, paymentType, dueDate, notes, savedAt: new Date().toISOString() };
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      setDraftSavedAt(new Date());
+    } catch {}
+  }, [isOpen, isRestoring, items, supplierId, paymentType, dueDate, notes]);
+
+  // ── Restore draft dari localStorage saat form dibuka (jika ada) ──
+  useEffect(() => {
+    if (!isOpen || isRestoring || hasDraftRestored) return;
+    setHasDraftRestored(true);
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      // Abaikan draft lama (> 24 jam)
+      if (draft.savedAt) {
+        const age = Date.now() - new Date(draft.savedAt).getTime();
+        if (age > 24 * 60 * 60 * 1000) { localStorage.removeItem(DRAFT_KEY); return; }
+      }
+      if (draft.items?.length > 0 || draft.supplierId) {
+        setItems(draft.items || []);
+        setSupplierId(draft.supplierId || "");
+        setPaymentType(draft.paymentType || "tunai");
+        setDueDate(draft.dueDate || "");
+        setNotes(draft.notes || "");
+        setDraftSavedAt(draft.savedAt ? new Date(draft.savedAt) : null);
+        toast({
+          title: "✅ Draft dipulihkan",
+          description: `Data input terakhir berhasil dimuat kembali. Periksa & submit kembali jika sudah benar.`,
+        });
+      }
+    } catch {}
+  }, [isOpen, isRestoring, hasDraftRestored]);
 
   const addItem = () => setItems(prev => [...prev, { categoryId: undefined, productId: 0, productName: "", rolls: "", meters: "", pricePerMeter: "", subtotal: 0, barcode: "", rollLengths: [] }]);
   const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
@@ -198,13 +279,32 @@ export default function Pembelian() {
 
   const totalAmount = Math.round(items.reduce((sum, i) => sum + i.subtotal, 0));
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(async () => {
     if (items.length === 0) { toast({ title: "Tambahkan minimal 1 item", variant: "destructive" }); return; }
     if (items.some(i => !i.productId || (typeof i.meters === "number" ? i.meters : 0) <= 0)) { toast({ title: "Mohon lengkapi data barang", variant: "destructive" }); return; }
     if (!supplierId) { toast({ title: "Pilih supplier", variant: "destructive" }); return; }
-    
+
+    // Selalu fetch daftar invoice terbaru langsung dari server
+    // agar nomor nota tidak bertabrakan meskipun form sudah lama terbuka
     let finalInvoiceNumber = invoiceNumber;
-    if (isRestoring || !finalInvoiceNumber) {
+    try {
+      const freshRes = await fetch("/api/purchases?_t=" + Date.now(), { credentials: "include" });
+      if (freshRes.status === 401) {
+        toast({ title: "Sesi telah berakhir", description: "Silakan login kembali.", variant: "destructive" });
+        window.dispatchEvent(new Event(sessionExpiredEvent));
+        return;
+      }
+      if (freshRes.ok) {
+        const freshData = await freshRes.json();
+        const freshInvoices: string[] = freshData.map((p: any) => p.invoiceNumber);
+        finalInvoiceNumber = generateSequentialInvoiceNumber("INV-IN", freshInvoices);
+      } else {
+        // Fallback ke data cache jika fetch gagal
+        const existingInvoices = purchases?.map(p => p.invoiceNumber) || [];
+        finalInvoiceNumber = generateSequentialInvoiceNumber("INV-IN", existingInvoices);
+      }
+    } catch {
+      // Fallback ke data cache
       const existingInvoices = purchases?.map(p => p.invoiceNumber) || [];
       finalInvoiceNumber = generateSequentialInvoiceNumber("INV-IN", existingInvoices);
     }
@@ -227,7 +327,7 @@ export default function Pembelian() {
         }))
       }
     });
-  };
+  }, [items, supplierId, invoiceNumber, paymentType, dueDate, notes, purchases, createMutation, toast]);
 
   const filtered = filterByDateRange(
     purchases?.filter(p => {
@@ -399,7 +499,7 @@ export default function Pembelian() {
         </div>
       )}
 
-      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetForm(); } }}>
+      <Drawer open={isOpen} onOpenChange={(open) => { if (!open) { setIsOpen(false); resetFormState(); } }}>
         <DrawerContent className="mx-auto w-full max-w-[95vw] xl:max-w-7xl px-4 sm:px-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] pt-2 flex flex-col" style={{ maxHeight: "calc(95dvh - env(safe-area-inset-top, 0px))" }}>
           <DrawerTitle className="sr-only">Buat Pembelian Baru</DrawerTitle>
           <DrawerDescription className="sr-only">Form to create a new purchase</DrawerDescription>
@@ -566,15 +666,26 @@ export default function Pembelian() {
             )}
           </div>
           </div>
-          <DrawerFooter className="px-0 pt-4 mt-4 flex-row gap-2">
-            <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
-            <Button
-              className={`flex-1 ${isRestoring ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
-              onClick={handleSubmit}
-              disabled={createMutation.isPending || items.length === 0}
-            >
-              {isRestoring ? <><RotateCcw className="mr-2 h-4 w-4" />Tambahkan ke Pembelian</> : "Simpan Pembelian"}
-            </Button>
+          <DrawerFooter className="px-0 pt-3 mt-2 flex-col gap-2">
+            {/* Indikator draft tersimpan */}
+            {draftSavedAt && !isRestoring && (
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
+                <Save className="w-3 h-3 shrink-0" />
+                <span>Draft tersimpan otomatis — {draftSavedAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · Aman jika terjadi gangguan</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" className="flex-1 bg-muted text-muted-foreground hover:bg-muted/80" onClick={() => { setIsOpen(false); resetForm(); }}>Batal</Button>
+              <Button
+                className={`flex-1 ${isRestoring ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}
+                onClick={handleSubmit}
+                disabled={createMutation.isPending || items.length === 0}
+              >
+                {createMutation.isPending
+                  ? <><span className="h-4 w-4 mr-2 rounded-full border-2 border-white border-t-transparent animate-spin inline-block" />Menyimpan...</>
+                  : isRestoring ? <><RotateCcw className="mr-2 h-4 w-4" />Tambahkan ke Pembelian</> : "Simpan Pembelian"}
+              </Button>
+            </div>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>

@@ -31,5 +31,15 @@ services:
       db:
         condition: service_healthy
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: vocpos-tunnel
+    restart: always
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - "./cloudflare:/etc/cloudflared:ro"
+    depends_on:
+      - app
+
 volumes:
   vocpos_db_data:

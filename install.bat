@@ -7,7 +7,7 @@ setlocal enabledelayedexpansion
 :: Masukkan GitHub PAT Token Anda di sini. 
 :: Jika diisi, installer tidak akan menanyakan token lagi.
 set "HARDCODED_GITHUB_TOKEN="
-set "HARDCODED_LOCATION_NAME=enkatextile"
+set "HARDCODED_LOCATION_NAME="
 
 :: ============================================================
 :: SELF-ELEVATION - Pastikan berjalan sebagai Administrator
@@ -49,8 +49,6 @@ set "FONNTE_TOKEN="
 set "LOCATION_NAME=%HARDCODED_LOCATION_NAME%"
 set "TIMEZONE_ZONE=WIB"
 set "GDRIVE_FOLDER_ID="
-set "GAS_WEBAPP_URL="
-set "GAS_SECRET=secret123"
 
 if exist "%INSTALL_DIR%.token" (
     echo  [OK] File .token ditemukan. Membaca konfigurasi...
@@ -61,8 +59,6 @@ if exist "%INSTALL_DIR%.token" (
         if /i "%%a"=="LOCATION_NAME"   if "!LOCATION_NAME!"=="" set "LOCATION_NAME=%%b"
         if /i "%%a"=="TIMEZONE_ZONE"   set "TIMEZONE_ZONE=%%b"
         if /i "%%a"=="GDRIVE_FOLDER_ID" set "GDRIVE_FOLDER_ID=%%b"
-        if /i "%%a"=="GAS_WEBAPP_URL"  set "GAS_WEBAPP_URL=%%b"
-        if /i "%%a"=="GAS_SECRET"      set "GAS_SECRET=%%b"
     )
 )
 
@@ -97,19 +93,6 @@ if "!GDRIVE_FOLDER_ID!"=="" (
     set /p "GDRIVE_FOLDER_ID=  Masukkan Google Drive Folder ID untuk Backup: "
     echo.
 )
-
-:: Minta GAS WebApp URL untuk sistem lisensi
-if "!GAS_WEBAPP_URL!"=="" (
-    echo.
-    echo  ============================================================
-    echo   SISTEM LISENSI: Masukkan URL Google Apps Script Cabang ini
-    echo   Dapatkan URL dari file GAS Cabang yang sudah di-deploy.
-    echo   Contoh: https://script.google.com/macros/s/AKfycb.../exec
-    echo  ============================================================
-    set /p "GAS_WEBAPP_URL=  GAS WebApp URL: "
-    echo.
-)
-if "!GAS_WEBAPP_URL!"=="" set "GAS_WEBAPP_URL=https://script.google.com/macros/s/BELUM_DIISI/exec"
 
 :: Tentukan TZ
 set "TZ_VALUE="
@@ -201,12 +184,8 @@ if not errorlevel 1 (
     echo  [!] Instalasi via winget gagal, mencoba download manual...
 )
 
-echo  Mengunduh Docker Desktop installer (Tunggu, ada bar progress di bawah)...
-curl.exe -# -L "https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe" -o "%TEMP%\DockerInstaller.exe"
-if not exist "%TEMP%\DockerInstaller.exe" (
-    echo  [!] Download via curl gagal. Mencoba menggunakan PowerShell...
-    powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' -Uri 'https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe' -OutFile '%TEMP%\DockerInstaller.exe'"
-)
+echo  Mengunduh Docker Desktop installer...
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -UserAgent 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' -Uri 'https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe' -OutFile '%TEMP%\DockerInstaller.exe'"
 if not exist "%TEMP%\DockerInstaller.exe" (
     echo  [ERROR] Gagal mengunduh. Periksa koneksi internet.
     pause
@@ -331,6 +310,20 @@ echo [4/8] Mempersiapkan docker-compose.yml...
     echo     depends_on:
     echo       db:
     echo         condition: service_healthy
+    
+    if exist "!INSTALL_DIR!cloudflare\config.yml" (
+        echo.
+        echo   cloudflared:
+        echo     image: cloudflare/cloudflared:latest
+        echo     container_name: vocpos-tunnel
+        echo     restart: always
+        echo     command: tunnel --config /etc/cloudflared/config.yml run
+        echo     volumes:
+        echo       - "./cloudflare:/etc/cloudflared:ro"
+        echo     depends_on:
+        echo       - app
+    )
+    
     echo.
     echo volumes:
     echo   vocpos_db_data:
@@ -348,25 +341,10 @@ if not exist "!INSTALL_DIR!docker.env" (
         echo PORT=8080
         echo DATABASE_URL="postgresql://postgres:vocpos2026@db:5432/vocpos"
         echo SESSION_SECRET="vocpos-production-secret-key-xyz987"
-        echo VAPID_PUBLIC_KEY="BLmRQxniwUVmZJaOZFthGgfShhVdFjgZFWQ3kC4bckWoQvjaFJZBuJgY9JMRpxGmPhu7hT2ZAICQrbsli5hWi3k"
-        echo VAPID_PRIVATE_KEY="dBo3rHkJrTSPTfPzEf1TfVB1igEan7hFXxahnr_B3Uc"
-        echo VAPID_SUBJECT="mailto:admin@vocpos.com"
-        echo.
-        echo # Sistem Lisensi GAS
-        echo GAS_WEBAPP_URL="!GAS_WEBAPP_URL!"
-        echo GAS_SECRET="!GAS_SECRET!"
     ) > "!INSTALL_DIR!docker.env"
-    echo  [OK] File docker.env dibuat (dengan konfigurasi lisensi).
+    echo  [OK] File docker.env dibuat.
 ) else (
     echo  [OK] File docker.env sudah ada.
-    :: Cek apakah GAS_WEBAPP_URL sudah ada, jika belum tambahkan
-    findstr /i "GAS_WEBAPP_URL" "!INSTALL_DIR!docker.env" >nul 2>&1
-    if errorlevel 1 (
-        echo.
-        echo GAS_WEBAPP_URL="!GAS_WEBAPP_URL!" >> "!INSTALL_DIR!docker.env"
-        echo GAS_SECRET="!GAS_SECRET!" >> "!INSTALL_DIR!docker.env"
-        echo  [OK] Konfigurasi lisensi ditambahkan ke docker.env.
-    )
 )
 
 

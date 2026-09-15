@@ -6,7 +6,9 @@ function onOpen() {
     .createMenu('Alat EnkaTextile')
     .addItem('Cari & Pindah Roll', 'showDialog')
     .addItem('Cek Otomatis (Tandai Kuning)', 'autoCheckMutasi')
+    .addItem('Tampilkan Detail Tidak Cocok', 'tampilkanDetailTidakCocok')
     .addItem('Hapus Roll Terpasang (Geser Kiri)', 'hapusRollTerpasang')
+    .addSeparator()
     .addItem('[DEBUG] Cek Struktur Kolom', 'debugStrukturKolom')
     .addItem('[DEBUG] Cek Barcode Match', 'debugBarcodeMatch')
     .addToUi();
@@ -307,10 +309,13 @@ function hapusRollTerpasang() {
  * Cek Otomatis: Cocokkan roll di Sheet Pembelian dengan Sheet Barang berdasarkan BARCODE.
  * Logika:
  *   1. Baca setiap baris di Sheet Pembelian (mulai baris 2).
- *   2. Ambil Barcode dari kolom B dan nilai roll dari kolom J ke kanan.
+ *   2. Ambil Barcode dari kolom E (atau kolom header "Barcode") dan nilai roll dari kolom "Roll N".
  *   3. Cari baris di Sheet Barang yang memiliki Barcode yang sama (kolom B).
  *   4. Gunakan sliding-window untuk menemukan urutan roll yang cocok di Barang.
- *   5. Jika urutan cocok dan belum pernah dikuningkan → warnai kuning.
+ *   5. Jika cocok → warnai kuning di Barang, hapus keterangan di Pembelian.
+ *   6. Jika tidak cocok → beri warna + catatan di sel Barcode sheet Pembelian:
+ *      🔴 Merah muda  = Barcode tidak ada di sheet Barang sama sekali
+ *      🟠 Oranye muda = Barcode ada di Barang tapi urutan roll tidak cocok
  */
 function autoCheckMutasi() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -325,7 +330,7 @@ function autoCheckMutasi() {
   var ui = SpreadsheetApp.getUi();
   var response = ui.alert(
     'Konfirmasi',
-    'Proses ini akan mencocokkan roll di Pembelian dengan Barang berdasarkan Barcode, lalu mewarnai kuning posisi roll yang ditemukan. Lanjutkan?',
+    'Proses ini akan mencocokkan roll di Pembelian dengan Barang berdasarkan Barcode, lalu mewarnai kuning posisi roll yang ditemukan.\n\nBaris yang TIDAK cocok akan diberi keterangan warna:\n🔴 Merah = Barcode tidak ada di Barang\n🟠 Oranye = Barcode ada tapi roll tidak cocok\n\nLanjutkan?',
     ui.ButtonSet.YES_NO
   );
   if (response !== ui.Button.YES) return;
@@ -342,6 +347,14 @@ function autoCheckMutasi() {
   for (var h = 0; h < headerP.length; h++) {
     var hname = String(headerP[h]).trim();
     if (/^Roll \d+$/.test(hname)) pRollCols.push(h);
+  }
+
+  // ── Cari index kolom Barcode di Pembelian (header "Barcode" atau fallback index 4) ──
+  var pBarcodeCol = 4; // default kolom E
+  for (var h = 0; h < headerP.length; h++) {
+    if (String(headerP[h]).trim().toLowerCase() === "barcode") {
+      pBarcodeCol = h; break;
+    }
   }
   
   // ── Cari kolom "Roll N" di header Barang (baris 1) ──
@@ -374,12 +387,18 @@ function autoCheckMutasi() {
   }
   
   // ── Loop setiap baris Pembelian ──
-  var matchCount = 0;
-  var batchUpdates = []; // kumpulkan dulu, baru tulis sekaligus
+  var matchCount      = 0;
+  var noBarangCount   = 0;  // barcode tidak ada di Barang
+  var noRollCount     = 0;  // barcode ada tapi roll tidak cocok
+  var batchUpdates    = []; // warna kuning di Barang
   
+  // Kumpulkan update warna di Pembelian (batch)
+  // { row(1-based), col(1-based), color, note }
+  var pembelianUpdates = [];
+
   for (var i = 1; i < dataPembelian.length; i++) {
-    var pRow    = dataPembelian[i];
-    var pBarcode = String(pRow[4]).trim(); // Kolom E (index 4) = Barcode di sheet Pembelian
+    var pRow     = dataPembelian[i];
+    var pBarcode = String(pRow[pBarcodeCol]).trim();
     if (!pBarcode || pBarcode === "") continue;
     
     // Ambil nilai roll HANYA dari kolom "Roll N" yang sudah teridentifikasi di header
@@ -393,13 +412,27 @@ function autoCheckMutasi() {
     }
     if (pRolls.length === 0) continue;
 
+    var barcodeCol1Based = pBarcodeCol + 1; // kolom barcode 1-based untuk highlight
     
     // Cari baris Barang dengan Barcode yang sama
     var barangRows = barangIndex[pBarcode];
-    if (!barangRows || barangRows.length === 0) continue;
+    if (!barangRows || barangRows.length === 0) {
+      // ── KASUS 1: Barcode tidak ada di sheet Barang ──
+      noBarangCount++;
+      pembelianUpdates.push({
+        row:   i + 1,
+        col:   barcodeCol1Based,
+        color: "#f4cccc", // merah muda
+        note:  "❌ Barcode tidak ditemukan di sheet Barang"
+      });
+      continue;
+    }
+    
+    // Barcode ditemukan — coba cocokkan roll
+    var foundMatch = false;
     
     for (var bi = 0; bi < barangRows.length; bi++) {
-      var entry  = barangRows[bi];
+      var entry    = barangRows[bi];
       var bRollArr = entry.rolls;
       var bRowIdx  = entry.rowIdx; // 0-based row index di dataBarang
       
@@ -408,15 +441,13 @@ function autoCheckMutasi() {
       // ── Sliding window: cari urutan pRolls di dalam bRollArr ──
       for (var s = 0; s <= bRollArr.length - pRolls.length; s++) {
         var isMatch  = true;
-        var hasYellow = false;
         
         for (var k = 0; k < pRolls.length; k++) {
           var bColIdx = bRollArr[s + k].col; // 0-based
           
           // Sudah dikuningkan sebelumnya? Anggap bukan kandidat
           if (bgBarang[bRowIdx] && bgBarang[bRowIdx][bColIdx] === "#ffff00") {
-            hasYellow = true;
-            isMatch   = false;
+            isMatch = false;
             break;
           }
           // Toleransi 0.11 yard
@@ -434,24 +465,152 @@ function autoCheckMutasi() {
             batchUpdates.push({ row: bRowIdx + 1, col: bColIdx + 1 }); // 1-based
           }
           matchCount++;
+          foundMatch = true;
+
+          // ── Hapus keterangan lama di Pembelian jika sebelumnya ditandai tidak cocok ──
+          pembelianUpdates.push({
+            row:   i + 1,
+            col:   barcodeCol1Based,
+            color: null, // reset warna
+            note:  null  // hapus catatan
+          });
+
           break; // Window ditemukan, tidak perlu scan lagi untuk baris Pembelian ini
         }
       }
+      if (foundMatch) break;
+    }
+    
+    if (!foundMatch) {
+      // ── KASUS 2: Barcode ada di Barang, tapi nilai roll tidak cocok ──
+      noRollCount++;
+      var barangNama = String(dataBarang[barangRows[0].rowIdx][2]).trim();
+      var rollBarang = barangRows[0].rolls.length;
+      pembelianUpdates.push({
+        row:   i + 1,
+        col:   barcodeCol1Based,
+        color: "#fce5cd", // oranye muda
+        note:  "⚠️ Barcode ada di Barang (\"" + barangNama + "\") tapi urutan " + pRolls.length +
+               " roll tidak cocok. Roll tersedia di Barang: " + rollBarang + " roll."
+      });
     }
   }
   
-  // ── Tulis warna kuning sekaligus (batch) ── 
+  // ── Tulis warna kuning di Barang (batch) ── 
   for (var u = 0; u < batchUpdates.length; u++) {
     sheetBarang.getRange(batchUpdates[u].row, batchUpdates[u].col).setBackground("#ffff00");
+  }
+
+  // ── Tulis warna + catatan di Pembelian (batch) ──
+  for (var u = 0; u < pembelianUpdates.length; u++) {
+    var upd  = pembelianUpdates[u];
+    var cell = sheetPembelian.getRange(upd.row, upd.col);
+
+    if (upd.color === null) {
+      // Reset: hapus warna dan catatan (sudah cocok)
+      cell.setBackground(null);
+      cell.clearNote();
+    } else {
+      cell.setBackground(upd.color);
+      cell.setNote(upd.note);
+    }
   }
   
   ui.alert(
     "Selesai",
-    "Berhasil mencocokkan dan menandai kuning " + matchCount + " deret roll di sheet Barang (berdasarkan Barcode).",
+    "✅ Cocok & ditandai kuning: " + matchCount + " deret roll\n" +
+    "🔴 Barcode tidak ada di Barang: " + noBarangCount + " baris\n" +
+    "🟠 Roll tidak cocok (barcode ada): " + noRollCount + " baris\n\n" +
+    "Lihat catatan (hover) pada sel Barcode di sheet Pembelian untuk detail.",
     ui.ButtonSet.OK
   );
 }
 
+
+/**
+ * Tampilkan detail baris Pembelian yang tidak cocok:
+ *   🔴 Merah muda  (#f4cccc) = Barcode tidak ada di sheet Barang
+ *   🟠 Oranye muda (#fce5cd) = Barcode ada tapi urutan roll tidak cocok
+ * Baca catatan (note) di sel Barcode untuk detail masing-masing baris.
+ */
+function tampilkanDetailTidakCocok() {
+  var ss             = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetPembelian = ss.getSheetByName("Pembelian");
+  if (!sheetPembelian) {
+    SpreadsheetApp.getUi().alert("Sheet 'Pembelian' tidak ditemukan!");
+    return;
+  }
+
+  var data    = sheetPembelian.getDataRange().getValues();
+  var bgs     = sheetPembelian.getDataRange().getBackgrounds();
+  var notes   = sheetPembelian.getDataRange().getNotes();
+  var headerP = data[0];
+
+  // Cari kolom Barcode
+  var pBarcodeCol = 4; // default kolom E
+  for (var h = 0; h < headerP.length; h++) {
+    if (String(headerP[h]).trim().toLowerCase() === "barcode") {
+      pBarcodeCol = h; break;
+    }
+  }
+
+  var merahList   = []; // barcode tidak ada di Barang
+  var oranyeList  = []; // barcode ada, roll tidak cocok
+
+  for (var i = 1; i < data.length; i++) {
+    var bg      = bgs[i][pBarcodeCol];
+    var barcode = String(data[i][pBarcodeCol]).trim();
+    var catatan = String(notes[i][pBarcodeCol]).trim();
+    var namaBarang = String(data[i][2]).trim(); // kolom C = Nama Barang di Pembelian
+
+    if (bg === "#f4cccc") {
+      merahList.push("Baris " + (i + 1) + " | " + barcode +
+        (namaBarang ? " (" + namaBarang + ")" : "") +
+        "\n   → " + (catatan || "Barcode tidak ada di Barang"));
+    } else if (bg === "#fce5cd") {
+      oranyeList.push("Baris " + (i + 1) + " | " + barcode +
+        (namaBarang ? " (" + namaBarang + ")" : "") +
+        "\n   → " + (catatan || "Roll tidak cocok"));
+    }
+  }
+
+  if (merahList.length === 0 && oranyeList.length === 0) {
+    SpreadsheetApp.getUi().alert(
+      "Tidak Ada Masalah",
+      "✅ Semua baris Pembelian sudah cocok atau belum pernah dicek.\n" +
+      "Jalankan 'Cek Otomatis' terlebih dahulu.",
+      SpreadsheetApp.getUi().ButtonSet.OK
+    );
+    return;
+  }
+
+  var msg = "";
+
+  if (merahList.length > 0) {
+    msg += "🔴 BARCODE TIDAK ADA DI SHEET BARANG (" + merahList.length + " baris):\n";
+    msg += "─────────────────────────────────\n";
+    for (var j = 0; j < merahList.length; j++) {
+      msg += merahList[j] + "\n\n";
+    }
+  }
+
+  if (oranyeList.length > 0) {
+    if (msg) msg += "\n";
+    msg += "🟠 BARCODE ADA TAPI ROLL TIDAK COCOK (" + oranyeList.length + " baris):\n";
+    msg += "─────────────────────────────────\n";
+    for (var j = 0; j < oranyeList.length; j++) {
+      msg += oranyeList[j] + "\n\n";
+    }
+  }
+
+  msg += "\nTip: Hover sel Barcode yang berwarna untuk melihat catatan lengkap.";
+
+  SpreadsheetApp.getUi().alert(
+    "Detail Baris Tidak Cocok (" + (merahList.length + oranyeList.length) + " baris)",
+    msg,
+    SpreadsheetApp.getUi().ButtonSet.OK
+  );
+}
 
 function showDialog() {
   var html = HtmlService.createHtmlOutputFromFile('Index')

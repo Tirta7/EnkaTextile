@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 
+// Event name untuk broadcast session expired dari manapun
+export const sessionExpiredEvent = "auth:session-expired";
+
 export interface AuthUser {
   id: number;
   username: string;
@@ -17,6 +20,15 @@ export function useAuth() {
       .then((data) => setUser(data))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Dengerin event session expired dari global interceptor
+  useEffect(() => {
+    const handler = () => {
+      setUser(null);
+    };
+    window.addEventListener(sessionExpiredEvent, handler);
+    return () => window.removeEventListener(sessionExpiredEvent, handler);
   }, []);
 
   const login = async (username: string, password: string): Promise<{ ok: boolean; error?: string }> => {

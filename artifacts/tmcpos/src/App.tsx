@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { sessionExpiredEvent } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 import Home from "@/pages/Home";
@@ -30,7 +31,19 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: (failureCount, error: any) => {
+        // Jangan retry jika 401 (session expired)
+        if (error?.status === 401 || error?.message?.includes('401')) return false;
+        return failureCount < 1;
+      },
+    },
+    mutations: {
+      onError: (error: any) => {
+        if (error?.status === 401 || error?.message?.includes('401')) {
+          // Session expired — broadcast event untuk logout
+          window.dispatchEvent(new Event(sessionExpiredEvent));
+        }
+      },
     },
   },
 });

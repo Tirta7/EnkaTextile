@@ -87,6 +87,9 @@ importers:
 
   artifacts/api-server:
     dependencies:
+      '@types/connect-pg-simple':
+        specifier: ^7.0.3
+        version: 7.0.3
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -99,6 +102,9 @@ importers:
       busboy:
         specifier: ^1.6.0
         version: 1.6.0
+      connect-pg-simple:
+        specifier: ^10.0.0
+        version: 10.0.0
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -1958,6 +1964,9 @@ packages:
   '@types/busboy@1.5.4':
     resolution: {integrity: sha512-kG7WrUuAKK0NoyxfQHsVE6j1m01s6kMma64E+OZenQABMQyTJop1DumUWcLwAQ2JzpefU7PDYoRDKl8uZosFjw==}
 
+  '@types/connect-pg-simple@7.0.3':
+    resolution: {integrity: sha512-NGCy9WBlW2bw+J/QlLnFZ9WjoGs6tMo3LAut6mY4kK+XHzue//lpNVpAvYRpIwM969vBRAM2Re0izUvV6kt+NA==}
+
   '@types/connect@3.4.38':
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
 
@@ -2212,6 +2221,10 @@ packages:
 
   compare-versions@6.1.1:
     resolution: {integrity: sha512-4hm4VPpIecmlg59CHXnRDnqGplJFrbLG4aFEl5vl6cK1u76ws3LLvX7ikFnTDl5vo39sjWD6AaDPYodJp/NNHg==}
+
+  connect-pg-simple@10.0.0:
+    resolution: {integrity: sha512-pBGVazlqiMrackzCr0eKhn4LO5trJXsOX0nQoey9wCOayh80MYtThCbq8eoLsjpiWgiok/h+1/uti9/2/Una8A==}
+    engines: {node: ^18.18.0 || ^20.9.0 || >=22.0.0}
 
   content-disposition@1.1.0:
     resolution: {integrity: sha512-5jRCH9Z/+DRP7rkvY83B+yGIGX96OYdJmzngqnw2SBSxqCFPd0w2km3s5iawpGX8krnwSGmF0FW5Nhr0Hfai3g==}
@@ -5080,6 +5093,12 @@ snapshots:
     dependencies:
       '@types/node': 25.9.3
 
+  '@types/connect-pg-simple@7.0.3':
+    dependencies:
+      '@types/express': 5.0.6
+      '@types/express-session': 1.19.0
+      '@types/pg': 8.20.0
+
   '@types/connect@3.4.38':
     dependencies:
       '@types/node': 25.9.3
@@ -5345,6 +5364,12 @@ snapshots:
   commander@14.0.3: {}
 
   compare-versions@6.1.1: {}
+
+  connect-pg-simple@10.0.0:
+    dependencies:
+      pg: 8.21.0
+    transitivePeerDependencies:
+      - pg-native
 
   content-disposition@1.1.0: {}
 

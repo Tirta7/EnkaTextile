@@ -6,14 +6,13 @@ REM BACKUP POSTGRESQL - ENKATEXTILE SYSTEM
 REM Mendukung mode: Docker (PC Client) & Lokal
 REM ==========================================
 
-REM ── Kredensial Database (Default/Docker) ─
+REM ── Kredensial Database ──────────────────
 set DB_USER=postgres
-set DB_NAME_DOCKER=vocpos
+set DB_NAME=vocpos
 
 REM ── Konfigurasi Lokal (PC Dev/Server) ────
 set DB_HOST=localhost
-set DB_PORT=4538
-set DB_NAME_LOCAL=avocpos
+set DB_PORT=5432
 set PGPASSWORD_LOCAL=vocpos2026
 set PG_DUMP_EXE=C:\Program Files\PostgreSQL\18\bin\pg_dump.exe
 
@@ -29,14 +28,15 @@ REM ==========================================
 REM GENERATE TIMESTAMP (PowerShell, bukan wmic)
 REM ==========================================
 for /f "usebackq" %%T in (`powershell -NoProfile -Command "Get-Date -Format 'yyyyMMdd_HHmmss'"`) do set TIMESTAMP=%%T
-set FILENAME_TMP=backup_%TIMESTAMP%.sql
+set FILENAME=%DB_NAME%_backup_%TIMESTAMP%.sql
+set BACKUP_PATH=%BACKUP_DIR%\%FILENAME%
 
 REM Buat folder backup jika belum ada
 if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 
 echo.
 echo ==========================================
-echo  MEMULAI PROSES BACKUP DATABASE...
+echo  BACKUP DATABASE: %DB_NAME%
 echo ==========================================
 
 REM ==========================================
@@ -52,22 +52,16 @@ REM ==========================================
 REM JALANKAN BACKUP
 REM ==========================================
 if "%USE_DOCKER%"=="yes" (
-    set TARGET_DB=%DB_NAME_DOCKER%
-    set BACKUP_PATH=%BACKUP_DIR%\!TARGET_DB!_%FILENAME_TMP%
     echo  Mode    : DOCKER
-    echo  Database : !TARGET_DB!
     echo  Container: %CONTAINER_NAME%
-    echo  Output  : !BACKUP_PATH!
+    echo  Output  : %BACKUP_PATH%
     echo ------------------------------------------
     docker exec -e PGPASSWORD=%PGPASSWORD_DOCKER% %CONTAINER_NAME% ^
-        pg_dump -U %DB_USER% !TARGET_DB! > "!BACKUP_PATH!"
+        pg_dump -U %DB_USER% %DB_NAME% > "%BACKUP_PATH%"
 ) else (
-    set TARGET_DB=%DB_NAME_LOCAL%
-    set BACKUP_PATH=%BACKUP_DIR%\!TARGET_DB!_%FILENAME_TMP%
     echo  Mode    : LOKAL
-    echo  Database : !TARGET_DB!
     echo  Host    : %DB_HOST%:%DB_PORT%
-    echo  Output  : !BACKUP_PATH!
+    echo  Output  : %BACKUP_PATH%
     echo ------------------------------------------
     REM Cek apakah pg_dump.exe ada
     if not exist "%PG_DUMP_EXE%" (
@@ -86,7 +80,7 @@ if "%USE_DOCKER%"=="yes" (
         )
     )
     set PGPASSWORD=%PGPASSWORD_LOCAL%
-    "%PG_DUMP_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% !TARGET_DB! > "!BACKUP_PATH!"
+    "%PG_DUMP_EXE%" -h %DB_HOST% -p %DB_PORT% -U %DB_USER% %DB_NAME% > "%BACKUP_PATH%"
 )
 
 REM ==========================================
@@ -103,15 +97,15 @@ if %ERRORLEVEL% equ 0 (
     )
     echo.
     echo [BERHASIL] Backup selesai^^!
-    echo   File  : !BACKUP_PATH!
+    echo   File  : %BACKUP_PATH%
     echo   Ukuran: !FILE_SIZE! bytes
     echo.
     REM Hapus backup lama jika lebih dari 10 file
     set COUNT=0
-    for %%F in ("%BACKUP_DIR%\!TARGET_DB!_backup_*.sql") do set /a COUNT+=1
+    for %%F in ("%BACKUP_DIR%\%DB_NAME%_backup_*.sql") do set /a COUNT+=1
     if !COUNT! gtr 10 (
         echo  Info: Membersihkan backup lama ^(simpan 10 terbaru^)...
-        for /f "skip=10 delims=" %%F in ('dir /b /o-d "%BACKUP_DIR%\!TARGET_DB!_backup_*.sql" 2^>nul') do (
+        for /f "skip=10 delims=" %%F in ('dir /b /o-d "%BACKUP_DIR%\%DB_NAME%_backup_*.sql" 2^>nul') do (
             del "%BACKUP_DIR%\%%F"
             echo   Dihapus: %%F
         )
@@ -130,7 +124,7 @@ if %ERRORLEVEL% equ 0 (
         rclone version >nul 2>&1
         if !ERRORLEVEL! equ 0 (
             echo  Info: Mengupload ke Google Drive via Rclone...
-            rclone copy "!BACKUP_PATH!" "gdrive:/" --drive-root-folder-id "!GDRIVE_FOLDER_ID!"
+            rclone copy "%BACKUP_PATH%" "gdrive:/" --drive-root-folder-id "!GDRIVE_FOLDER_ID!"
             if !ERRORLEVEL! equ 0 (
                 echo   [BERHASIL] Upload Google Drive selesai!
             ) else (

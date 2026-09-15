@@ -4,8 +4,6 @@ setlocal enabledelayedexpansion
 title VOCpos - Hard Restart
 color 0C
 
-set PSQL="C:\Program Files\PostgreSQL\18\bin\psql.exe"
-
 echo ============================================================
 echo   PERINGATAN: HARD RESTART (RESET SEMUA DATA)
 echo ============================================================
@@ -20,25 +18,21 @@ if /i not "!confirm!"=="YAKIN" (
 )
 
 echo.
-echo [1/3] Memutus semua koneksi aktif ke database avocpos...
-set PGPASSWORD=vocpos2026
-%PSQL% -h 127.0.0.1 -p 4538 -U postgres -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'avocpos' AND pid <> pg_backend_pid();"
+echo [1/3] Menghapus Database Docker (Volume)...
+docker-compose down -v
+if %ERRORLEVEL% neq 0 (
+    echo Gagal menghapus container docker.
+)
 
-echo.
-echo [2/3] Menghapus dan membuat ulang database kosong...
-%PSQL% -h 127.0.0.1 -p 4538 -U postgres -d postgres -c "DROP DATABASE IF EXISTS avocpos;"
-%PSQL% -h 127.0.0.1 -p 4538 -U postgres -d postgres -c "CREATE DATABASE avocpos;"
+echo [2/3] Membangun ulang dan menyalakan Database...
+docker-compose up -d db
 
-echo.
-echo [3/3] Membuat ulang tabel (schema) dari awal...
-cd /d "d:\AVOCpos\Alma-Ecosystem"
-pnpm --filter @workspace/db run push-force
-
+echo [3/3] Selesai
 echo.
 echo ============================================================
 echo HARD RESTART SELESAI!
 echo ============================================================
-echo Database avocpos kini kosong bersih seperti baru.
-echo Silakan refresh browser aplikasi kasir Anda.
+echo Silakan jalankan start-vocpos.bat kembali.
+echo Sistem akan membuat tabel database baru pada saat start pertama kali.
 echo.
 pause

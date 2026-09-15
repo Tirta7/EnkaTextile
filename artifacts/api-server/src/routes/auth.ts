@@ -48,7 +48,17 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.username = user.username;
   req.session.fullName = user.fullName;
   req.session.role = user.role;
-  res.json({ id: user.id, username: user.username, fullName: user.fullName, role: user.role });
+  
+  // WAJIB panggil save eksplisit karena PostgreSQL store itu async.
+  // Jika tidak, frontend bisa keburu redirect & fetch /auth/me SEBELUM DB selesai nyimpan,
+  // yang berakibat langsung kena 401 dan auto-logout lagi.
+  req.session.save((err) => {
+    if (err) {
+      res.status(500).json({ error: "Gagal menyimpan session" });
+      return;
+    }
+    res.json({ id: user.id, username: user.username, fullName: user.fullName, role: user.role });
+  });
 });
 
 router.post("/auth/logout", (req, res): void => {

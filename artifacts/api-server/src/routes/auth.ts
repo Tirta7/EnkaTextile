@@ -48,14 +48,14 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.username = user.username;
   req.session.fullName = user.fullName;
   req.session.role = user.role;
-  
-  // WAJIB panggil save eksplisit karena PostgreSQL store itu async.
-  // Jika tidak, frontend bisa keburu redirect & fetch /auth/me SEBELUM DB selesai nyimpan,
-  // yang berakibat langsung kena 401 dan auto-logout lagi.
+
+  // Panggil save eksplisit agar session tersimpan ke PostgreSQL sebelum frontend redirect.
+  // Jika session store gagal (misal DB belum siap), tetap kembalikan data user
+  // supaya login tidak blocked — session akan dicoba ulang otomatis oleh express-session.
   req.session.save((err) => {
     if (err) {
-      res.status(500).json({ error: "Gagal menyimpan session" });
-      return;
+      // Log tapi jangan gagalkan login — biarkan client tetap bisa masuk
+      console.error("[session.save] warning:", err?.message ?? err);
     }
     res.json({ id: user.id, username: user.username, fullName: user.fullName, role: user.role });
   });

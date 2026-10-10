@@ -2,11 +2,12 @@ import { Router, Request, Response } from "express";
 import { db, licenseCacheTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import machineIdPkg from "node-machine-id";
+import path from "path";
+import { checkLicense, verifyLicenseKey } from "../lib/vocml-client.js";
+
 const { machineId } = machineIdPkg;
 
 const router = Router();
-
-const GAS_WEBAPP_URL = process.env.GAS_WEBAPP_URL || "";
 
 const getMachineId = async () => {
   const id = await machineId();
@@ -32,56 +33,60 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
       return;
     }
     
-    if (!GAS_WEBAPP_URL) {
-      res.status(500).json({ error: "GAS_WEBAPP_URL belum diatur di sistem" });
+    const publicKeyPem = process.env.VOCML_PUBLIC_KEY || "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEADenKScMcRxd/GFPnwHLg026Y3mKWNmtyUR1KPQgLTFI=\n-----END PUBLIC KEY-----\n";
+    if (!publicKeyPem) {
+      res.status(500).json({ error: "Kunci Publik VOCML belum diatur di sistem (VOCML_PUBLIC_KEY)." });
       return;
     }
 
     const mId = await getMachineId();
+    const product = process.env.VOCML_PRODUCT || "pos";
 
-    const response = await fetch(GAS_WEBAPP_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ action: "activate", licenseKey, machineId: mId }),
-    });
+    // Verifikasi key secara offline menggunakan SDK
+    const verifyResult = verifyLicenseKey(licenseKey, mId, product, publicKeyPem);
 
-    let data: any;
-    try {
-      data = await response.json();
-    } catch(e) {
-      res.status(400).json({ error: "Gagal terhubung ke Server Lisensi (Invalid Response)." });
+    if (!verifyResult.valid) {
+      res.status(400).json({ error: verifyResult.reason || "Gagal mengaktifkan lisensi. Key tidak valid." });
       return;
     }
 
-    if (!data.valid) {
-      res.status(400).json({ error: data.error || "Gagal mengaktifkan lisensi. Key tidak valid." });
+    if (verifyResult.expired) {
+      res.status(400).json({ error: "Lisensi sudah kadaluarsa." });
       return;
     }
 
+    // Jika valid, simpan ke database sebagai cache tambahan
     const existing = await db.select().from(licenseCacheTable).limit(1);
     
+    // Hitung daysLeft
+    const expDate = new Date(verifyResult.expiresAt);
+    const today = new Date();
+    const daysLeft = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+
     if (existing.length > 0) {
       await db.update(licenseCacheTable).set({
         licenseKey: licenseKey,
         isValid: true,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        daysLeft: data.daysLeft || 0,
+        expiresAt: expDate,
+        daysLeft: daysLeft > 0 ? daysLeft : 0,
         cachedAt: new Date(),
-        storeName: data.storeName || "",
+        storeName: existing[0].storeName || "",
       }).where(eq(licenseCacheTable.id, existing[0].id));
     } else {
       await db.insert(licenseCacheTable).values({
         licenseKey: licenseKey,
         isValid: true,
-        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-        daysLeft: data.daysLeft || 0,
-        storeName: data.storeName || "",
+        expiresAt: expDate,
+        daysLeft: daysLeft > 0 ? daysLeft : 0,
+        storeName: "",
       });
     }
 
-    res.json(data);
+    res.json({
+      valid: true,
+      expiresAt: verifyResult.expiresAt,
+      daysLeft: daysLeft > 0 ? daysLeft : 0,
+    });
   } catch (error) {
     console.error("Failed to activate license", error);
     res.status(500).json({ error: "Terjadi kesalahan sistem saat menghubungi server lisensi." });
@@ -90,59 +95,71 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
 
 router.get("/status", async (req: Request, res: Response): Promise<void> => {
   try {
-    const cache = await db.select().from(licenseCacheTable).limit(1);
-    const licenses = await db.select().from(licenseCacheTable).limit(1);
-    
-    if (licenses.length === 0) {
-      res.json({ status: "not_activated", isValid: false });
+    const mId = await getMachineId();
+    const serverUrl = process.env.VOCML_SERVER_URL || "https://vocml.vocpos.id";
+    const publicKeyPem = process.env.VOCML_PUBLIC_KEY || "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEADenKScMcRxd/GFPnwHLg026Y3mKWNmtyUR1KPQgLTFI=\n-----END PUBLIC KEY-----\n";
+    const product = process.env.VOCML_PRODUCT || "pos";
+    const cacheFile = path.resolve(process.cwd(), "license-cache.json");
+
+    if (!publicKeyPem) {
+      res.status(500).json({ error: "Kunci Publik VOCML belum diatur di sistem." });
       return;
     }
 
-    const currentCache = licenses[0];
-    const isLocked = currentCache.daysLeft === -999;
+    // Gunakan SDK untuk cek lisensi (online/offline cache otomatis)
+    const lic = await checkLicense({
+      serverUrl,
+      product,
+      machineId: mId,
+      publicKeyPem,
+      cacheFile,
+      timeoutMs: 5000
+    });
 
-    let result = {
-      status: isLocked ? "locked" : (currentCache.isValid ? "active" : "expired"),
-      isValid: currentCache.isValid,
-      expiresAt: currentCache.expiresAt,
-      daysLeft: currentCache.daysLeft === -999 ? 0 : currentCache.daysLeft,
-      storeName: currentCache.storeName,
+    const isLocked = lic.status === "locked";
+    
+    let daysLeft = 0;
+    let expDate = null;
+    
+    if (lic.expiresAt) {
+      expDate = new Date(lic.expiresAt);
+      const today = new Date();
+      daysLeft = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+    }
+
+    // Map "pending" dari VOCML ke "not_activated" agar UI frontend mengenalinya dan mengunci layar
+    let finalStatus = lic.status;
+    if (finalStatus === "pending") finalStatus = "not_activated";
+    if (finalStatus === "offline" && !lic.allowed) finalStatus = "not_activated";
+
+    const result = {
+      status: lic.allowed ? "active" : (finalStatus || "not_activated"),
+      isValid: lic.allowed,
+      expiresAt: lic.expiresAt || null,
+      daysLeft: isLocked ? 0 : Math.max(0, daysLeft),
+      storeName: "", // Bisa di-query dari db jika perlu
+      reason: lic.reason || null,
     };
     
-    // Background sync jika cache sudah lebih dari 30 detik
-    const now = new Date().getTime();
-    const cachedAt = currentCache.cachedAt ? currentCache.cachedAt.getTime() : 0;
-    
-    if (GAS_WEBAPP_URL && (now - cachedAt > 30000)) {
-      (async () => {
-        try {
-          const mId = await getMachineId();
-          const response = await fetch(GAS_WEBAPP_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "validate", licenseKey: currentCache.licenseKey, machineId: mId }),
-          });
-          
-          if (response.ok) {
-            const data: any = await response.json();
-            
-            let isEmergencyLock = false;
-            if (!data.valid && data.error === "LOCKED_EMERGENCY") {
-              isEmergencyLock = true;
-            }
-
-            await db.update(licenseCacheTable).set({
-              isValid: data.valid,
-              expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
-              daysLeft: isEmergencyLock ? -999 : (data.daysLeft || 0),
-              cachedAt: new Date(),
-              storeName: data.storeName || "",
-            }).where(eq(licenseCacheTable.id, currentCache.id));
-          }
-        } catch (fetchError) {
-          // Abaikan error background fetch
-        }
-      })();
+    // Update DB untuk keperluan info lokalan
+    const existing = await db.select().from(licenseCacheTable).limit(1);
+    if (existing.length > 0) {
+      await db.update(licenseCacheTable).set({
+        isValid: lic.allowed,
+        expiresAt: expDate,
+        daysLeft: isLocked ? -999 : Math.max(0, daysLeft),
+        cachedAt: new Date(),
+        licenseKey: lic.licenseKey || existing[0].licenseKey,
+      }).where(eq(licenseCacheTable.id, existing[0].id));
+      result.storeName = existing[0].storeName || "";
+    } else {
+      await db.insert(licenseCacheTable).values({
+        licenseKey: lic.licenseKey || "",
+        isValid: lic.allowed,
+        expiresAt: expDate,
+        daysLeft: isLocked ? -999 : Math.max(0, daysLeft),
+        storeName: "",
+      });
     }
     
     res.json(result);

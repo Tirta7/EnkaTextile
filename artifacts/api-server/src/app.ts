@@ -65,6 +65,8 @@ const uploadsDir = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use("/api/uploads", express.static(uploadsDir));
 
+import { licenseGuard } from "./middlewares/licenseGuard";
+
 // Auth guard — protect all other /api routes
 app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
   const publicPaths = ["/healthz", "/settings", "/settings/manifest.json", "/license"];
@@ -79,6 +81,9 @@ app.use("/api", (req: Request, res: Response, next: NextFunction): void => {
   }
   next();
 });
+
+// Mutlak 100% Anti-Bypass: Terapkan License Guard ke seluruh rute privat
+app.use("/api", licenseGuard);
 
 app.use("/api", router);
 

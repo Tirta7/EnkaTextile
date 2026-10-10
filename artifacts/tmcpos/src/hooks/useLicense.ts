@@ -8,6 +8,7 @@ interface LicenseData {
   expiresAt: string | null;
   daysLeft: number;
   storeName?: string;
+  reason?: string;
 }
 
 export function useLicense() {
@@ -70,6 +71,7 @@ export function useLicense() {
     daysLeft: data.daysLeft,
     expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
     storeName: data.storeName,
+    reason: data.reason,
     activateLicense,
     refreshLicense: checkLicense,
   };

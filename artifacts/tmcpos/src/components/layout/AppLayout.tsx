@@ -21,7 +21,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-background flex overflow-hidden">
+    <div className="h-full w-full bg-background flex overflow-hidden">
       <Sidebar
         isOpen={sidebarOpen}
         setOpen={setSidebarOpen}

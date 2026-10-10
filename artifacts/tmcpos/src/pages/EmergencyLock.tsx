@@ -1,7 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export default function EmergencyLock() {
+export default function EmergencyLock({ reason }: { reason?: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#07090f]">
       <div className="absolute inset-0 bg-red-900/20 pointer-events-none" />
@@ -17,7 +17,7 @@ export default function EmergencyLock() {
           <div>
             <CardTitle className="text-3xl font-black tracking-tight text-red-500">SYSTEM LOCKED</CardTitle>
             <CardDescription className="text-red-200 mt-2 font-medium">
-              Akses aplikasi dihentikan sementara
+              {reason ? `Alasan: ${reason}` : "Akses aplikasi dihentikan sementara"}
             </CardDescription>
           </div>
         </CardHeader>

@@ -712,14 +712,14 @@ export default function Pembelian() {
                 <p className="font-semibold">📋 Format Excel yang dibutuhkan:</p>
                 <p>Gunakan file hasil <strong>Export Excel</strong> sebagai template, atau buat file dengan kolom:</p>
                 <ul className="list-disc ml-4 space-y-0.5 mt-1">
-                  <li><strong>No Invoice</strong> — kunci pengelompokan (wajib)</li>
+                  <li><strong>No Invoice</strong> — nomor nota / faktur pembelian (wajib)</li>
                   <li><strong>Tanggal</strong> — format dd/mm/yyyy</li>
-                  <li><strong>Supplier</strong> — nama supplier sesuai di sistem (wajib)</li>
-                  <li><strong>Produk / Barang</strong> — nama barang sesuai di sistem (wajib)</li>
+                  <li><strong>Supplier</strong> — nama supplier (otomatis dibuat jika belum ada)</li>
+                  <li><strong>Produk / Barang</strong> — nama barang (otomatis didaftarkan ke Master Barang jika belum ada)</li>
                   <li><strong>Roll</strong>, <strong>Meter/Yard</strong>, <strong>Harga / Meter</strong>, <strong>Subtotal</strong></li>
-                  <li><strong>Metode Bayar</strong> — tunai / kredit / tempo</li>
+                  <li><strong>Metode Bayar</strong> — tunai / kredit / tempo (otomatis mencatat beban hutang)</li>
                 </ul>
-                <p className="text-blue-600 mt-1">⚠️ Invoice yang sudah ada di sistem akan dilewati otomatis.</p>
+                <p className="text-blue-600 mt-1">💡 Invoice yang sudah ada di sistem akan dilewati otomatis agar stok tidak ganda.</p>
               </div>
 
               <div

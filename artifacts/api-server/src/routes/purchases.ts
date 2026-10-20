@@ -226,6 +226,7 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
 
     const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode }).from(productsTable);
     const allSuppliers = await db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable);
+    const allCategories = await db.select().from(categoriesTable);
 
     const findProduct = (name: string) => {
       const n = name?.trim().toLowerCase();
@@ -234,6 +235,10 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
     const findSupplier = (name: string) => {
       const n = name?.trim().toLowerCase();
       return allSuppliers.find(s => s.name.toLowerCase() === n);
+    };
+    const findCategory = (name: string) => {
+      const n = name?.trim().toLowerCase();
+      return allCategories.find(c => c.name.toLowerCase() === n);
     };
 
     // Group rows by invoice number + supplier (carry over if blank)
@@ -294,9 +299,15 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         if (!supplierName) {
           results.push({ invoice: invoiceNumber, status: "error", message: "Kolom Supplier kosong" }); continue;
         }
-        const supplier = findSupplier(supplierName);
+
+        let supplier = findSupplier(supplierName);
         if (!supplier) {
-          results.push({ invoice: invoiceNumber, status: "error", message: `Supplier "${supplierName}" tidak ditemukan` }); continue;
+          // Otomatis buat supplier baru jika belum ada di database
+          const [newSupp] = await db.insert(suppliersTable).values({
+            name: supplierName
+          }).returning();
+          supplier = newSupp;
+          allSuppliers.push(newSupp);
         }
 
         const existingList = await db.select({ id: purchasesTable.id }).from(purchasesTable)
@@ -311,12 +322,58 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         for (const row of rows) {
           const prodName = String(row["Produk / Barang"] || "").trim();
           if (!prodName) continue;
-          const prod = findProduct(prodName);
-          if (!prod) { itemErrors.push(`Produk "${prodName}" tidak ditemukan`); continue; }
+
+          let prod = findProduct(prodName);
           const rollsCount = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
           const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
           const pricePerMeter = parseFloat(String(row["Harga / Meter"]).replace(",", ".")) || 0;
           const subtotal = parseFloat(String(row["Subtotal"]).replace(",", ".")) || Math.round(meters * pricePerMeter);
+
+          if (!prod) {
+            // Otomatis daftarkan produk baru ke master barang dari nota pembelian
+            const catName = String(row["Kategori"] || "").trim();
+            let categoryId: number | null = null;
+            if (catName) {
+              let cat = findCategory(catName);
+              if (!cat) {
+                const [newCat] = await db.insert(categoriesTable).values({ name: catName }).returning();
+                allCategories.push(newCat);
+                cat = newCat;
+              }
+              categoryId = cat.id;
+            } else if (allCategories.length > 0) {
+              categoryId = allCategories[0].id;
+            } else {
+              const [newCat] = await db.insert(categoriesTable).values({ name: "Kain" }).returning();
+              allCategories.push(newCat);
+              categoryId = newCat.id;
+            }
+
+            const barcode = String(row["Barcode"] || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const costPriceStr = pricePerMeter > 0 ? pricePerMeter.toString() : "0";
+
+            const [newProd] = await db.insert(productsTable).values({
+              name: prodName,
+              categoryId: categoryId!,
+              barcode,
+              primaryUnit: "METER",
+              secondaryUnit: "ROLL",
+              costPricePerMeter: costPriceStr,
+              pricePerMeter: costPriceStr,
+              rollStock: "0",
+              meterStock: "0",
+              minStock: "0",
+            }).returning();
+
+            prod = newProd;
+            allProducts.push(newProd);
+          } else if (pricePerMeter > 0) {
+            // Update harga beli ke produk yang sudah ada jika belum diset
+            await db.update(productsTable)
+              .set({ costPricePerMeter: pricePerMeter.toString(), updatedAt: new Date() })
+              .where(eq(productsTable.id, prod.id));
+          }
+
           const rollLengths: number[] = [];
           for (const key of Object.keys(row)) {
             if (key.startsWith("Roll ") && key !== "Roll") {

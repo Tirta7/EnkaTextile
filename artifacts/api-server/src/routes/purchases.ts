@@ -273,6 +273,44 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       invoiceMap.get(currentInvKey)!.push(row);
     }
 
+    // Helper tanggal serbaguna: dukung Serial Excel Date (misal 46284), String (DD/MM/YYYY & YYYY-MM-DD), serta Invoice number fallback
+    function parseExcelDate(val: any, inv: string): Date | undefined {
+      if (!val && !inv) return undefined;
+      if (val instanceof Date) return val;
+      if (typeof val === "number" || (!isNaN(Number(val)) && !String(val).includes("/") && !String(val).includes("-"))) {
+        const num = Number(val);
+        if (num > 30000 && num < 60000) {
+          const utcDays = num - 25569;
+          const utcValue = utcDays * 86400;
+          const dateInfo = new Date(utcValue * 1000);
+          return new Date(dateInfo.getFullYear(), dateInfo.getMonth(), dateInfo.getDate());
+        }
+      }
+      const str = String(val || "").trim();
+      if (str) {
+        const parts = str.includes("/") ? str.split("/") : str.split("-");
+        if (parts.length === 3) {
+          if (str.includes("/")) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2], 10);
+            return new Date(y, m, d);
+          } else {
+            return new Date(str);
+          }
+        }
+      }
+      // Fallback: ekstrak dari nomor faktur format INV-IN/YYYYMMDD/...
+      const match = String(inv || "").match(/(\d{4})(\d{2})(\d{2})/);
+      if (match) {
+        const y = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10) - 1;
+        const d = parseInt(match[3], 10);
+        return new Date(y, m, d);
+      }
+      return undefined;
+    }
+
     const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];
     let successCount = 0;
 
@@ -282,19 +320,23 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       try {
         // ── Parse common data from Excel rows ──
         const supplierName = String(firstRow["Supplier"] || "").trim();
-        const paymentType = String(firstRow["Metode Bayar"] || "tunai").trim().toLowerCase();
-        const notes = String(firstRow["Catatan"] || "").trim();
-        const tanggalStr = String(firstRow["Tanggal"] || "").trim();
+        const tanggalVal = firstRow["Tanggal"];
+        const createdAt = parseExcelDate(tanggalVal, invoiceNumber);
 
-        let createdAt: Date | undefined;
-        if (tanggalStr) {
-          const parts = tanggalStr.includes("/") ? tanggalStr.split("/") : tanggalStr.split("-");
-          if (parts.length === 3) {
-            createdAt = tanggalStr.includes("/")
-              ? new Date(`${parts[2]}-${parts[1].padStart(2,"0")}-${parts[0].padStart(2,"0")}`)
-              : new Date(tanggalStr);
-          }
+        let paymentType = String(firstRow["Metode Bayar"] || "").trim().toLowerCase();
+        let statusHint = String(firstRow["Status"] || "").trim().toLowerCase();
+        let notes = String(firstRow["Catatan"] || "").trim();
+
+        // Deteksi jika kolom bergeser (misal row di-copy dari sheet dengan kolom Roll lebih sedikit)
+        const rowKeys = Object.keys(firstRow);
+        const methodKey = rowKeys.find(k => ["kredit", "tunai", "tempo"].includes(String(firstRow[k]).toLowerCase().trim()));
+        if ((!paymentType || !["tunai", "kredit", "tempo"].includes(paymentType)) && methodKey) {
+          paymentType = String(firstRow[methodKey]).trim().toLowerCase();
+          const mIdx = rowKeys.indexOf(methodKey);
+          if (mIdx + 1 < rowKeys.length) statusHint = String(firstRow[rowKeys[mIdx + 1]] || "").trim().toLowerCase();
+          if (mIdx + 2 < rowKeys.length) notes = String(firstRow[rowKeys[mIdx + 2]] || "").trim();
         }
+        if (!paymentType) paymentType = "kredit";
 
         if (!supplierName) {
           results.push({ invoice: invoiceNumber, status: "error", message: "Kolom Supplier kosong" }); continue;
@@ -326,8 +368,28 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
           let prod = findProduct(prodName);
           const rollsCount = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
           const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
-          const pricePerMeter = parseFloat(String(row["Harga / Meter"]).replace(",", ".")) || 0;
-          const subtotal = parseFloat(String(row["Subtotal"]).replace(",", ".")) || Math.round(meters * pricePerMeter);
+          let pricePerMeter = parseFloat(String(row["Harga / Meter"] || "0").replace(",", ".")) || 0;
+
+          // Koreksi kolom bergeser jika harga kosong
+          if (!pricePerMeter || pricePerMeter === 0) {
+            const itemRowKeys = Object.keys(row);
+            const itemMethodKey = itemRowKeys.find(k => ["kredit", "tunai", "tempo"].includes(String(row[k]).toLowerCase().trim()));
+            if (itemMethodKey && itemMethodKey.startsWith("Roll ")) {
+              const mIdx = itemRowKeys.indexOf(itemMethodKey);
+              if (mIdx >= 5) {
+                const detectedP = parseFloat(String(row[itemRowKeys[mIdx - 5]] || "0").replace(",", "."));
+                if (detectedP > 0) pricePerMeter = detectedP;
+              }
+            } else {
+              const afterRolls = Math.round(rollsCount);
+              for (let r = afterRolls + 1; r <= afterRolls + 10; r++) {
+                const val = parseFloat(String(row[`Roll ${r}`] || "0").replace(",", "."));
+                if (val > 100) { pricePerMeter = val; break; }
+              }
+            }
+          }
+
+          const subtotal = parseFloat(String(row["Subtotal"] || "0").replace(",", ".")) || Math.round(meters * pricePerMeter);
 
           if (!prod) {
             // Otomatis daftarkan produk baru ke master barang dari nota pembelian
@@ -374,13 +436,15 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
               .where(eq(productsTable.id, prod.id));
           }
 
+          // Parse roll lengths: batasi hanya sampai rollsCount agar kolom harga yang bergeser tidak ikut terbaca sebagai roll
           const rollLengths: number[] = [];
+          const maxRollIndex = Math.round(rollsCount) || 500;
           for (const key of Object.keys(row)) {
             if (key.startsWith("Roll ") && key !== "Roll") {
-              const val = parseFloat(String(row[key]).replace(",", "."));
-              if (!isNaN(val) && val > 0) {
-                const rollIndex = parseInt(key.replace("Roll ", "").trim(), 10);
-                if (!isNaN(rollIndex) && rollIndex > 0) rollLengths[rollIndex - 1] = val;
+              const rollIndex = parseInt(key.replace("Roll ", "").trim(), 10);
+              if (!isNaN(rollIndex) && rollIndex > 0 && rollIndex <= maxRollIndex) {
+                const val = parseFloat(String(row[key]).replace(",", "."));
+                if (!isNaN(val) && val > 0) rollLengths[rollIndex - 1] = val;
               }
             }
           }
@@ -392,12 +456,46 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
         const isKredit = paymentType === "kredit" || paymentType === "tempo";
         const paidAmount = isKredit ? 0 : totalAmount;
-        const status = paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
+        const status = statusHint === "lunas" || paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
 
         let purchaseId: number;
 
         if (existingList.length > 0) {
-          // SKIP existing invoice to prevent stock destruction and FK errors
+          const [existingP] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, existingList[0].id));
+          if (existingP && parseFloat(existingP.totalAmount as string) === 0 && totalAmount > 0) {
+            // Perbaiki data faktur lama yang sempat tersimpan dengan total 0
+            await db.update(purchasesTable).set({
+              totalAmount: totalAmount.toString(),
+              paidAmount: paidAmount.toString(),
+              status,
+              paymentType,
+              notes: notes || null,
+              ...(createdAt && !isNaN(createdAt.getTime()) ? { createdAt } : {}),
+              updatedAt: new Date()
+            }).where(eq(purchasesTable.id, existingP.id));
+
+            if (status !== "lunas") {
+              const existingPayable = await db.select().from(payablesTable).where(eq(payablesTable.purchaseId, existingP.id));
+              if (existingPayable.length === 0) {
+                await db.insert(payablesTable).values({
+                  purchaseId: existingP.id, supplierId: supplier.id,
+                  totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
+                  status: status === "partial" ? "partial" : "unpaid",
+                });
+              } else {
+                await db.update(payablesTable).set({
+                  totalAmount: totalAmount.toString(), paidAmount: paidAmount.toString(),
+                  status: status === "partial" ? "partial" : "unpaid",
+                }).where(eq(payablesTable.purchaseId, existingP.id));
+              }
+            }
+
+            results.push({ invoice: invoiceNumber, status: "ok", message: "Faktur diperbarui dengan total & tanggal yang valid" });
+            successCount++;
+            continue;
+          }
+
+          // SKIP invoice yang sudah ada dan valid agar riwayat stok tidak rusak
           results.push({ invoice: invoiceNumber, status: "skip", message: "Invoice sudah ada, dilewati agar riwayat stok tidak rusak" });
           continue;
         } else {

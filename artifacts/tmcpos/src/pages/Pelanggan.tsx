@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { PaginationControl } from "../components/PaginationControl";
 import { useListCustomers, useCreateCustomer, useUpdateCustomer, useDeleteCustomer, getListCustomersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerDescription } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Users, User, MoreVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, User, MoreVertical, Download, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
@@ -30,6 +31,14 @@ export default function Pelanggan() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
+  // ─── Export & Import state ───
+  const [isExporting, setIsExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<any | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+
   const { data: customers, isLoading } = useListCustomers({}, { query: { queryKey: getListCustomersQueryKey({}) } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -51,6 +60,53 @@ export default function Pelanggan() {
   const openCreate = () => { form.reset({ name: "", phone: "", address: "", creditLimit: 0 }); setEditingId(null); setIsOpen(true); };
   const openEdit = (c: any) => { form.reset({ name: c.name, phone: c.phone || "", address: c.address || "", creditLimit: c.creditLimit }); setEditingId(c.id); setIsOpen(true); };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/customers/export", { credentials: "include" });
+      if (!res.ok) throw new Error("Export gagal");
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `Data_Pelanggan_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      toast({ title: "Export berhasil", description: "File data pelanggan telah diunduh." });
+    } catch (err: any) {
+      toast({ title: "Gagal export", description: err.message || "Terjadi kesalahan", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleStartImport = async () => {
+    if (!importFile) return;
+    setIsImporting(true);
+    try {
+      const form = new FormData();
+      form.append("file", importFile);
+      const res = await fetch("/api/customers/import", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import gagal");
+      setImportResult(data);
+      queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey({}) });
+      toast({
+        title: "Import selesai",
+        description: `${data.created || 0} baru, ${data.updated || 0} diperbarui.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Gagal import", description: err.message, variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const filtered = customers?.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || (c.phone && c.phone.includes(search)));
 
   const totalPelanggan = customers?.length ?? 0;
@@ -61,15 +117,44 @@ export default function Pelanggan() {
     <div className="w-full">
       {/* Top Strip */}
       <div className="pb-3 space-y-2.5">
-        {/* Row 1: Title + Tambah */}
-        <div className="flex items-center justify-between">
+        {/* Row 1: Title + Action buttons */}
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none">Pelanggan</h1>
             <p className="text-[11px] text-slate-400 mt-0.5">Kelola data pelanggan & kredit</p>
           </div>
-          <Button onClick={openCreate} size="sm" className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-xs font-bold">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              onClick={handleExport}
+              disabled={isExporting}
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              {isExporting ? (
+                <span className="h-3.5 w-3.5 sm:mr-1.5 rounded-full border-2 border-slate-600 border-t-transparent animate-spin inline-block" />
+              ) : (
+                <Download className="h-3.5 w-3.5 sm:mr-1.5" />
+              )}
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Button
+              onClick={() => {
+                setImportResult(null);
+                setImportFile(null);
+                setImportOpen(true);
+              }}
+              variant="outline"
+              size="sm"
+              className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <Upload className="h-3.5 w-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Import</span>
+            </Button>
+            <Button onClick={openCreate} size="sm" className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
+            </Button>
+          </div>
         </div>
 
         {/* Row 2: Search */}
@@ -267,6 +352,154 @@ export default function Pelanggan() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* ─── Modal Import Pelanggan ─────────────────────────────────── */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(o) => {
+          if (!isImporting) {
+            setImportOpen(o);
+            if (!o) {
+              setImportFile(null);
+              setImportResult(null);
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <FileSpreadsheet className="w-5 h-5 text-violet-600" />
+              Import Data Pelanggan dari Excel
+            </DialogTitle>
+          </DialogHeader>
+
+          {!importResult ? (
+            <div className="space-y-4">
+              <div className="bg-violet-50/70 border border-violet-100 rounded-xl p-3 text-xs text-violet-900 space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-violet-800">
+                  📋 Panduan Format Excel:
+                </p>
+                <p className="text-slate-600">
+                  Gunakan file hasil <strong>Export</strong> sebagai backup & template data, atau buat file Excel baru dengan kolom berikut:
+                </p>
+                <ul className="list-disc ml-4 space-y-0.5 text-slate-600">
+                  <li><strong>Nama Pelanggan</strong> — wajib diisi</li>
+                  <li><strong>No. Telepon</strong> — nomor telepon / WhatsApp (opsional)</li>
+                  <li><strong>Alamat</strong> — alamat pelanggan (opsional)</li>
+                  <li><strong>Limit Kredit</strong> — batas plafon kredit/tempo dalam angka (opsional)</li>
+                </ul>
+                <p className="text-[11px] text-violet-700 pt-0.5">
+                  💡 <em>Pelanggan dengan nama yang sudah ada otomatis akan diperbarui datanya.</em>
+                </p>
+              </div>
+
+              {/* Upload Dropzone */}
+              <div
+                className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-violet-400 hover:bg-violet-50/20 transition-all"
+                onClick={() => importFileRef.current?.click()}
+              >
+                {importFile ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <FileSpreadsheet className="w-7 h-7 text-emerald-600 shrink-0" />
+                    <div className="text-left min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{importFile.name}</p>
+                      <p className="text-xs text-slate-400">{(importFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImportFile(null);
+                      }}
+                      className="ml-2 p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
+                    >
+                      <XIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="mx-auto w-8 h-8 text-slate-300 mb-2" />
+                    <p className="text-sm font-medium text-slate-700">Klik untuk memilih file Excel</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Mendukung format .xlsx dan .xls (maks. 10MB)</p>
+                  </div>
+                )}
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setImportFile(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setImportOpen(false)}>
+                  Batal
+                </Button>
+                <Button
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
+                  disabled={!importFile || isImporting}
+                  onClick={handleStartImport}
+                >
+                  {isImporting ? (
+                    <>
+                      <span className="h-3.5 w-3.5 mr-1.5 rounded-full border-2 border-white border-t-transparent animate-spin inline-block" />
+                      Mengimpor...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-1.5 h-3.5 w-3.5" />
+                      Mulai Import
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-emerald-700">{importResult.created ?? 0}</p>
+                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Pelanggan Baru</p>
+                </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-blue-700">{importResult.updated ?? 0}</p>
+                  <p className="text-[11px] text-blue-600 font-semibold mt-0.5">Diperbarui</p>
+                </div>
+                <div className={`rounded-xl p-3 text-center border ${importResult.failed > 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
+                  <p className={`text-2xl font-black ${importResult.failed > 0 ? 'text-rose-700' : 'text-slate-500'}`}>{importResult.failed ?? 0}</p>
+                  <p className={`text-[11px] font-semibold mt-0.5 ${importResult.failed > 0 ? 'text-rose-600' : 'text-slate-400'}`}>Gagal / Error</p>
+                </div>
+              </div>
+
+              {importResult.errors && importResult.errors.length > 0 && (
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 max-h-32 overflow-y-auto space-y-1">
+                  <p className="text-xs font-bold text-rose-800">Detail Kendala:</p>
+                  {importResult.errors.map((err: string, idx: number) => (
+                    <p key={idx} className="text-[11px] text-rose-700">{err}</p>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
+                onClick={() => {
+                  setImportOpen(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+              >
+                Selesai
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

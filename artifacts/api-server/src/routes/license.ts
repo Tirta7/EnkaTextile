@@ -59,9 +59,9 @@ router.post("/activate", async (req: Request, res: Response): Promise<void> => {
     const existing = await db.select().from(licenseCacheTable).limit(1);
     
     // Hitung daysLeft
-    const expDate = new Date(verifyResult.expiresAt);
+    const expDate = verifyResult.expiresAt ? new Date(verifyResult.expiresAt) : null;
     const today = new Date();
-    const daysLeft = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+    const daysLeft = expDate ? Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 3600 * 24)) : 0;
 
     if (existing.length > 0) {
       await db.update(licenseCacheTable).set({
@@ -128,7 +128,7 @@ router.get("/status", async (req: Request, res: Response): Promise<void> => {
     }
 
     // Map "pending" dari VOCML ke "not_activated" agar UI frontend mengenalinya dan mengunci layar
-    let finalStatus = lic.status;
+    let finalStatus: string = lic.status;
     if (finalStatus === "pending") finalStatus = "not_activated";
     if (finalStatus === "offline" && !lic.allowed) finalStatus = "not_activated";
 

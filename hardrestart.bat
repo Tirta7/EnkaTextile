@@ -24,15 +24,25 @@ if %ERRORLEVEL% neq 0 (
     echo Gagal menghapus container docker.
 )
 
-echo [2/3] Membangun ulang dan menyalakan Database...
-docker-compose up -d db
+echo [2/3] Membangun ulang dan menyalakan seluruh sistem Docker...
+docker-compose up -d
+if %ERRORLEVEL% neq 0 (
+    echo Gagal menyalakan docker. Pastikan Docker Desktop berjalan.
+    pause
+    exit /b 1
+)
 
-echo [3/3] Selesai
+echo.
+echo [3/3] Menunggu aplikasi siap (10 detik)...
+timeout /t 10 /nobreak >nul
+
 echo.
 echo ============================================================
 echo HARD RESTART SELESAI!
+echo Database baru dan bersih telah diinisialisasi otomatis.
+echo Akun Admin : admin / vocpos2026
+echo Web App    : http://localhost:8080
 echo ============================================================
-echo Silakan jalankan start-vocpos.bat kembali.
-echo Sistem akan membuat tabel database baru pada saat start pertama kali.
 echo.
+start http://localhost:8080
 pause

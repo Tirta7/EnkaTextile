@@ -52,7 +52,7 @@ echo "[✓] PostgreSQL aktif dan siap."
 
 echo ""
 echo "[3/4] Menjalankan pembersihan database & inisialisasi awal pabrik..."
-pnpm --filter @workspace/api-server exec tsx --env-file=../../.env ../../scripts/factory-reset.ts
+pnpm --filter @workspace/api-server exec tsx --env-file=../../.env src/scripts/factory-reset.ts
 
 if [ $? -ne 0 ]; then
     echo ""

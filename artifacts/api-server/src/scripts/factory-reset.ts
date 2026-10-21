@@ -7,7 +7,8 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
+// Root project is 3 levels up from artifacts/api-server/src/scripts
+const rootDir = path.resolve(__dirname, "../../..");
 
 async function factoryReset() {
   console.log("\n[1/3] Menghapus seluruh data & schema lama dari database...");

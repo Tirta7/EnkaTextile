@@ -48,9 +48,12 @@ Thumbs.db
 .cache/
 .local/
 
-# Machine ID cache file
+# Machine ID & License cache
 **/.machine-id
 .machine-id
+**/license-cache.json
+license-cache.json
+
 
 CABANG_utama/
 artifacts/api-server/uploads/

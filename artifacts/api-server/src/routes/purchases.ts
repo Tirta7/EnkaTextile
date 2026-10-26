@@ -555,8 +555,16 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         if (items.length === 0) { results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" }); continue; }
 
         const totalAmount = items.reduce((s, i) => s + i.subtotal, 0);
+        const rawPaid = getVal(firstRow, "Sudah Dibayar", "Dibayar", "Bayar", "Paid", "Paid Amount");
         const isKredit = paymentType === "kredit" || paymentType === "tempo";
-        const paidAmount = isKredit ? 0 : totalAmount;
+        
+        let paidAmount = 0;
+        if (rawPaid !== "" && !isNaN(parseFloat(rawPaid.replace(',', '.')))) {
+          paidAmount = parseFloat(rawPaid.replace(',', '.')) || 0;
+        } else {
+          paidAmount = isKredit ? 0 : totalAmount;
+        }
+
         const status = statusHint === "lunas" || paidAmount >= totalAmount ? "lunas" : paidAmount > 0 ? "partial" : "tempo";
 
         let purchaseId: number;

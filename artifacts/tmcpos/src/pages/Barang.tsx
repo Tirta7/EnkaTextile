@@ -47,6 +47,7 @@ type FormData = z.infer<typeof schema>;
 export default function Barang() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [unitFilter, setUnitFilter] = useState<"ALL" | "METER" | "YARD">("ALL");
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -55,6 +56,12 @@ export default function Barang() {
   const [viewRollsName, setViewRollsName] = useState<string>("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const isYardProd = (unit?: string | null) => {
+    if (!unit) return false;
+    const u = unit.toUpperCase().trim();
+    return u === "YARD" || u === "YD" || u === "YDS" || u.startsWith("YAR");
+  };
 
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
@@ -126,8 +133,12 @@ export default function Barang() {
     }
   };
 
-  const handleExport = () => {
-    window.location.href = `${API_BASE}/api/products/export`;
+  const handleExport = (unit?: string) => {
+    if (unit) {
+      window.location.href = `${API_BASE}/api/products/export?unit=${encodeURIComponent(unit)}`;
+    } else {
+      window.location.href = `${API_BASE}/api/products/export`;
+    }
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +160,10 @@ export default function Barang() {
         if (data.error) {
           toast({ title: "Gagal import", description: data.error, variant: "destructive" });
         } else {
-          toast({ title: "Import selesai", description: `${data.success} berhasil, ${data.failed} gagal.` });
+          toast({
+            title: "Import selesai",
+            description: `${data.success} berhasil (${data.meterCount ?? 0} Meter, ${data.yardCount ?? 0} Yard), ${data.failed} gagal.`
+          });
           queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
         }
       } else {
@@ -201,16 +215,26 @@ export default function Barang() {
   
   const filtered = baseProducts.filter(p => {
     // If global and no filters applied, we return empty so the "Pilih Kategori" placeholder shows
-    if (selectedCategoryId === null && !showLowStock && !search) return false;
+    if (selectedCategoryId === null && !showLowStock && !search && unitFilter === "ALL") return false;
     
+    if (unitFilter === "METER" && isYardProd(p.primaryUnit)) return false;
+    if (unitFilter === "YARD" && !isYardProd(p.primaryUnit)) return false;
+
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.lotNumber && p.lotNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesLowStock = !showLowStock || p.isLowStock;
     return matchesSearch && matchesLowStock;
   });
 
   // Calculate summary based on current category (or global if null)
-  const summaryProducts = (selectedCategoryId === null && !showLowStock && !search) ? baseProducts : filtered;
+  const summaryProducts = (selectedCategoryId === null && !showLowStock && !search && unitFilter === "ALL") ? baseProducts : filtered;
   const lowStockCount = baseProducts.filter(p => p.isLowStock).length;
+
+  const meterTotal = summaryProducts
+    ?.filter(p => !isYardProd(p.primaryUnit))
+    .reduce((s, p) => s + (Number(p.meterStock) || 0), 0) ?? 0;
+  const yardTotal = summaryProducts
+    ?.filter(p => isYardProd(p.primaryUnit))
+    .reduce((s, p) => s + (Number(p.meterStock) || 0), 0) ?? 0;
 
   return (
     <div className="w-full">
@@ -225,10 +249,38 @@ export default function Barang() {
             <p className="text-[11px] font-medium text-slate-400 mt-0.5 hidden sm:block">Kelola inventaris dan stok gudang</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <Button onClick={handleExport} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600">
-              <Download className="h-3.5 w-3.5 sm:mr-1.5" />
-              <span className="hidden sm:inline">Export</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600 gap-1.5 hover:bg-slate-50">
+                  <Download className="h-3.5 w-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1.5 shadow-lg rounded-xl border-slate-200">
+                <DropdownMenuItem onClick={() => handleExport()} className="text-xs font-semibold py-2 cursor-pointer rounded-lg">
+                  <Download className="h-3.5 w-3.5 mr-2 text-violet-600 shrink-0" />
+                  <div>
+                    <div className="font-bold text-slate-800">Export Semua (.xlsx)</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Tab: Semua, Meter & Yard</div>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("METER")} className="text-xs font-semibold py-2 cursor-pointer rounded-lg">
+                  <Ruler className="h-3.5 w-3.5 mr-2 text-blue-600 shrink-0" />
+                  <div>
+                    <div className="font-bold text-slate-800">Export Khusus Meter</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Data_Barang_METER.xlsx</div>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("YARD")} className="text-xs font-semibold py-2 cursor-pointer rounded-lg">
+                  <Ruler className="h-3.5 w-3.5 mr-2 text-emerald-600 shrink-0" />
+                  <div>
+                    <div className="font-bold text-slate-800">Export Khusus Yard</div>
+                    <div className="text-[10px] text-slate-400 font-normal">Data_Barang_YARD.xlsx</div>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button onClick={() => document.getElementById("import-file-product")?.click()} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600">
               <PlusCircle className="h-3.5 w-3.5 sm:mr-1.5" />
               <span className="hidden sm:inline">Import</span>
@@ -251,7 +303,7 @@ export default function Barang() {
           />
         </div>
 
-        {/* Row 3: Category filter + chip */}
+        {/* Row 3: Category & Unit filter */}
         <div className="flex items-center gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => { setSelectedCategoryId(null); setCurrentPage(1); }}
@@ -288,6 +340,34 @@ export default function Barang() {
               </div>
             ) : null;
           })()}
+
+          {/* Unit pill filters: Semua / Meter / Yard */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-full shrink-0 ml-auto">
+            <button
+              onClick={() => { setUnitFilter("ALL"); setCurrentPage(1); }}
+              className={`h-6 px-2.5 rounded-full text-[10px] font-bold transition-all ${
+                unitFilter === "ALL" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Semua Satuan
+            </button>
+            <button
+              onClick={() => { setUnitFilter("METER"); setCurrentPage(1); }}
+              className={`h-6 px-2.5 rounded-full text-[10px] font-bold transition-all ${
+                unitFilter === "METER" ? "bg-blue-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Meter
+            </button>
+            <button
+              onClick={() => { setUnitFilter("YARD"); setCurrentPage(1); }}
+              className={`h-6 px-2.5 rounded-full text-[10px] font-bold transition-all ${
+                unitFilter === "YARD" ? "bg-emerald-600 text-white shadow-xs" : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Yard
+            </button>
+          </div>
         </div>
 
         {/* Row 4: Summary strip — 4-col compact, no shadow */}
@@ -323,9 +403,19 @@ export default function Barang() {
           <div className="bg-violet-50 border border-violet-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
             <Ruler className="w-3.5 h-3.5 text-violet-400 shrink-0" strokeWidth={1.5} />
             <div className="min-w-0">
-              <p className="text-[8px] font-bold text-violet-400 uppercase tracking-wider">Yard</p>
+              <p className="text-[8px] font-bold text-violet-500 uppercase tracking-wider">
+                {unitFilter === "METER" ? "Meter" : unitFilter === "YARD" ? "Yard" : yardTotal > 0 && meterTotal > 0 ? "Meter & Yard" : yardTotal > 0 ? "Yard" : "Meter"}
+              </p>
               <p className="text-xs font-black text-violet-800 leading-tight truncate">
-                {formatNumber(summaryProducts?.reduce((s, p) => s + (Number(p.meterStock) || 0), 0) ?? 0)}
+                {unitFilter === "METER"
+                  ? `${formatNumber(meterTotal)} M`
+                  : unitFilter === "YARD"
+                  ? `${formatNumber(yardTotal)} YD`
+                  : yardTotal > 0 && meterTotal > 0
+                  ? `${formatNumber(meterTotal)} M · ${formatNumber(yardTotal)} YD`
+                  : yardTotal > 0
+                  ? `${formatNumber(yardTotal)} YD`
+                  : `${formatNumber(meterTotal)} M`}
               </p>
             </div>
           </div>
@@ -397,7 +487,10 @@ export default function Barang() {
                         }`}>{formatNumber(p.rollStock)} roll</span>
                         <span className="text-[10px] text-slate-200">·</span>
                         <span className="text-[11px] font-bold text-violet-700">
-                          {formatRupiah(p.pricePerMeter)}<span className="text-[9px] text-slate-300 font-normal">/yd</span>
+                          {formatRupiah(p.pricePerMeter)}
+                          <span className="text-[9px] text-slate-400 font-normal ml-0.5">
+                            /{isYardProd(p.primaryUnit) ? 'yd' : (p.primaryUnit?.toLowerCase() || 'm')}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -468,13 +561,16 @@ export default function Barang() {
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
-                            <span className="text-[9px] text-slate-400 ml-1">/{p.primaryUnit}</span>
+                            <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
+                            <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
                           </td>
                           <td className="py-2.5 px-4 text-center">
-                            <div className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>{formatNumber(p.meterStock)}</div>
+                            <div className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
+                              {formatNumber(p.meterStock)} {isYardProd(p.primaryUnit) ? 'Yd' : 'M'}
+                            </div>
                             <div className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</div>
                           </td>
                           <td className="py-2.5 px-4 text-center">

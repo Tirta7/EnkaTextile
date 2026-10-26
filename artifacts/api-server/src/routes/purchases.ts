@@ -50,6 +50,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
           productName: productsTable.name,
           categoryName: categoriesTable.name,
           barcode: productsTable.barcode,
+          primaryUnit: productsTable.primaryUnit,
           rolls: purchaseItemsTable.rolls,
           meters: purchaseItemsTable.meters,
           pricePerMeter: purchaseItemsTable.pricePerMeter,
@@ -92,7 +93,9 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
       if (items.length === 0) {
         const row: any = {
           "No": rowNo++, "Tanggal": tanggal,
+          "No Invoice": p.invoiceNumber, "Supplier": p.supplierName || "",
           "Barcode": "", "Kategori": "", "Produk / Barang": "",
+          "Satuan": "METER",
           "Roll": 0, "Meter/Yard": 0
         };
         for (let i = 1; i <= maxRolls; i++) row[`Roll ${i}`] = "";
@@ -115,6 +118,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
             "Barcode": item.barcode || "",
             "Kategori": item.categoryName || "",
             "Produk / Barang": item.productName || "",
+            "Satuan": item.primaryUnit || "METER",
             "Roll": parseFloat(item.rolls) || 0,
             "Meter/Yard": parseFloat(item.meters) || 0,
           };
@@ -127,6 +131,7 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
             row[`Roll ${i}`] = rollLengths[i - 1] !== undefined ? rollLengths[i - 1] : "";
           }
 
+          row["Harga / Satuan"] = parseFloat(item.pricePerMeter) || 0;
           row["Harga / Meter"] = parseFloat(item.pricePerMeter) || 0;
           row["Subtotal"] = parseFloat(item.subtotal) || 0;
           row["Total Nota"] = idx === 0 ? totalAmt : "";
@@ -224,7 +229,7 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       res.json({ success: 0, failed: 0, skipped: 0, total: 0, details: [] }); return;
     }
 
-    const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode }).from(productsTable);
+    const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode, primaryUnit: productsTable.primaryUnit }).from(productsTable);
     const allSuppliers = await db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable);
     const allCategories = await db.select().from(categoriesTable);
 
@@ -311,21 +316,37 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       return undefined;
     }
 
+    const getVal = (row: any, ...keys: string[]) => {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          return row[k];
+        }
+      }
+      const rowKeys = Object.keys(row);
+      for (const k of keys) {
+        const found = rowKeys.find(rk => rk.toLowerCase().trim() === k.toLowerCase().trim());
+        if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== "") {
+          return row[found];
+        }
+      }
+      return "";
+    };
+
     const results: { invoice: string; status: "ok" | "skip" | "error"; message: string }[] = [];
     let successCount = 0;
 
     for (const [invKey, rows] of invoiceMap) {
       const firstRow = rows[0];
-      const invoiceNumber = firstRow["_ParsedInvoice"] || String(firstRow["No Invoice"] || "").trim();
+      const invoiceNumber = firstRow["_ParsedInvoice"] || String(getVal(firstRow, "No Invoice", "No. Invoice", "Nomor Invoice", "Invoice", "No Nota", "No Faktur") || "").trim();
       try {
         // ── Parse common data from Excel rows ──
-        const supplierName = String(firstRow["Supplier"] || "").trim();
-        const tanggalVal = firstRow["Tanggal"];
+        const supplierName = String(getVal(firstRow, "Supplier", "Nama Supplier", "Vendor") || "").trim();
+        const tanggalVal = getVal(firstRow, "Tanggal", "Date", "Tgl") || firstRow["Tanggal"];
         const createdAt = parseExcelDate(tanggalVal, invoiceNumber);
 
-        let paymentType = String(firstRow["Metode Bayar"] || "").trim().toLowerCase();
-        let statusHint = String(firstRow["Status"] || "").trim().toLowerCase();
-        let notes = String(firstRow["Catatan"] || "").trim();
+        let paymentType = String(getVal(firstRow, "Metode Bayar", "Metode Pembayaran", "Payment Method", "Cara Bayar") || "").trim().toLowerCase();
+        let statusHint = String(getVal(firstRow, "Status", "Status Bayar") || "").trim().toLowerCase();
+        let notes = String(getVal(firstRow, "Catatan", "Notes", "Keterangan") || "").trim();
 
         // Deteksi jika kolom bergeser (misal row di-copy dari sheet dengan kolom Roll lebih sedikit)
         const rowKeys = Object.keys(firstRow);
@@ -362,13 +383,53 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
         const items: { productId: number; rolls: number; meters: number; pricePerMeter: number; subtotal: number; rollLengths: number[] }[] = [];
         const itemErrors: string[] = [];
         for (const row of rows) {
-          const prodName = String(row["Produk / Barang"] || "").trim();
+          const prodName = String(getVal(row, "Produk / Barang", "Nama Barang", "Produk", "Nama Produk", "Barang", "Item", "Nama") || "").trim();
           if (!prodName) continue;
 
           let prod = findProduct(prodName);
-          const rollsCount = parseFloat(String(row["Roll"]).replace(",", ".")) || 0;
-          const meters = parseFloat(String(row["Meter/Yard"]).replace(",", ".")) || 0;
-          let pricePerMeter = parseFloat(String(row["Harga / Meter"] || "0").replace(",", ".")) || 0;
+
+          // Deteksi satuan METER vs YARD
+          const rawUnit = String(getVal(row, "Satuan", "Unit", "Satuan Barang", "Unit 1") || "").trim().toLowerCase();
+          let detectedUnit = "METER";
+          if (rawUnit.includes("yard") || rawUnit.includes("yd") || rawUnit.includes("yds") || rawUnit.startsWith("yar")) {
+            detectedUnit = "YARD";
+          } else if (rawUnit.includes("meter") || rawUnit.includes("mtr") || rawUnit === "m") {
+            detectedUnit = "METER";
+          } else if (row["Yard"] !== undefined || row["Stok (Yard)"] !== undefined || row["Harga / Yard"] !== undefined) {
+            detectedUnit = "YARD";
+          } else if (prod?.primaryUnit) {
+            detectedUnit = prod.primaryUnit;
+          }
+
+          let rollsCount = parseFloat(String(getVal(row, "Roll", "Jumlah Roll", "Stok (Roll)", "Stok Roll", "Qty Roll") || "0").replace(",", ".")) || 0;
+
+          // Parse roll lengths: cek Roll 1, Roll 2, dst.
+          const rollLengths: number[] = [];
+          for (const key of Object.keys(row)) {
+            const kLower = key.toLowerCase().trim();
+            if (kLower.startsWith("roll ") || kLower.startsWith("roll #") || kLower.startsWith("roll-")) {
+              const numStr = kLower.replace(/^roll\s*[#\-]?\s*/i, "").trim();
+              const rollIndex = parseInt(numStr, 10);
+              if (!isNaN(rollIndex) && rollIndex > 0) {
+                const val = parseFloat(String(row[key]).replace(",", "."));
+                if (!isNaN(val) && val > 0) rollLengths[rollIndex - 1] = val;
+              }
+            }
+          }
+          const cleanRollLengths = rollLengths.filter(r => r !== undefined);
+
+          if (rollsCount === 0 && cleanRollLengths.length > 0) {
+            rollsCount = cleanRollLengths.length;
+          }
+
+          let meters = parseFloat(String(getVal(row, "Meter/Yard", "Qty (YARD)", "Qty (METER)", "Qty (Yard)", "Qty (Meter)", "Yard", "Meter", "Qty", "Jumlah", "Panjang", "Total Panjang", "Stok Meter", "Stok Yard") || "0").replace(",", ".")) || 0;
+
+          // Jika total panjang belum diisi tapi detail roll ada, hitung otomatis dari total roll
+          if (meters === 0 && cleanRollLengths.length > 0) {
+            meters = parseFloat(cleanRollLengths.reduce((a, b) => a + b, 0).toFixed(3));
+          }
+
+          let pricePerMeter = parseFloat(String(getVal(row, "Harga / Satuan", "Harga / Meter", "Harga / Yard", "Harga Satuan", "Harga Beli", "Harga / Qty", "Harga") || "0").replace(",", ".")) || 0;
 
           // Koreksi kolom bergeser jika harga kosong
           if (!pricePerMeter || pricePerMeter === 0) {
@@ -389,11 +450,11 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
             }
           }
 
-          const subtotal = parseFloat(String(row["Subtotal"] || "0").replace(",", ".")) || Math.round(meters * pricePerMeter);
+          const subtotal = parseFloat(String(getVal(row, "Subtotal", "Total", "Jumlah Harga") || "0").replace(",", ".")) || Math.round(meters * pricePerMeter);
 
           if (!prod) {
             // Otomatis daftarkan produk baru ke master barang dari nota pembelian
-            const catName = String(row["Kategori"] || "").trim();
+            const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
             let categoryId: number | null = null;
             if (catName) {
               let cat = findCategory(catName);
@@ -411,14 +472,14 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
               categoryId = newCat.id;
             }
 
-            const barcode = String(row["Barcode"] || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const barcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             const costPriceStr = pricePerMeter > 0 ? pricePerMeter.toString() : "0";
 
             const [newProd] = await db.insert(productsTable).values({
               name: prodName,
               categoryId: categoryId!,
               barcode,
-              primaryUnit: "METER",
+              primaryUnit: detectedUnit,
               secondaryUnit: "ROLL",
               costPricePerMeter: costPriceStr,
               pricePerMeter: costPriceStr,
@@ -430,25 +491,24 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
             prod = newProd;
             allProducts.push(newProd);
           } else if (pricePerMeter > 0) {
-            // Update harga beli ke produk yang sudah ada jika belum diset
+            // Update harga beli dan pastikan satuan sesuai jika sebelumnya belum diset
             await db.update(productsTable)
-              .set({ costPricePerMeter: pricePerMeter.toString(), updatedAt: new Date() })
+              .set({
+                costPricePerMeter: pricePerMeter.toString(),
+                primaryUnit: detectedUnit !== "METER" ? detectedUnit : prod.primaryUnit,
+                updatedAt: new Date()
+              })
               .where(eq(productsTable.id, prod.id));
           }
 
-          // Parse roll lengths: batasi hanya sampai rollsCount agar kolom harga yang bergeser tidak ikut terbaca sebagai roll
-          const rollLengths: number[] = [];
-          const maxRollIndex = Math.round(rollsCount) || 500;
-          for (const key of Object.keys(row)) {
-            if (key.startsWith("Roll ") && key !== "Roll") {
-              const rollIndex = parseInt(key.replace("Roll ", "").trim(), 10);
-              if (!isNaN(rollIndex) && rollIndex > 0 && rollIndex <= maxRollIndex) {
-                const val = parseFloat(String(row[key]).replace(",", "."));
-                if (!isNaN(val) && val > 0) rollLengths[rollIndex - 1] = val;
-              }
-            }
-          }
-          items.push({ productId: prod.id, rolls: rollsCount, meters, pricePerMeter, subtotal, rollLengths: rollLengths.filter(r => r !== undefined) });
+          items.push({
+            productId: prod.id,
+            rolls: rollsCount,
+            meters,
+            pricePerMeter,
+            subtotal,
+            rollLengths: cleanRollLengths
+          });
         }
         if (itemErrors.length > 0) { results.push({ invoice: invoiceNumber, status: "error", message: itemErrors.join("; ") }); continue; }
         if (items.length === 0) { results.push({ invoice: invoiceNumber, status: "skip", message: "Tidak ada item barang valid" }); continue; }

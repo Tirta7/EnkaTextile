@@ -430,8 +430,10 @@ router.get("/sales/export", async (req, res): Promise<void> => {
       saleItemsData = await db
         .select({
           saleId: saleItemsTable.saleId,
+          productId: saleItemsTable.productId,
           productName: productsTable.name,
           categoryName: categoriesTable.name,
+          primaryUnit: productsTable.primaryUnit,
           rolls: saleItemsTable.rolls,
           meters: saleItemsTable.meters,
           pricePerMeter: saleItemsTable.pricePerMeter,
@@ -472,6 +474,7 @@ router.get("/sales/export", async (req, res): Promise<void> => {
           "Pelanggan": s.customerName || "Umum",
           "Kategori": "",
           "Produk / Barang": "",
+          "Satuan": "METER",
           "Roll": 0,
           "Meter/Yard": 0,
           "Detail Roll": "",
@@ -508,6 +511,7 @@ router.get("/sales/export", async (req, res): Promise<void> => {
             "Pelanggan": idx === 0 ? (s.customerName || "Umum") : "",
             "Kategori": item.categoryName || "",
             "Produk / Barang": item.productName || "",
+            "Satuan": item.primaryUnit || "METER",
             "Roll": item.rolls,
             "Meter/Yard": item.meters,
             "Detail Roll": item.rollLengths.length > 0 ? item.rollLengths.map((r: number, i: number) => `R#${i + 1}: ${r}`).join(", ") : "",

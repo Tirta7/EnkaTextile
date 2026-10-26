@@ -635,7 +635,7 @@ export default function Pembelian() {
                             <label className="text-[10px] font-medium text-slate-500 truncate">Roll #{i + 1}</label>
                             <Input
                               type="number" step="any" min={0}
-                              placeholder="Yard"
+                              placeholder={item.primaryUnit || "Panjang"}
                               className="h-8 text-xs px-2"
                               value={item.rollLengths?.[i] || ''}
                               onChange={e => updateItem(index, `rollLengths.${i}` as any, e.target.value === "" ? "" : parseFloat(e.target.value))}

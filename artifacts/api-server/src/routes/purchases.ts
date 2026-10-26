@@ -251,9 +251,17 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
     const allSuppliers = await db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable);
     const allCategories = await db.select().from(categoriesTable);
 
-    const findProduct = (name: string) => {
+    const findProduct = (name: string, barcode?: string) => {
+      const bc = barcode?.trim();
+      if (bc) {
+        const byBc = allProducts.find(p => p.barcode && p.barcode.toLowerCase() === bc.toLowerCase());
+        if (byBc) return byBc;
+      }
       const n = name?.trim().toLowerCase();
-      return allProducts.find(p => p.name.toLowerCase() === n);
+      if (n) {
+        return allProducts.find(p => p.name.toLowerCase() === n);
+      }
+      return undefined;
     };
     const findSupplier = (name: string) => {
       const n = name?.trim().toLowerCase();
@@ -404,7 +412,8 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
           const prodName = String(getVal(row, "Produk / Barang", "Nama Barang", "Produk", "Nama Produk", "Barang", "Item", "Nama") || "").trim();
           if (!prodName) continue;
 
-          let prod = findProduct(prodName);
+          const rawBarcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim();
+          let prod = findProduct(prodName, rawBarcode);
 
           // Deteksi satuan METER vs YARD
           const rawUnit = String(getVal(row, "Satuan", "Unit", "Satuan Barang", "Unit 1") || "").trim().toLowerCase();

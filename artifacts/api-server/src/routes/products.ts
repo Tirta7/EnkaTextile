@@ -208,16 +208,16 @@ router.get("/products/export", async (req, res): Promise<void> => {
             "Satuan Roll": p.secondaryUnit || "ROLL",
             "Stok (Roll)": parseFloat(p.rollStock || "0"),
             "Stok (Meter)": parseFloat(p.meterStock || "0"),
+            "Harga Beli / Meter": parseFloat(p.costPricePerMeter || "0"),
+            "Harga Jual / Meter": parseFloat(p.pricePerMeter || "0"),
+            "Harga Beli / Roll": parseFloat(p.costPricePerRoll || "0"),
+            "Harga Jual / Roll": parseFloat(p.pricePerRoll || "0"),
+            "Min Stok": parseFloat(p.minStock || "0"),
+            "Deskripsi": p.description || "",
           };
           for (let i = 1; i <= maxRolls; i++) {
             row[`Roll ${i}`] = productRolls[i - 1] ? parseFloat(productRolls[i - 1].currentLength) : "";
           }
-          row["Harga Beli / Meter"] = parseFloat(p.costPricePerMeter || "0");
-          row["Harga Jual / Meter"] = parseFloat(p.pricePerMeter || "0");
-          row["Harga Beli / Roll"] = parseFloat(p.costPricePerRoll || "0");
-          row["Harga Jual / Roll"] = parseFloat(p.pricePerRoll || "0");
-          row["Min Stok"] = parseFloat(p.minStock || "0");
-          row["Deskripsi"] = p.description || "";
           rows.push(row);
         } else if (mode === "YARD") {
           const row: any = {
@@ -229,19 +229,19 @@ router.get("/products/export", async (req, res): Promise<void> => {
             "Satuan Roll": p.secondaryUnit || "ROLL",
             "Stok (Roll)": parseFloat(p.rollStock || "0"),
             "Stok (Yard)": parseFloat(p.meterStock || "0"),
+            "Harga Beli / Yard": parseFloat(p.costPricePerMeter || "0"),
+            "Harga Jual / Yard": parseFloat(p.pricePerMeter || "0"),
+            "Harga Beli / Roll": parseFloat(p.costPricePerRoll || "0"),
+            "Harga Jual / Roll": parseFloat(p.pricePerRoll || "0"),
+            "Min Stok": parseFloat(p.minStock || "0"),
+            "Deskripsi": p.description || "",
           };
           for (let i = 1; i <= maxRolls; i++) {
             row[`Roll ${i}`] = productRolls[i - 1] ? parseFloat(productRolls[i - 1].currentLength) : "";
           }
-          row["Harga Beli / Yard"] = parseFloat(p.costPricePerMeter || "0");
-          row["Harga Jual / Yard"] = parseFloat(p.pricePerMeter || "0");
-          row["Harga Beli / Roll"] = parseFloat(p.costPricePerRoll || "0");
-          row["Harga Jual / Roll"] = parseFloat(p.pricePerRoll || "0");
-          row["Min Stok"] = parseFloat(p.minStock || "0");
-          row["Deskripsi"] = p.description || "";
           rows.push(row);
         } else {
-          // Mode ALL (Semua Barang): Pisahkan kolom Meter dan Yard secara jelas
+          // Mode ALL (Semua Barang): Kolom harga diletakkan bersebelahan dengan Stok Yard/Meter sebelum kolom Roll
           const row: any = {
             "No": rowNo++,
             "Barcode": p.barcode || "",
@@ -252,18 +252,18 @@ router.get("/products/export", async (req, res): Promise<void> => {
             "Stok (Roll)": parseFloat(p.rollStock || "0"),
             "Stok (Meter)": isYard ? "" : parseFloat(p.meterStock || "0"),
             "Stok (Yard)": isYard ? parseFloat(p.meterStock || "0") : "",
+            "Harga Beli (Meter)": isYard ? "" : parseFloat(p.costPricePerMeter || "0"),
+            "Harga Jual (Meter)": isYard ? "" : parseFloat(p.pricePerMeter || "0"),
+            "Harga Beli (Yard)": isYard ? parseFloat(p.costPricePerMeter || "0") : "",
+            "Harga Jual (Yard)": isYard ? parseFloat(p.pricePerMeter || "0") : "",
+            "Harga Beli (Roll)": parseFloat(p.costPricePerRoll || "0"),
+            "Harga Jual (Roll)": parseFloat(p.pricePerRoll || "0"),
+            "Min Stok": parseFloat(p.minStock || "0"),
+            "Deskripsi": p.description || "",
           };
           for (let i = 1; i <= maxRolls; i++) {
             row[`Roll ${i}`] = productRolls[i - 1] ? parseFloat(productRolls[i - 1].currentLength) : "";
           }
-          row["Harga Beli (Meter)"] = isYard ? "" : parseFloat(p.costPricePerMeter || "0");
-          row["Harga Jual (Meter)"] = isYard ? "" : parseFloat(p.pricePerMeter || "0");
-          row["Harga Beli (Yard)"] = isYard ? parseFloat(p.costPricePerMeter || "0") : "";
-          row["Harga Jual (Yard)"] = isYard ? parseFloat(p.pricePerMeter || "0") : "";
-          row["Harga Beli (Roll)"] = parseFloat(p.costPricePerRoll || "0");
-          row["Harga Jual (Roll)"] = parseFloat(p.pricePerRoll || "0");
-          row["Min Stok"] = parseFloat(p.minStock || "0");
-          row["Deskripsi"] = p.description || "";
           rows.push(row);
         }
       }

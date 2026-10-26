@@ -11,6 +11,14 @@ export interface Category {
   name: string;
   /** @nullable */
   description?: string | null;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  costPricePerMeter?: number;
+  pricePerMeter?: number;
+  /** @nullable */
+  costPricePerRoll?: number | null;
+  /** @nullable */
+  pricePerRoll?: number | null;
   productCount?: number;
   createdAt: string;
 }

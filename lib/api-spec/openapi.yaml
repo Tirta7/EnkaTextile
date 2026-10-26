@@ -1498,6 +1498,18 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
+        costPricePerMeter:
+          type: number
+        pricePerMeter:
+          type: number
+        costPricePerRoll:
+          type: ["number", "null"]
+        pricePerRoll:
+          type: ["number", "null"]
         productCount:
           type: integer
         createdAt:
@@ -1511,6 +1523,18 @@ components:
           type: string
         description:
           type: string
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
+        costPricePerMeter:
+          type: number
+        pricePerMeter:
+          type: number
+        costPricePerRoll:
+          type: number
+        pricePerRoll:
+          type: number
 
     CategoryUpdate:
       type: object
@@ -1519,6 +1543,18 @@ components:
           type: string
         description:
           type: string
+        primaryUnit:
+          type: string
+        secondaryUnit:
+          type: string
+        costPricePerMeter:
+          type: number
+        pricePerMeter:
+          type: number
+        costPricePerRoll:
+          type: number
+        pricePerRoll:
+          type: number
 
     Product:
       type: object

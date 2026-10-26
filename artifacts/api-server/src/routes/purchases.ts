@@ -456,31 +456,54 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
             // Otomatis daftarkan produk baru ke master barang dari nota pembelian
             const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
             let categoryId: number | null = null;
+            let cat: any = null;
             if (catName) {
-              let cat = findCategory(catName);
+              cat = findCategory(catName);
               if (!cat) {
-                const [newCat] = await db.insert(categoriesTable).values({ name: catName }).returning();
+                const [newCat] = await db.insert(categoriesTable).values({ 
+                  name: catName,
+                  primaryUnit: detectedUnit || "METER",
+                  secondaryUnit: "ROLL",
+                  costPricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
+                  pricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
+                }).returning();
                 allCategories.push(newCat);
                 cat = newCat;
               }
               categoryId = cat.id;
             } else if (allCategories.length > 0) {
-              categoryId = allCategories[0].id;
+              cat = allCategories[0];
+              categoryId = cat.id;
             } else {
-              const [newCat] = await db.insert(categoriesTable).values({ name: "Kain" }).returning();
+              const [newCat] = await db.insert(categoriesTable).values({ 
+                name: "Kain",
+                primaryUnit: detectedUnit || "METER",
+                secondaryUnit: "ROLL",
+                costPricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
+                pricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
+              }).returning();
               allCategories.push(newCat);
+              cat = newCat;
               categoryId = newCat.id;
             }
 
+            // Fallback unit dan harga dari kategori jika di baris tidak ada
+            if (cat?.primaryUnit && (!rawUnit || detectedUnit === "METER")) {
+              detectedUnit = cat.primaryUnit;
+            }
+            if ((!pricePerMeter || pricePerMeter === 0) && cat?.costPricePerMeter) {
+              pricePerMeter = parseFloat(cat.costPricePerMeter) || 0;
+            }
+
             const barcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-            const costPriceStr = pricePerMeter > 0 ? pricePerMeter.toString() : "0";
+            const costPriceStr = pricePerMeter > 0 ? pricePerMeter.toString() : (cat?.costPricePerMeter || "0");
 
             const [newProd] = await db.insert(productsTable).values({
               name: prodName,
               categoryId: categoryId!,
               barcode,
               primaryUnit: detectedUnit,
-              secondaryUnit: "ROLL",
+              secondaryUnit: (cat?.secondaryUnit) || "ROLL",
               costPricePerMeter: costPriceStr,
               pricePerMeter: costPriceStr,
               rollStock: "0",

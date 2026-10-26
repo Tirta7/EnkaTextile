@@ -91,6 +91,12 @@ export const ListCategoriesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().nullish(),
+  "pricePerRoll": zod.number().nullish(),
   "productCount": zod.number().optional(),
   "createdAt": zod.string()
 })
@@ -102,13 +108,25 @@ export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem)
  */
 export const CreateCategoryBody = zod.object({
   "name": zod.string(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().optional(),
+  "pricePerRoll": zod.number().optional()
 })
 
 export const CreateCategoryResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().nullish(),
+  "pricePerRoll": zod.number().nullish(),
   "productCount": zod.number().optional(),
   "createdAt": zod.string()
 })
@@ -125,6 +143,12 @@ export const GetCategoryResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().nullish(),
+  "pricePerRoll": zod.number().nullish(),
   "productCount": zod.number().optional(),
   "createdAt": zod.string()
 })
@@ -139,13 +163,25 @@ export const UpdateCategoryParams = zod.object({
 
 export const UpdateCategoryBody = zod.object({
   "name": zod.string().optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().optional(),
+  "pricePerRoll": zod.number().optional()
 })
 
 export const UpdateCategoryResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "primaryUnit": zod.string().optional(),
+  "secondaryUnit": zod.string().optional(),
+  "costPricePerMeter": zod.number().optional(),
+  "pricePerMeter": zod.number().optional(),
+  "costPricePerRoll": zod.number().nullish(),
+  "pricePerRoll": zod.number().nullish(),
   "productCount": zod.number().optional(),
   "createdAt": zod.string()
 })

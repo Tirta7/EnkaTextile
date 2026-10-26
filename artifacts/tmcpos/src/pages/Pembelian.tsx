@@ -252,14 +252,43 @@ export default function Pembelian() {
       } else {
         (updated[index] as any)[field] = value;
       }
+
+      if (field === "categoryId") {
+        const catId = parseInt(value) || 0;
+        const cat = categories?.find((c: any) => c.id === catId);
+        if (cat) {
+          if ((cat as any).primaryUnit) updated[index].primaryUnit = (cat as any).primaryUnit;
+          if ((cat as any).secondaryUnit) updated[index].secondaryUnit = (cat as any).secondaryUnit;
+          if (!updated[index].productId && (cat as any).costPricePerMeter !== undefined) {
+            updated[index].pricePerMeter = Number((cat as any).costPricePerMeter) || 0;
+          }
+        }
+        // If current product does not belong to selected category, reset it
+        if (updated[index].productId && catId > 0) {
+          const prod = products?.find(p => p.id === updated[index].productId);
+          if (prod && prod.categoryId !== catId) {
+            updated[index].productId = 0;
+            updated[index].productName = "";
+            updated[index].barcode = "";
+          }
+        }
+      }
       
       if (field === "productId") {
         const prod = products?.find(p => p.id === parseInt(value));
         if (prod) { 
-          updated[index].productName = prod.name; 
-          updated[index].pricePerMeter = (prod as any).costPricePerMeter ?? (prod as any).pricePerMeter ?? 0;
-          updated[index].primaryUnit = prod.primaryUnit;
-          updated[index].secondaryUnit = prod.secondaryUnit;
+          updated[index].productName = prod.name;
+          updated[index].barcode = prod.barcode || "";
+          const cat = categories?.find((c: any) => c.id === prod.categoryId);
+          if (prod.categoryId && !updated[index].categoryId) {
+            updated[index].categoryId = prod.categoryId;
+          }
+          updated[index].primaryUnit = prod.primaryUnit || (cat as any)?.primaryUnit || "METER";
+          updated[index].secondaryUnit = prod.secondaryUnit || (cat as any)?.secondaryUnit || "ROLL";
+          
+          const baseCost = Number((prod as any).costPricePerMeter || 0);
+          const catCost = Number((cat as any)?.costPricePerMeter || 0);
+          updated[index].pricePerMeter = baseCost > 0 ? baseCost : (catCost > 0 ? catCost : Number((prod as any).pricePerMeter || 0));
         }
       }
       
@@ -577,12 +606,12 @@ export default function Pembelian() {
                       <label className="text-xs text-muted-foreground mb-1 block">Kategori</label>
                       <Combobox
                         items={[
-                          { value: "0", label: "Semua" },
-                          ...(categories?.map((c: any) => ({ value: c.id.toString(), label: c.name })) || [])
+                          { value: "0", label: "Semua Kategori" },
+                          ...(categories?.map((c: any) => ({ value: c.id.toString(), label: `${c.name} (${c.primaryUnit || "METER"})` })) || [])
                         ]}
                         value={item.categoryId ? item.categoryId.toString() : undefined}
                         onValueChange={(v) => updateItem(index, "categoryId", parseInt(v))}
-                        placeholder="Semua"
+                        placeholder="Semua Kategori"
                         searchPlaceholder="Cari kategori..."
                         className="h-8"
                       />
@@ -592,7 +621,7 @@ export default function Pembelian() {
                       <Combobox
                         items={products
                           ?.filter((p: any) => !item.categoryId || item.categoryId === 0 || p.categoryId === item.categoryId)
-                          .map((p: any) => ({ value: p.id.toString(), label: p.name })) || []}
+                          .map((p: any) => ({ value: p.id.toString(), label: `${p.name} (${p.primaryUnit || "METER"})` })) || []}
                         value={item.productId ? item.productId.toString() : undefined}
                         onValueChange={(v) => updateItem(index, "productId", parseInt(v))}
                         placeholder="Pilih"
@@ -609,11 +638,11 @@ export default function Pembelian() {
                       <Input className="h-8 px-2" type="number" step="1" min={0} value={item.rolls} onChange={e => updateItem(index, "rolls", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "Yard"})</label>
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Qty ({item.primaryUnit || "METER"})</label>
                       <Input className="h-8 px-2 bg-slate-100 cursor-not-allowed font-medium" type="number" step="any" min={0} value={item.meters} readOnly />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "Yard"}</label>
+                      <label className="text-xs text-muted-foreground mb-1 block truncate">Harga / {item.primaryUnit || "METER"}</label>
                       <Input className="h-8 px-2" type="number" step="any" min={0} value={item.pricePerMeter} onChange={e => updateItem(index, "pricePerMeter", e.target.value === "" ? "" : parseFloat(e.target.value))} />
                     </div>
                     <div className="md:col-span-1">
@@ -628,7 +657,7 @@ export default function Pembelian() {
                   {/* Dynamic inputs for roll lengths */}
                   {item.rolls && (item.rolls as number) > 0 && (
                     <div className="mt-2 bg-white p-3 rounded-lg border border-slate-200">
-                      <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll ({item.primaryUnit || "Yard"})</label>
+                      <label className="text-xs font-semibold text-slate-700 block mb-2 border-b pb-1">Detail Panjang Tiap Roll ({item.primaryUnit || "METER"})</label>
                       <div className="flex flex-wrap gap-3">
                         {Array.from({ length: item.rolls as number }).map((_, i) => (
                           <div key={i} className="flex flex-col w-24 shrink-0 space-y-1 relative group">

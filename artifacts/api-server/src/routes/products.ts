@@ -438,11 +438,16 @@ router.post("/products/import", async (req, res): Promise<void> => {
           processedBarcodesOrNames.add(dedupeKey);
 
           let categoryId: number | null = null;
+          let cat: any = null;
           const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
           if (catName) {
-            let cat = findCategory(catName);
+            cat = findCategory(catName);
             if (!cat) {
-              const [newCat] = await db.insert(categoriesTable).values({ name: catName }).returning();
+              const [newCat] = await db.insert(categoriesTable).values({ 
+                name: catName,
+                primaryUnit: "METER",
+                secondaryUnit: "ROLL",
+              }).returning();
               allCategories.push(newCat);
               cat = newCat;
             }
@@ -470,7 +475,7 @@ router.post("/products/import", async (req, res): Promise<void> => {
             unit = "KG";
           }
 
-          // Jika kolom satuan kosong/tidak spesifik, deteksi berdasarkan nama kolom yang berisi nilai
+          // Jika kolom satuan kosong/tidak spesifik, deteksi berdasarkan nama kolom yang berisi nilai atau dari kategori
           if (!unit) {
             const yardStockVal = parseFloat(String(getVal(row, "Stok (Yard)", "Yard", "Stok Yard", "Panjang (Yard)", "Total Yard") || "0").replace(",", "."));
             const meterStockVal = parseFloat(String(getVal(row, "Stok (Meter)", "Meter", "Stok Meter", "Panjang (Meter)", "Total Meter", "Panjang (M)") || "0").replace(",", "."));
@@ -485,6 +490,8 @@ router.post("/products/import", async (req, res): Promise<void> => {
               unit = sheetDefaultUnit;
             } else if (existingProd?.primaryUnit) {
               unit = existingProd.primaryUnit;
+            } else if (cat?.primaryUnit) {
+              unit = cat.primaryUnit;
             } else {
               unit = "METER";
             }
@@ -543,16 +550,31 @@ router.post("/products/import", async (req, res): Promise<void> => {
             priceUnit = parseFloat(String(getVal(row, "Harga Jual (Meter)", "Harga / Meter", "Harga Jual / Meter", "Harga Jual (M)", "Harga Jual (Yard)", "Harga / Yard", "Harga Jual") || "0").replace(",", ".")) || 0;
           }
 
-          const costR = parseFloat(String(getVal(row, "Harga Beli (R)", "Harga Beli / Roll", "Harga Beli (Roll)") || "0").replace(",", ".")) || 0;
-          const priceR = parseFloat(String(getVal(row, "Harga Jual (R)", "Harga Jual / Roll", "Harga Jual (Roll)") || "0").replace(",", ".")) || 0;
+          // Fallback harga dari kategori jika tidak diisi pada file Excel
+          if (costUnit === 0 && cat?.costPricePerMeter) {
+            costUnit = parseFloat(cat.costPricePerMeter) || 0;
+          }
+          if (priceUnit === 0 && cat?.pricePerMeter) {
+            priceUnit = parseFloat(cat.pricePerMeter) || 0;
+          }
+
+          let costR = parseFloat(String(getVal(row, "Harga Beli (R)", "Harga Beli / Roll", "Harga Beli (Roll)") || "0").replace(",", ".")) || 0;
+          let priceR = parseFloat(String(getVal(row, "Harga Jual (R)", "Harga Jual / Roll", "Harga Jual (Roll)") || "0").replace(",", ".")) || 0;
+          if (costR === 0 && cat?.costPricePerRoll) {
+            costR = parseFloat(cat.costPricePerRoll) || 0;
+          }
+          if (priceR === 0 && cat?.pricePerRoll) {
+            priceR = parseFloat(cat.pricePerRoll) || 0;
+          }
+
           const minStk = parseFloat(String(getVal(row, "Min Stok", "Minimum Stok", "Min Stock") || "0").replace(",", ".")) || 0;
 
           const prodData: any = {
             name,
             barcode,
             categoryId,
-            primaryUnit: unit || "METER",
-            secondaryUnit: String(getVal(row, "Satuan Roll", "Unit 2", "Satuan 2") || "ROLL").trim(),
+            primaryUnit: unit || cat?.primaryUnit || "METER",
+            secondaryUnit: String(getVal(row, "Satuan Roll", "Unit 2", "Satuan 2") || cat?.secondaryUnit || "ROLL").trim(),
             costPricePerMeter: String(costUnit),
             pricePerMeter: String(priceUnit),
             costPricePerRoll: String(costR),

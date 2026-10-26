@@ -72,6 +72,14 @@ export interface Category {
   name: string;
   /** @nullable */
   description?: string | null;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  costPricePerMeter?: number;
+  pricePerMeter?: number;
+  /** @nullable */
+  costPricePerRoll?: number | null;
+  /** @nullable */
+  pricePerRoll?: number | null;
   productCount?: number;
   createdAt: string;
 }
@@ -79,11 +87,23 @@ export interface Category {
 export interface CategoryInput {
   name: string;
   description?: string;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  costPricePerMeter?: number;
+  pricePerMeter?: number;
+  costPricePerRoll?: number;
+  pricePerRoll?: number;
 }
 
 export interface CategoryUpdate {
   name?: string;
   description?: string;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  costPricePerMeter?: number;
+  pricePerMeter?: number;
+  costPricePerRoll?: number;
+  pricePerRoll?: number;
 }
 
 export interface Product {

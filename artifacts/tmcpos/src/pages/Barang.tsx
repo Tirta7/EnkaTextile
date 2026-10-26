@@ -178,7 +178,43 @@ export default function Barang() {
   };
 
   const openCreate = () => {
-    form.reset({ name: "", barcode: "", primaryUnit: "METER", secondaryUnit: "ROLL", lotNumber: "", rackLocation: "", costPricePerMeter: 0, pricePerMeter: 0, minStock: 0, rollStock: 0, meterStock: 0, rollLengths: [] });
+    let initialCatId = selectedCategoryId || undefined;
+    let initialPrimaryUnit = "METER";
+    let initialSecondaryUnit = "ROLL";
+    let initialCost = 0;
+    let initialPrice = 0;
+    let initialCostRoll: number | undefined = undefined;
+    let initialPriceRoll: number | undefined = undefined;
+
+    if (initialCatId) {
+      const cat = categories?.find(c => c.id === initialCatId);
+      if (cat) {
+        if ((cat as any).primaryUnit) initialPrimaryUnit = (cat as any).primaryUnit;
+        if ((cat as any).secondaryUnit) initialSecondaryUnit = (cat as any).secondaryUnit;
+        if ((cat as any).costPricePerMeter !== undefined) initialCost = parseFloat(String((cat as any).costPricePerMeter)) || 0;
+        if ((cat as any).pricePerMeter !== undefined) initialPrice = parseFloat(String((cat as any).pricePerMeter)) || 0;
+        if ((cat as any).costPricePerRoll != null) initialCostRoll = parseFloat(String((cat as any).costPricePerRoll)) || undefined;
+        if ((cat as any).pricePerRoll != null) initialPriceRoll = parseFloat(String((cat as any).pricePerRoll)) || undefined;
+      }
+    }
+
+    form.reset({
+      name: "",
+      categoryId: initialCatId,
+      barcode: "",
+      primaryUnit: initialPrimaryUnit,
+      secondaryUnit: initialSecondaryUnit,
+      lotNumber: "",
+      rackLocation: "",
+      costPricePerMeter: initialCost,
+      costPricePerRoll: initialCostRoll,
+      pricePerMeter: initialPrice,
+      pricePerRoll: initialPriceRoll,
+      minStock: 0,
+      rollStock: 0,
+      meterStock: 0,
+      rollLengths: []
+    });
     setEditingId(null);
     setImageUrl(null);
     setIsOpen(true);
@@ -715,10 +751,33 @@ export default function Barang() {
                     <FormField control={form.control} name="categoryId" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-semibold text-slate-600">Kategori <span className="text-red-400">*</span></FormLabel>
-                        <Select onValueChange={(v: string) => field.onChange(parseInt(v))} value={field.value?.toString()}>
+                        <Select
+                          onValueChange={(v: string) => {
+                            const catId = parseInt(v);
+                            field.onChange(catId);
+                            const cat = categories?.find(c => c.id === catId);
+                            if (cat) {
+                              if ((cat as any).primaryUnit) form.setValue("primaryUnit", (cat as any).primaryUnit);
+                              if ((cat as any).secondaryUnit) form.setValue("secondaryUnit", (cat as any).secondaryUnit);
+                              if ((cat as any).costPricePerMeter !== undefined) form.setValue("costPricePerMeter", parseFloat(String((cat as any).costPricePerMeter)) || 0);
+                              if ((cat as any).pricePerMeter !== undefined) form.setValue("pricePerMeter", parseFloat(String((cat as any).pricePerMeter)) || 0);
+                              if ((cat as any).costPricePerRoll != null) {
+                                form.setValue("costPricePerRoll", parseFloat(String((cat as any).costPricePerRoll)) || undefined);
+                              }
+                              if ((cat as any).pricePerRoll != null) {
+                                form.setValue("pricePerRoll", parseFloat(String((cat as any).pricePerRoll)) || undefined);
+                              }
+                            }
+                          }}
+                          value={field.value?.toString()}
+                        >
                           <FormControl><SelectTrigger className="h-10 bg-white border-slate-200 rounded-xl"><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            {categories?.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                            {categories?.map(c => (
+                              <SelectItem key={c.id} value={c.id.toString()}>
+                                {c.name} {((c as any).primaryUnit ? `(${(c as any).primaryUnit})` : "")}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -751,7 +810,12 @@ export default function Barang() {
 
               {/* —— SATUAN & HARGA —— */}
               <div className="px-5 pt-5 space-y-3">
-                <h3 className="text-[11px] font-bold tracking-widest uppercase text-slate-500 ml-1">Satuan & Harga</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-bold tracking-widest uppercase text-slate-500 ml-1">Satuan & Harga</h3>
+                  <span className="text-[10px] text-violet-700 bg-violet-50 border border-violet-100 px-2 py-0.5 rounded-full font-semibold">
+                    ✨ Otomatis dari Kategori
+                  </span>
+                </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Eceran */}
@@ -772,14 +836,18 @@ export default function Barang() {
                     )} />
                     <FormField control={form.control} name="costPricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Beli (Rp)</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-600">
+                          Harga Beli / {form.watch("primaryUnit") || "Satuan"} (Rp)
+                        </FormLabel>
                         <FormControl><Input type="number" step="any" min={0} className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="pricePerMeter" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-semibold text-slate-600">Harga Jual (Rp)</FormLabel>
+                        <FormLabel className="text-xs font-semibold text-slate-600">
+                          Harga Jual / {form.watch("primaryUnit") || "Satuan"} (Rp)
+                        </FormLabel>
                         <FormControl><Input type="number" step="any" min={0} className="h-9 bg-white border-slate-200 rounded-xl text-sm" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} /></FormControl>
                         <FormMessage />
                       </FormItem>

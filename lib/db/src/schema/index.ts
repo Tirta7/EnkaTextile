@@ -13,6 +13,12 @@ export const categoriesTable = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  primaryUnit: text("primary_unit").notNull().default("METER"),
+  secondaryUnit: text("secondary_unit").notNull().default("ROLL"),
+  costPricePerMeter: numeric("cost_price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
+  pricePerMeter: numeric("price_per_meter", { precision: 15, scale: 2 }).notNull().default("0"),
+  costPricePerRoll: numeric("cost_price_per_roll", { precision: 15, scale: 2 }),
+  pricePerRoll: numeric("price_per_roll", { precision: 15, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -1,23 +1,32 @@
 import { useState, useRef } from "react";
 import { PaginationControl } from "../components/PaginationControl";
-import { useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory, getListCategoriesQueryKey } from "@workspace/api-client-react";
+import { useListCategories, useListUnits, useCreateCategory, useUpdateCategory, useDeleteCategory, getListCategoriesQueryKey, getListUnitsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Pencil, Trash2, Search, Tags, Download, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, Search, Tags, Download, Upload, FileSpreadsheet, X as XIcon, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Category } from "@workspace/api-client-react";
+import { formatRupiah } from "@/lib/utils";
 
 const schema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, "Nama kategori wajib diisi"),
   description: z.string().optional(),
+  primaryUnit: z.string().default("METER"),
+  secondaryUnit: z.string().default("ROLL"),
+  costPricePerMeter: z.number().min(0).default(0),
+  pricePerMeter: z.number().min(0).default(0),
+  costPricePerRoll: z.number().min(0).optional(),
+  pricePerRoll: z.number().min(0).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -26,6 +35,7 @@ export default function Kategori() {
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const { data: categories, isLoading } = useListCategories({ query: { queryKey: getListCategoriesQueryKey() } });
+  const { data: units } = useListUnits({ query: { queryKey: getListUnitsQueryKey() } });
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -75,7 +85,16 @@ export default function Kategori() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", description: "" }
+    defaultValues: {
+      name: "",
+      description: "",
+      primaryUnit: "METER",
+      secondaryUnit: "ROLL",
+      costPricePerMeter: 0,
+      pricePerMeter: 0,
+      costPricePerRoll: undefined,
+      pricePerRoll: undefined,
+    }
   });
 
   const onSubmit = (data: FormData) => {
@@ -87,12 +106,30 @@ export default function Kategori() {
   };
 
   const openCreate = () => {
-    form.reset({ name: "", description: "" });
+    form.reset({
+      name: "",
+      description: "",
+      primaryUnit: "METER",
+      secondaryUnit: "ROLL",
+      costPricePerMeter: 0,
+      pricePerMeter: 0,
+      costPricePerRoll: undefined,
+      pricePerRoll: undefined,
+    });
     setIsCreateOpen(true);
   };
 
   const openEdit = (cat: Category) => {
-    form.reset({ name: cat.name, description: cat.description || "" });
+    form.reset({
+      name: cat.name,
+      description: cat.description || "",
+      primaryUnit: (cat as any).primaryUnit || "METER",
+      secondaryUnit: (cat as any).secondaryUnit || "ROLL",
+      costPricePerMeter: (cat as any).costPricePerMeter !== undefined ? Number((cat as any).costPricePerMeter) : 0,
+      pricePerMeter: (cat as any).pricePerMeter !== undefined ? Number((cat as any).pricePerMeter) : 0,
+      costPricePerRoll: (cat as any).costPricePerRoll !== null && (cat as any).costPricePerRoll !== undefined ? Number((cat as any).costPricePerRoll) : undefined,
+      pricePerRoll: (cat as any).pricePerRoll !== null && (cat as any).pricePerRoll !== undefined ? Number((cat as any).pricePerRoll) : undefined,
+    });
     setEditingCategory(cat);
   };
 
@@ -220,30 +257,43 @@ export default function Kategori() {
           <>
             {/* Mobile: seamless divider list */}
             <div className="md:hidden bg-white rounded-2xl border border-slate-100">
-              {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((cat, idx) => (
-                <div
-                  key={cat.id}
-                  className={`px-3.5 py-3 flex items-center gap-3 active:bg-slate-50 transition-colors ${idx > 0 ? 'border-t border-slate-50' : ''}`}
-                >
-                  <span className="text-[10px] text-slate-300 font-bold w-5 shrink-0 text-center">{(currentPage - 1) * 20 + idx + 1}</span>
-                  <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0">
-                    <Tags className="w-4 h-4 text-violet-500" strokeWidth={1.5} />
+              {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((cat, idx) => {
+                const isYard = ((cat as any).primaryUnit || "").toUpperCase() === "YARD";
+                return (
+                  <div
+                    key={cat.id}
+                    className={`px-3.5 py-3 flex items-start gap-3 active:bg-slate-50 transition-colors ${idx > 0 ? 'border-t border-slate-50' : ''}`}
+                  >
+                    <span className="text-[10px] text-slate-300 font-bold w-5 shrink-0 text-center pt-1">{(currentPage - 1) * 20 + idx + 1}</span>
+                    <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0 mt-0.5">
+                      <Tags className="w-4 h-4 text-violet-500" strokeWidth={1.5} />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-800 text-sm">{cat.name}</span>
+                        <Badge variant="outline" className={`text-[10px] font-bold px-1.5 py-0 ${isYard ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                          {(cat as any).primaryUnit || "METER"} / {(cat as any).secondaryUnit || "ROLL"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                        <span>Beli: <strong className="text-slate-700">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</strong></span>
+                        <span>•</span>
+                        <span>Jual: <strong className="text-slate-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</strong></span>
+                      </div>
+                      {cat.description && <div className="text-[10px] text-slate-400 truncate">{cat.description}</div>}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">{cat.productCount || 0} item</span>
+                      <button onClick={() => openEdit(cat)} className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center active:scale-95">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => { if (confirm('Hapus kategori ini?')) deleteMutation.mutate({ id: cat.id }); }} className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center active:scale-95">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-800 text-sm truncate">{cat.name}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{cat.description || '—'}</div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">{cat.productCount || 0} item</span>
-                    <button onClick={() => openEdit(cat)} className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center active:scale-95">
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => { if (confirm('Hapus kategori ini?')) deleteMutation.mutate({ id: cat.id }); }} className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center active:scale-95">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Desktop: table */}
@@ -254,33 +304,55 @@ export default function Kategori() {
                     <tr>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-10">#</th>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Nama Kategori</th>
+                      <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-36">Satuan Patokan</th>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-56">Harga Default (Beli / Jual)</th>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Deskripsi</th>
                       <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-24">Produk</th>
                       <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-24">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((cat, idx) => (
-                      <tr key={cat.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-2.5 px-4 text-[11px] text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
-                        <td className="py-2.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center border border-violet-100 shrink-0">
-                              <Tags className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
+                    {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((cat, idx) => {
+                      const isYard = ((cat as any).primaryUnit || "").toUpperCase() === "YARD";
+                      return (
+                        <tr key={cat.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-2.5 px-4 text-[11px] text-slate-400 font-mono">{(currentPage - 1) * 20 + idx + 1}</td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center border border-violet-100 shrink-0">
+                                <Tags className="w-3.5 h-3.5 text-violet-500" strokeWidth={1.5} />
+                              </div>
+                              <span className="font-semibold text-slate-800 text-xs">{cat.name}</span>
                             </div>
-                            <span className="font-semibold text-slate-800 text-xs">{cat.name}</span>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-500 text-xs">{cat.description || <span className="text-slate-300">—</span>}</td>
-                        <td className="py-2.5 px-4 text-center"><span className="font-bold text-slate-700 text-xs">{cat.productCount || 0}</span></td>
-                        <td className="py-2.5 px-4">
-                          <div className="flex items-center gap-1 justify-center">
-                            <button className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center" onClick={() => openEdit(cat)}><Pencil className="w-3.5 h-3.5" /></button>
-                            <button className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center" onClick={() => { if (confirm('Hapus?')) deleteMutation.mutate({ id: cat.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${isYard ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                              {(cat as any).primaryUnit || "METER"} / {(cat as any).secondaryUnit || "ROLL"}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="text-xs space-y-0.5">
+                              <div className="flex items-center justify-between text-slate-600 gap-2">
+                                <span className="text-[10px] text-slate-400">Beli:</span>
+                                <span className="font-semibold text-slate-800">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-slate-600 gap-2">
+                                <span className="text-[10px] text-slate-400">Jual:</span>
+                                <span className="font-bold text-violet-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 text-slate-500 text-xs">{cat.description || <span className="text-slate-300">—</span>}</td>
+                          <td className="py-2.5 px-4 text-center"><span className="font-bold text-slate-700 text-xs">{cat.productCount || 0}</span></td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex items-center gap-1 justify-center">
+                              <button className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center" title="Edit Kategori" onClick={() => openEdit(cat)}><Pencil className="w-3.5 h-3.5" /></button>
+                              <button className="w-7 h-7 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center" title="Hapus Kategori" onClick={() => { if (confirm('Hapus kategori ini?')) deleteMutation.mutate({ id: cat.id }); }}><Trash2 className="w-3.5 h-3.5" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -310,7 +382,7 @@ export default function Kategori() {
           style={{ maxHeight: 'calc(95dvh - env(safe-area-inset-top, 0px))' }}
         >
           <DrawerTitle className="sr-only">{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</DrawerTitle>
-          <DrawerDescription className="sr-only">Form kategori</DrawerDescription>
+          <DrawerDescription className="sr-only">Form kategori dengan pengaturan satuan dan harga default</DrawerDescription>
           <DrawerHeader className="pb-3 px-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
@@ -318,22 +390,185 @@ export default function Kategori() {
               </div>
               <div>
                 <h2 className="text-[15px] font-bold text-slate-800 leading-tight">{editingCategory ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
-                <p className="text-xs text-slate-400">Kelola data kategori produk</p>
+                <p className="text-xs text-slate-400">Atur satuan patokan & harga default agar pengisian barang otomatis</p>
               </div>
             </div>
           </DrawerHeader>
-          <div className="overflow-y-auto flex-1">
+          <div className="overflow-y-auto flex-1 pr-1">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nama Kategori</FormLabel><FormControl><Input placeholder="Contoh: Katun" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Deskripsi</FormLabel><FormControl><Input placeholder="Deskripsi opsional" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <DrawerFooter className="px-0 pt-4 flex-row gap-2">
-                  <Button type="button" variant="outline" className="w-full" onClick={() => { setIsCreateOpen(false); setEditingCategory(null); }}>Batal</Button>
-                  <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700" disabled={createMutation.isPending || updateMutation.isPending}>Simpan</Button>
+                <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    Informasi Kategori
+                  </h3>
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Nama Kategori <span className="text-rose-500">*</span></FormLabel>
+                      <FormControl><Input placeholder="Contoh: Katun Combed / Rayon Twill" className="bg-white rounded-xl" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold text-slate-600">Deskripsi / Catatan</FormLabel>
+                      <FormControl><Input placeholder="Deskripsi opsional (misal: Bahan rajut/woven)" className="bg-white rounded-xl" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* Section Satuan & Harga Patokan */}
+                <div className="bg-linear-to-b from-violet-50/50 to-white border border-violet-100 rounded-2xl p-4 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-violet-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                      Satuan & Harga Patokan (Otomatis untuk Barang Baru)
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Satuan Utama */}
+                    <FormField control={form.control} name="primaryUnit" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">Satuan Utama Patokan</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl h-9 text-xs">
+                              <SelectValue placeholder="Pilih Satuan" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="METER">METER</SelectItem>
+                            <SelectItem value="YARD">YARD</SelectItem>
+                            <SelectItem value="KG">KG</SelectItem>
+                            <SelectItem value="PCS">PCS</SelectItem>
+                            {units?.filter(u => !["METER", "YARD", "KG", "PCS"].includes(u.name.toUpperCase())).map(u => (
+                              <SelectItem key={u.id} value={u.name.toUpperCase()}>{u.name.toUpperCase()}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Satuan Roll / Grosir */}
+                    <FormField control={form.control} name="secondaryUnit" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">Satuan Roll / Grosir</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white rounded-xl h-9 text-xs">
+                              <SelectValue placeholder="Pilih Satuan" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="ROLL">ROLL</SelectItem>
+                            <SelectItem value="BAL">BAL</SelectItem>
+                            <SelectItem value="DUS">DUS</SelectItem>
+                            {units?.filter(u => !["ROLL", "BAL", "DUS"].includes(u.name.toUpperCase())).map(u => (
+                              <SelectItem key={u.id} value={u.name.toUpperCase()}>{u.name.toUpperCase()}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Harga Beli Satuan Utama */}
+                    <FormField control={form.control} name="costPricePerMeter" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">
+                          Harga Beli Patokan / {form.watch("primaryUnit") || "Satuan"} (Rp)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min={0}
+                            placeholder="0"
+                            className="bg-white rounded-xl h-9 text-xs"
+                            value={field.value ?? 0}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Harga Jual Satuan Utama */}
+                    <FormField control={form.control} name="pricePerMeter" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-700">
+                          Harga Jual Patokan / {form.watch("primaryUnit") || "Satuan"} (Rp)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min={0}
+                            placeholder="0"
+                            className="bg-white rounded-xl h-9 text-xs"
+                            value={field.value ?? 0}
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Harga Beli Grosir (Roll) - Opsional */}
+                    <FormField control={form.control} name="costPricePerRoll" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-500">
+                          Harga Beli Grosir / Roll (Rp, opsional)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min={0}
+                            placeholder="Opsional"
+                            className="bg-white rounded-xl h-9 text-xs"
+                            value={field.value ?? ""}
+                            onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+
+                    {/* Harga Jual Grosir (Roll) - Opsional */}
+                    <FormField control={form.control} name="pricePerRoll" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-semibold text-slate-500">
+                          Harga Jual Grosir / Roll (Rp, opsional)
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min={0}
+                            placeholder="Opsional"
+                            className="bg-white rounded-xl h-9 text-xs"
+                            value={field.value ?? ""}
+                            onChange={e => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+
+                  <p className="text-[11px] text-violet-700 bg-white/70 border border-violet-100 rounded-xl p-2.5 leading-relaxed">
+                    💡 <em>Saat menambah barang baru dan memilih kategori ini, satuan dan harga di atas otomatis terisi sehingga Anda tidak perlu input berulang-ulang, dan data Excel Export/Import tetap seragam.</em>
+                  </p>
+                </div>
+
+                <DrawerFooter className="px-0 pt-2 flex-row gap-2">
+                  <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => { setIsCreateOpen(false); setEditingCategory(null); }}>Batal</Button>
+                  <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 rounded-xl font-bold" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {createMutation.isPending || updateMutation.isPending ? "Menyimpan..." : "Simpan Kategori"}
+                  </Button>
                 </DrawerFooter>
               </form>
             </Form>
@@ -369,14 +604,18 @@ export default function Kategori() {
                   📋 Panduan Format Excel:
                 </p>
                 <p className="text-slate-600">
-                  Gunakan file hasil <strong>Export</strong> sebagai backup & template data, atau buat file Excel baru dengan kolom berikut:
+                  Gunakan file hasil <strong>Export</strong> sebagai template data, atau buat file Excel dengan kolom:
                 </p>
                 <ul className="list-disc ml-4 space-y-0.5 text-slate-600">
                   <li><strong>Nama Kategori</strong> — wajib diisi</li>
-                  <li><strong>Deskripsi</strong> — deskripsi atau keterangan kategori (opsional)</li>
+                  <li><strong>Satuan Utama</strong> — METER / YARD / KG (default: METER)</li>
+                  <li><strong>Satuan Roll</strong> — ROLL / BAL / DUS (default: ROLL)</li>
+                  <li><strong>Harga Beli</strong> & <strong>Harga Jual</strong> — patokan harga beli & jual satuan utama</li>
+                  <li><strong>Harga Beli (Roll)</strong> & <strong>Harga Jual (Roll)</strong> — patokan harga grosir roll</li>
+                  <li><strong>Deskripsi</strong> — keterangan kategori (opsional)</li>
                 </ul>
                 <p className="text-[11px] text-violet-700 pt-0.5">
-                  💡 <em>Kategori dengan nama yang sudah ada otomatis akan diperbarui datanya.</em>
+                  💡 <em>Kategori dengan nama yang sudah ada otomatis diperbarui datanya.</em>
                 </p>
               </div>
 

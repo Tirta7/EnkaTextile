@@ -9,4 +9,10 @@
 export interface CategoryInput {
   name: string;
   description?: string;
+  primaryUnit?: string;
+  secondaryUnit?: string;
+  costPricePerMeter?: number;
+  pricePerMeter?: number;
+  costPricePerRoll?: number;
+  pricePerRoll?: number;
 }

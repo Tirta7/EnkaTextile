@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Panduan & Aturan Format Import Pembelian Excel - Enka Textile</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 14mm 12mm 14mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+      font-size: 10pt;
+      line-height: 1.45;
+    }
+
+    .page {
+      min-height: 270mm;
+      position: relative;
+    }
+
+    .page-break {
+      page-break-before: always;
+      padding-top: 6mm;
+    }
+    
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2.5px solid #2563eb;
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .brand-title {
+      font-size: 19pt;
+      font-weight: 800;
+      color: #1e3a8a;
+      letter-spacing: -0.5px;
+      margin: 0;
+    }
+    .brand-sub {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #2563eb;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-box {
+      text-align: right;
+      font-size: 8pt;
+      color: #64748b;
+    }
+    .badge-doc {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 7.5pt;
+      margin-bottom: 3px;
+    }
+
+    /* Important Question Highlight Boxes */
+    .highlight-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .callout-box {
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .callout-box.green {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+    .callout-box.blue {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .callout-title {
+      font-size: 10pt;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .callout-box.green .callout-title {
+      color: #15803d;
+    }
+    .callout-box.blue .callout-title {
+      color: #1d4ed8;
+    }
+    .callout-body {
+      font-size: 8.5pt;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    /* Section Headings */
+    .section-title {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 14px 0 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-left: 4px solid #2563eb;
+      padding-left: 8px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      margin-bottom: 12px;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      text-align: left;
+      font-weight: 700;
+      padding: 6px 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 8pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    td {
+      padding: 5.5px 8px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      line-height: 1.35;
+    }
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    /* Status Badges in Table */
+    .badge-wajib {
+      display: inline-block;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-weight: 700;
+      font-size: 7pt;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #fca5a5;
+      white-space: nowrap;
+    }
+    .badge-otomatis {
+      display: inline-block;
+      background: #dcfce7;
+      color: #15803d;
+      font-weight: 700;
+      font-size: 7pt;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #86efac;
+      white-space: nowrap;
+    }
+    .badge-opsi {
+      display: inline-block;
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      font-size: 7pt;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      white-space: nowrap;
+    }
+
+    /* Excel Mockup Preview */
+    .excel-preview {
+      background: #ffffff;
+      border: 1px solid #94a3b8;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      font-size: 7.5pt;
+    }
+    .excel-preview th {
+      background: #e2e8f0;
+      color: #1e293b;
+      font-size: 7.5pt;
+      padding: 5px 6px;
+      text-align: center;
+      border: 1px solid #cbd5e1;
+    }
+    .excel-preview td {
+      padding: 5px 6px;
+      font-size: 7.5pt;
+      border: 1px solid #cbd5e1;
+    }
+    .excel-header-bar {
+      background: #107c41;
+      color: #ffffff;
+      padding: 4px 8px;
+      font-weight: 700;
+      font-size: 8pt;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      font-size: 8pt;
+      margin-bottom: 12px;
+    }
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .info-card-title {
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      font-size: 8.5pt;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* Step flow */
+    .flow-steps {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .step-box {
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 8px 9px;
+      position: relative;
+    }
+    .step-num {
+      position: absolute;
+      top: -8px;
+      left: 10px;
+      background: #2563eb;
+      color: white;
+      font-weight: 800;
+      font-size: 7.5pt;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-title {
+      font-weight: 700;
+      font-size: 8pt;
+      color: #1e3a8a;
+      margin-top: 4px;
+      margin-bottom: 3px;
+    }
+    .step-desc {
+      font-size: 7.5pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+      margin-top: 14px;
+      font-size: 7.5pt;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== HALAMAN 1 ==================== -->
+  <div class="page">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1 class="brand-title">ENKA TEXTILE</h1>
+        <div class="brand-sub">SOP & Panduan Aturan Import Pembelian Excel</div>
+      </div>
+      <div class="meta-box">
+        <div class="badge-doc">STANDAR OPERASIONAL SISTEM</div>
+        <div>Modul: <strong>Pembelian POS</strong></div>
+        <div>Versi: <strong>2.0 (Oktober 2026)</strong></div>
+      </div>
+    </div>
+
+    <!-- Key Questions Highlights -->
+    <div class="highlight-grid">
+      <div class="callout-box green">
+        <div class="callout-title">
+          <span>✓</span> Apakah Barcode Wajib Diisikan?
+        </div>
+        <div class="callout-body">
+          <strong>TIDAK WAJIB (Boleh Dikosongkan).</strong><br>
+          • Jika Barcode kosong, sistem mencari barang berdasarkan <strong>Nama Produk / Barang</strong>.<br>
+          • Jika barang baru dan belum terdaftar di sistem, sistem akan <strong>secara otomatis membuat Barcode baru</strong> (contoh: <code>PRD-...</code>).
+        </div>
+      </div>
+
+      <div class="callout-box blue">
+        <div class="callout-title">
+          <span>⚙</span> Apakah Sistem Menjumlah Otomatis?
+        </div>
+        <div class="callout-body">
+          <strong>YA, SEMUANYA DIHITUNG OTOMATIS!</strong><br>
+          • Jumlah Roll, Total Meter/Yard, Subtotal (Qty × Harga), Total Nota, dan Sisa Bayar (Hutang) dihitung otomatis oleh sistem tanpa perlu rumus manual di Excel.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 1: Daftar Kolom Wajib vs Opsional -->
+    <div class="section-title">1. Daftar Kolom Excel & Tingkat Keharusan Pengisian</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 17%;">Nama Kolom</th>
+          <th style="width: 15%; text-align: center;">Status</th>
+          <th style="width: 68%;">Aturan & Keterangan Pengisian</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>No Invoice</strong></td>
+          <td style="text-align: center;"><span class="badge-wajib">WAJIB</span></td>
+          <td>Nomor faktur/nota pembelian (contoh: <code>INV-IN/20261018/0001</code>). Menjadi acuan sistem mengelompokkan baris-baris barang ke dalam 1 faktur yang sama.</td>
+        </tr>
+        <tr>
+          <td><strong>Supplier</strong></td>
+          <td style="text-align: center;"><span class="badge-wajib">WAJIB</span></td>
+          <td>Nama supplier/pemasok (contoh: <code>SCA</code>, <code>BAS</code>). Jika nama supplier belum ada di master data, sistem akan <strong>otomatis mendaftarkannya</strong>.</td>
+        </tr>
+        <tr>
+          <td><strong>Produk / Barang</strong></td>
+          <td style="text-align: center;"><span class="badge-wajib">WAJIB</span></td>
+          <td>Nama kain atau nama barang (contoh: <code>RAYON MOTIF THE BEST</code>). Jika barang baru, sistem otomatis menambahkannya ke master barang.</td>
+        </tr>
+        <tr>
+          <td><strong>Meter/Yard</strong><br><em>atau</em> <strong>Roll 1..N</strong></td>
+          <td style="text-align: center;"><span class="badge-wajib">WAJIB (Salah Satu)</span></td>
+          <td>Pilih salah satu metode pengisian:
+            <br>• Isi kolom <strong>Meter/Yard</strong> langsung (panjang total), <em>ATAU</em>
+            <br>• Isi rincian pada kolom <strong>Roll 1, Roll 2, dst</strong>. Sistem akan menjumlahkan total panjangnya dan menghitung jumlah roll secara otomatis.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Barcode</strong></td>
+          <td style="text-align: center;"><span class="badge-opsi">OPSIONAL</span></td>
+          <td>Boleh diisi jika ada, atau <strong>dikosongkan</strong>. Sistem mencocokkan via nama barang atau membuat barcode baru otomatis jika barang baru.</td>
+        </tr>
+        <tr>
+          <td><strong>Kategori</strong></td>
+          <td style="text-align: center;"><span class="badge-opsi">OPSIONAL</span></td>
+          <td>Boleh dikosongkan. Sistem otomatis mengambil kategori dari data master produk / master kategori.</td>
+        </tr>
+        <tr>
+          <td><strong>Satuan</strong></td>
+          <td style="text-align: center;"><span class="badge-opsi">OPSIONAL</span></td>
+          <td>Boleh dikosongkan (default: <code>METER</code>). Jika kain menggunakan Yard, cukup tulis <code>YARD</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Harga / Satuan</strong></td>
+          <td style="text-align: center;"><span class="badge-otomatis">OTOMATIS</span></td>
+          <td>Boleh diisi harga beli riil saat transaksi. Jika dikosongkan, sistem otomatis mengambil harga beli default dari Master Kategori / Master Barang.</td>
+        </tr>
+        <tr>
+          <td><strong>Subtotal & Total Nota</strong></td>
+          <td style="text-align: center;"><span class="badge-otomatis">OTOMATIS</span></td>
+          <td><strong>Tidak perlu dihitung manual di Excel.</strong> Sistem menghitung otomatis: <code>Qty × Harga Satuan</code> dan menjumlahkan semua item per invoice.</td>
+        </tr>
+        <tr>
+          <td><strong>Sudah Dibayar & Sisa</strong></td>
+          <td style="text-align: center;"><span class="badge-otomatis">OTOMATIS</span></td>
+          <td>Jika metode bayar <code>kredit</code> atau <code>tempo</code>, sisa bayar otomatis terhitung sebagai hutang. Jika metode <code>tunai</code>/<code>lunas</code>, otomatis lunas.</td>
+        </tr>
+        <tr>
+          <td><strong>Metode Bayar & Status</strong></td>
+          <td style="text-align: center;"><span class="badge-opsi">OPSIONAL</span></td>
+          <td>Pilihan: <code>tunai</code> (lunas) atau <code>kredit</code> / <code>tempo</code> (belum lunas). Jika kosong, default ke <code>tunai</code> (lunas).</td>
+        </tr>
+        <tr>
+          <td><strong>Tanggal</strong></td>
+          <td style="text-align: center;"><span class="badge-opsi">OPSIONAL</span></td>
+          <td>Format tanggal (contoh: <code>18/10/2026</code>). Jika dikosongkan, sistem otomatis menggunakan tanggal hari ini saat diimpor.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <div>Dokumen Resmi Aturan Import Excel &copy; 2026 Enka Textile POS</div>
+      <div>Halaman 1 dari 2</div>
+    </div>
+  </div>
+
+  <!-- ==================== HALAMAN 2 ==================== -->
+  <div class="page page-break">
+    <div class="header">
+      <div>
+        <h1 class="brand-title">CONTOH STRUKTUR & CARA PENGISIAN</h1>
+        <div class="brand-sub">Simulasi Pengisian Faktur Pembelian Multi-Item</div>
+      </div>
+      <div class="meta-box">
+        <div class="badge-doc">PANDUAN PRAKTIS</div>
+        <div>Halaman Lampiran Teknis</div>
+      </div>
+    </div>
+
+    <!-- Section 2: Contoh Format Tabel Excel -->
+    <div class="section-title">2. Simulasi 1 Faktur Pembelian dengan Banyak Item Kain (Multi-Item)</div>
+    
+    <div class="excel-preview">
+      <div class="excel-header-bar">
+        <span>📊 Tampilan Lembar Kerja Excel (Pembelian_all_sd_all.xlsx)</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 4%;">No</th>
+            <th style="width: 10%;">Tanggal</th>
+            <th style="width: 17%;">No Invoice</th>
+            <th style="width: 9%;">Supplier</th>
+            <th style="width: 12%;">Barcode</th>
+            <th style="width: 22%;">Produk / Barang</th>
+            <th style="width: 7%;">Satuan</th>
+            <th style="width: 5%;">Roll</th>
+            <th style="width: 7%;">Meter/Yard</th>
+            <th style="width: 7%;">Roll 1</th>
+            <th style="width: 7%;">Roll 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td style="text-align: center;">18/10/2026</td>
+            <td><strong>INV-IN/20261018/0001</strong></td>
+            <td>SCA</td>
+            <td><em>(Kosongkan)</em></td>
+            <td><strong>RAYON MOTIF BIRU</strong></td>
+            <td style="text-align: center;">METER</td>
+            <td style="text-align: center;"><em>Auto</em></td>
+            <td style="text-align: right;"><strong>300</strong></td>
+            <td style="text-align: right;">150</td>
+            <td style="text-align: right;">150</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;"></td>
+            <td style="text-align: center;">18/10/2026</td>
+            <td><strong>INV-IN/20261018/0001</strong></td>
+            <td>SCA</td>
+            <td><em>(Kosongkan)</em></td>
+            <td><strong>RAYON MOTIF MAROON</strong></td>
+            <td style="text-align: center;">METER</td>
+            <td style="text-align: center;"><em>Auto</em></td>
+            <td style="text-align: right;"><strong>295</strong></td>
+            <td style="text-align: right;">145</td>
+            <td style="text-align: right;">150</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;"></td>
+            <td style="text-align: center;">18/10/2026</td>
+            <td><strong>INV-IN/20261018/0001</strong></td>
+            <td>SCA</td>
+            <td><em>(Kosongkan)</em></td>
+            <td><strong>RAYON MOTIF KUNING</strong></td>
+            <td style="text-align: center;">METER</td>
+            <td style="text-align: center;"><em>Auto</em></td>
+            <td style="text-align: right;"><strong>142</strong></td>
+            <td style="text-align: right;">142</td>
+            <td style="text-align: right;">-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 3: Langkah Kerja Sistem Saat Import -->
+    <div class="section-title">3. Alur Otomatisasi Saat File Diunggah</div>
+    <div class="flow-steps">
+      <div class="step-box">
+        <div class="step-num">1</div>
+        <div class="step-title">Pengelompokan Faktur</div>
+        <div class="step-desc">
+          Sistem membaca kolom <strong>No Invoice</strong>. Baris yang memiliki nomor invoice sama akan digabung otomatis ke dalam 1 transaksi pembelian.
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">2</div>
+        <div class="step-title">Validasi Master Data</div>
+        <div class="step-desc">
+          Sistem memeriksa <strong>Supplier</strong> & <strong>Produk</strong>. Jika belum ada di database, sistem langsung mendaftarkannya secara otomatis.
+        </div>
+      </div>
+      <div class="step-box">
+        <div class="step-num">3</div>
+        <div class="step-title">Kalkulasi Keuangan & Stok</div>
+        <div class="step-desc">
+          Sistem menjumlah total roll, menghitung subtotal per item, total hutang/lunas, serta memasukkan stok rincian roll ke gudang.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4: Tips & Catatan Penting -->
+    <div class="section-title">4. Tips Penting Agar Import Berjalan Lancar</div>
+    <div class="cards-grid">
+      <div class="info-card">
+        <div class="info-card-title">✨ Penulisan Nama Kolom Fleksibel</div>
+        <div>Sistem mengenali berbagai variasi nama header Excel. Misalnya: <code>Produk / Barang</code>, <code>Nama Barang</code>, <code>Produk</code>, <code>Item</code> semuanya akan terbaca dengan tepat.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">📏 Satuan METER vs YARD</div>
+        <div>Secara default sistem menggunakan satuan <strong>METER</strong>. Jika kain yang Anda beli menggunakan hitungan yard, isi kolom <strong>Satuan</strong> dengan tulisan <code>YARD</code>.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">🔢 Penulisan Angka Koma / Titik</div>
+        <div>Format angka desimal di Excel aman menggunakan tanda koma (contoh: <code>140,5</code>) ataupun tanda titik (contoh: <code>140.5</code>). Sistem otomatis mengonversinya.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-title">💰 Status Pembayaran & Hutang</div>
+        <div>Jika pembelian dilakukan secara tempo/kredit, pastikan kolom <strong>Metode Bayar</strong> diisi <code>kredit</code> atau <code>tempo</code> agar tercatat di modul Hutang Usaha.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Dokumen Resmi Aturan Import Excel &copy; 2026 Enka Textile POS</div>
+      <div>Halaman 2 dari 2</div>
+    </div>
+  </div>
+
+</body>
+</html>

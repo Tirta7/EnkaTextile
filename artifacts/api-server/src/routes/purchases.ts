@@ -92,21 +92,26 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
 
       if (items.length === 0) {
         const row: any = {
-          "No": rowNo++, "Tanggal": tanggal,
-          "No Invoice": p.invoiceNumber, "Supplier": p.supplierName || "",
-          "Barcode": "", "Kategori": "", "Produk / Barang": "",
+          "No": rowNo++,
+          "Tanggal": tanggal,
+          "No Invoice": p.invoiceNumber,
+          "Supplier": p.supplierName || "",
+          "Barcode": "",
+          "Kategori": "",
+          "Produk / Barang": "",
           "Satuan": "METER",
-          "Roll": 0, "Meter/Yard": 0
+          "Roll": 0,
+          "Meter/Yard": 0,
+          "Harga / Satuan": 0,
+          "Subtotal": 0,
+          "Total Nota": totalAmt,
+          "Sudah Dibayar": paidAmt,
+          "Sisa Bayar": remaining > 0 ? remaining : 0,
+          "Metode Bayar": p.paymentType,
+          "Status": p.status,
+          "Catatan": p.notes || "",
         };
         for (let i = 1; i <= maxRolls; i++) row[`Roll ${i}`] = "";
-        row["Harga / Meter"] = 0;
-        row["Subtotal"] = 0;
-        row["Total Nota"] = totalAmt;
-        row["Sudah Dibayar"] = paidAmt;
-        row["Sisa Bayar"] = remaining > 0 ? remaining : 0;
-        row["Metode Bayar"] = p.paymentType;
-        row["Status"] = p.status;
-        row["Catatan"] = p.notes || "";
         rows.push(row);
       } else {
         items.forEach((item, idx) => {
@@ -121,6 +126,14 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
             "Satuan": item.primaryUnit || "METER",
             "Roll": parseFloat(item.rolls) || 0,
             "Meter/Yard": parseFloat(item.meters) || 0,
+            "Harga / Satuan": parseFloat(item.pricePerMeter) || 0,
+            "Subtotal": parseFloat(item.subtotal) || 0,
+            "Total Nota": idx === 0 ? totalAmt : "",
+            "Sudah Dibayar": idx === 0 ? paidAmt : "",
+            "Sisa Bayar": idx === 0 ? (remaining > 0 ? remaining : 0) : "",
+            "Metode Bayar": idx === 0 ? p.paymentType : "",
+            "Status": idx === 0 ? p.status : "",
+            "Catatan": idx === 0 ? (p.notes || "") : "",
           };
           
           let rollLengths: number[] = [];
@@ -130,16 +143,6 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
           for (let i = 1; i <= maxRolls; i++) {
             row[`Roll ${i}`] = rollLengths[i - 1] !== undefined ? rollLengths[i - 1] : "";
           }
-
-          row["Harga / Satuan"] = parseFloat(item.pricePerMeter) || 0;
-          row["Harga / Meter"] = parseFloat(item.pricePerMeter) || 0;
-          row["Subtotal"] = parseFloat(item.subtotal) || 0;
-          row["Total Nota"] = idx === 0 ? totalAmt : "";
-          row["Sudah Dibayar"] = idx === 0 ? paidAmt : "";
-          row["Sisa Bayar"] = idx === 0 ? (remaining > 0 ? remaining : 0) : "";
-          row["Metode Bayar"] = idx === 0 ? p.paymentType : "";
-          row["Status"] = idx === 0 ? p.status : "";
-          row["Catatan"] = idx === 0 ? (p.notes || "") : "";
           
           rows.push(row);
         });
@@ -148,9 +151,24 @@ router.get("/purchases/export", async (req, res): Promise<void> => {
 
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
-      { wch: 5 }, { wch: 14 }, { wch: 24 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 24 },
-      { wch: 8 }, { wch: 12 }, { wch: 40 }, { wch: 16 }, { wch: 18 }, { wch: 18 },
-      { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 24 },
+      { wch: 5 },  // No
+      { wch: 12 }, // Tanggal
+      { wch: 22 }, // No Invoice
+      { wch: 22 }, // Supplier
+      { wch: 18 }, // Barcode
+      { wch: 22 }, // Kategori
+      { wch: 26 }, // Produk / Barang
+      { wch: 10 }, // Satuan
+      { wch: 8 },  // Roll
+      { wch: 12 }, // Meter/Yard
+      { wch: 16 }, // Harga / Satuan
+      { wch: 16 }, // Subtotal
+      { wch: 16 }, // Total Nota
+      { wch: 16 }, // Sudah Dibayar
+      { wch: 16 }, // Sisa Bayar
+      { wch: 14 }, // Metode Bayar
+      { wch: 12 }, // Status
+      { wch: 24 }, // Catatan
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Pembelian");

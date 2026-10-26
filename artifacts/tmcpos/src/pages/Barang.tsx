@@ -97,13 +97,15 @@ export default function Barang() {
 
   const createMutation = useCreateProduct({
     mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); setIsOpen(false); toast({ title: "Barang berhasil ditambahkan" }); }
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); setIsOpen(false); toast({ title: "Barang berhasil ditambahkan" }); },
+      onError: (error: any) => { toast({ title: "Gagal menambahkan barang", description: error.data?.error || error.message || "Terjadi kesalahan", variant: "destructive" }); }
     }
   });
 
   const updateMutation = useUpdateProduct({
     mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); setIsOpen(false); setEditingId(null); toast({ title: "Barang berhasil diperbarui" }); }
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) }); setIsOpen(false); setEditingId(null); toast({ title: "Barang berhasil diperbarui" }); },
+      onError: (error: any) => { toast({ title: "Gagal memperbarui barang", description: error.data?.error || error.message || "Terjadi kesalahan", variant: "destructive" }); }
     }
   });
 
@@ -128,9 +130,24 @@ export default function Barang() {
       } else {
         await createMutation.mutateAsync({ data: payload });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      toast({
+        title: "Gagal menyimpan barang",
+        description: error.data?.error || error.message || "Terjadi kesalahan sistem",
+        variant: "destructive"
+      });
     }
+  };
+
+  const onInvalid = (errors: any) => {
+    console.warn("Validation error:", errors);
+    const firstError = Object.values(errors)[0] as any;
+    toast({
+      title: "Mohon periksa isian",
+      description: firstError?.message || "Ada isian barang yang belum sesuai",
+      variant: "destructive"
+    });
   };
 
   const handleExport = (unit?: string) => {
@@ -691,7 +708,7 @@ export default function Barang() {
 
           {/* Form Wrapper */}
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col overflow-hidden" style={{ maxHeight: 'calc(95vh - 5rem)' }}>
+            <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col overflow-hidden" style={{ maxHeight: 'calc(95vh - 5rem)' }}>
               
               {/* Scrollable Body */}
               <div className="overflow-y-auto bg-slate-50/50 flex-1">

@@ -50,13 +50,38 @@ export default function Supplier() {
     defaultValues: { name: "", phone: "", address: "", contactPerson: "" },
   });
 
-  const createMutation = useCreateSupplier({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); setIsOpen(false); toast({ title: "Supplier berhasil ditambahkan" }); } } });
-  const updateMutation = useUpdateSupplier({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); setIsOpen(false); setEditingId(null); toast({ title: "Supplier berhasil diperbarui" }); } } });
-  const deleteMutation = useDeleteSupplier({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); toast({ title: "Supplier berhasil dihapus" }); }, onError: (error: any) => { toast({ title: "Gagal menghapus", description: error.data?.error || "Terjadi kesalahan", variant: "destructive" }); } } });
+  const createMutation = useCreateSupplier({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); setIsOpen(false); toast({ title: "Supplier berhasil ditambahkan" }); },
+      onError: (error: any) => { toast({ title: "Gagal menambahkan supplier", description: error.data?.error || error.message || "Terjadi kesalahan", variant: "destructive" }); }
+    }
+  });
+  const updateMutation = useUpdateSupplier({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); setIsOpen(false); setEditingId(null); toast({ title: "Supplier berhasil diperbarui" }); },
+      onError: (error: any) => { toast({ title: "Gagal memperbarui supplier", description: error.data?.error || error.message || "Terjadi kesalahan", variant: "destructive" }); }
+    }
+  });
+  const deleteMutation = useDeleteSupplier({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListSuppliersQueryKey({}) }); toast({ title: "Supplier berhasil dihapus" }); },
+      onError: (error: any) => { toast({ title: "Gagal menghapus", description: error.data?.error || "Terjadi kesalahan", variant: "destructive" }); }
+    }
+  });
 
   const onSubmit = (data: FormData) => {
     if (editingId) updateMutation.mutate({ id: editingId, data });
     else createMutation.mutate({ data });
+  };
+
+  const onInvalid = (errors: any) => {
+    console.warn("Validation error:", errors);
+    const firstError = Object.values(errors)[0] as any;
+    toast({
+      title: "Mohon periksa isian",
+      description: firstError?.message || "Ada isian data supplier yang belum sesuai",
+      variant: "destructive"
+    });
   };
 
   const openCreate = () => { form.reset({ name: "", phone: "", address: "", contactPerson: "" }); setEditingId(null); setIsOpen(true); };
@@ -338,7 +363,7 @@ export default function Supplier() {
           </DrawerHeader>
           <div className="overflow-y-auto flex-1">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+              <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4 pb-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>Nama Supplier</FormLabel><FormControl><Input placeholder="Nama perusahaan/toko" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />

@@ -126,7 +126,10 @@ echo.
 
 :: Generate Machine ID
 set "MACHINE_ID="
-if exist "!INSTALL_DIR!.env" (
+if exist "!INSTALL_DIR!docker.env" (
+    for /f "tokens=2 delims==" %%v in ('findstr /i "MACHINE_ID=" "!INSTALL_DIR!docker.env" 2^>nul') do set "MACHINE_ID=%%v"
+)
+if "!MACHINE_ID!"=="" if exist "!INSTALL_DIR!.env" (
     for /f "tokens=2 delims==" %%v in ('findstr /i "MACHINE_ID=" "!INSTALL_DIR!.env" 2^>nul') do set "MACHINE_ID=%%v"
 )
 if "!MACHINE_ID!"=="" (
@@ -137,8 +140,19 @@ if "!MACHINE_ID!"=="" (
         echo MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!.env"
         echo LICENSE_KEY=>> "!INSTALL_DIR!.env"
     )
+    if exist "!INSTALL_DIR!docker.env" (
+        echo MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+        echo VOCML_MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+    )
     echo  [OK] Serial Number: !MACHINE_ID!
 ) else (
+    if exist "!INSTALL_DIR!docker.env" (
+        findstr /i "MACHINE_ID=" "!INSTALL_DIR!docker.env" >nul 2>&1
+        if errorlevel 1 (
+            echo MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+            echo VOCML_MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+        )
+    )
     echo  [OK] Serial Number: !MACHINE_ID! (sudah ada)
 )
 
@@ -302,6 +316,7 @@ echo [4/8] Mempersiapkan docker-compose.yml...
     echo   app:
     echo     image: ghcr.io/!GITHUB_USERNAME!/enkatextile:latest
     echo     container_name: vocpos-app
+    echo     hostname: vocpos-app
     echo     restart: always
     echo     env_file:
     echo       - docker.env
@@ -341,9 +356,18 @@ if not exist "!INSTALL_DIR!docker.env" (
         echo PORT=8080
         echo DATABASE_URL="postgresql://postgres:vocpos2026@db:5432/vocpos"
         echo SESSION_SECRET="vocpos-production-secret-key-xyz987"
+        echo MACHINE_ID=!MACHINE_ID!
+        echo VOCML_MACHINE_ID=!MACHINE_ID!
+        echo VOCML_SERVER_URL="https://vocml.vocpos.id"
+        echo VOCML_PRODUCT="pos"
     ) > "!INSTALL_DIR!docker.env"
     echo  [OK] File docker.env dibuat.
 ) else (
+    findstr /i "MACHINE_ID=" "!INSTALL_DIR!docker.env" >nul 2>&1
+    if errorlevel 1 (
+        echo MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+        echo VOCML_MACHINE_ID=!MACHINE_ID!>> "!INSTALL_DIR!docker.env"
+    )
     echo  [OK] File docker.env sudah ada.
 )
 

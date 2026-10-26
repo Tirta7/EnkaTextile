@@ -1,18 +1,121 @@
 import { Router, Request, Response } from "express";
-import { db, licenseCacheTable } from "@workspace/db";
+import { db, licenseCacheTable, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import machineIdPkg from "node-machine-id";
 import path from "path";
+import fs from "fs";
 import { checkLicense, verifyLicenseKey } from "../lib/vocml-client.js";
 
 const { machineId } = machineIdPkg;
 
 const router = Router();
 
-const getMachineId = async () => {
-  const id = await machineId();
-  const short = id.substring(0, 12).toUpperCase();
-  return `VOC-${short.substring(0,4)}-${short.substring(4,8)}-${short.substring(8,12)}`;
+let cachedMachineId: string | null = null;
+
+export const getMachineId = async (): Promise<string> => {
+  if (cachedMachineId) return cachedMachineId;
+
+  // 1. Cek Environment Variable (jika diset oleh docker.env / .env)
+  const envMid = (process.env.MACHINE_ID || process.env.VOCML_MACHINE_ID || "").trim();
+  if (envMid) {
+    cachedMachineId = envMid.toUpperCase();
+    try {
+      const existing = await db.select().from(settingsTable).where(eq(settingsTable.key, "system_machine_id")).limit(1);
+      if (existing.length === 0) {
+        await db.insert(settingsTable).values({
+          key: "system_machine_id",
+          value: cachedMachineId,
+          description: "Permanent Hardware Machine ID for VOCML License",
+        });
+      }
+    } catch (_) {}
+    return cachedMachineId;
+  }
+
+  // 2. Cek apakah sudah tersimpan di Database (Settings Table)
+  // Catatan: Volume PostgreSQL vocpos_db_data bersifat permanen dan TIDAK PERNAH terhapus saat update Docker/aplikasi!
+  try {
+    const existing = await db.select().from(settingsTable).where(eq(settingsTable.key, "system_machine_id")).limit(1);
+    if (existing.length > 0 && existing[0].value?.trim()) {
+      cachedMachineId = existing[0].value.trim().toUpperCase();
+      return cachedMachineId;
+    }
+  } catch (_) {}
+
+  // 3. Cek file persistensi di disk (.machine-id)
+  const idFilePath = path.resolve(process.cwd(), ".machine-id");
+  try {
+    if (fs.existsSync(idFilePath)) {
+      const fileContent = fs.readFileSync(idFilePath, "utf8").trim();
+      if (fileContent) {
+        cachedMachineId = fileContent.toUpperCase();
+        try {
+          await db.insert(settingsTable).values({
+            key: "system_machine_id",
+            value: cachedMachineId,
+            description: "Permanent Hardware Machine ID for VOCML License",
+          });
+        } catch (_) {}
+        return cachedMachineId;
+      }
+    }
+  } catch (_) {}
+
+  // 4. Cek apakah ada machine_id dari token aktif sebelumnya di license-cache.json
+  const cacheFile = path.resolve(process.cwd(), "license-cache.json");
+  try {
+    if (fs.existsSync(cacheFile)) {
+      const raw = JSON.parse(fs.readFileSync(cacheFile, "utf8"));
+      if (raw?.token) {
+        const parts = raw.token.split(".");
+        if (parts[0]) {
+          const payload = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+          if (payload?.machine_id) {
+            cachedMachineId = String(payload.machine_id).trim().toUpperCase();
+            try {
+              await db.insert(settingsTable).values({
+                key: "system_machine_id",
+                value: cachedMachineId,
+                description: "Permanent Hardware Machine ID for VOCML License",
+              });
+            } catch (_) {}
+            try {
+              fs.writeFileSync(idFilePath, cachedMachineId, "utf8");
+            } catch (_) {}
+            return cachedMachineId;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+
+  // 5. Jika benar-benar baru pertama kali dipasang, generate dari hardware
+  let generated = "";
+  try {
+    const id = await machineId();
+    const short = id.substring(0, 12).toUpperCase();
+    generated = `VOC-${short.substring(0, 4)}-${short.substring(4, 8)}-${short.substring(8, 12)}`;
+  } catch (err) {
+    const randomHex = Math.random().toString(36).substring(2, 14).toUpperCase();
+    generated = `VOC-${randomHex.substring(0, 4)}-${randomHex.substring(4, 8)}-${randomHex.substring(8, 12)}`;
+  }
+
+  cachedMachineId = generated;
+
+  // Kunci dan simpan Machine ID ini secara PERMANEN di Database dan File Disk
+  try {
+    await db.insert(settingsTable).values({
+      key: "system_machine_id",
+      value: cachedMachineId,
+      description: "Permanent Hardware Machine ID for VOCML License",
+    });
+  } catch (_) {}
+
+  try {
+    fs.writeFileSync(idFilePath, cachedMachineId, "utf8");
+  } catch (_) {}
+
+  return cachedMachineId;
 };
 
 router.get("/machine-id", async (req: Request, res: Response): Promise<void> => {

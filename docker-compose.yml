@@ -22,6 +22,7 @@ services:
   app:
     image: ghcr.io/tirta7/enkatextile:latest
     container_name: vocpos-app
+    hostname: vocpos-app
     restart: always
     env_file:
       - docker.env

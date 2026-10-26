@@ -12,9 +12,8 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// Pastikan tabel user_sessions ada sebelum server mulai
-// connect-pg-simple memerlukan tabel ini agar session bisa disimpan ke PostgreSQL
-async function ensureSessionTable() {
+// Pastikan tabel user_sessions, settings, dan kolom-kolom baru categories ada sebelum server mulai
+async function ensureSchema() {
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_sessions (
@@ -24,11 +23,24 @@ async function ensureSessionTable() {
         CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE
       ) WITH (OIDS=FALSE);
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON user_sessions (expire);
+
+      CREATE TABLE IF NOT EXISTS settings (
+        key text PRIMARY KEY,
+        value text NOT NULL,
+        description text,
+        updated_at timestamp DEFAULT now() NOT NULL
+      );
+
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS primary_unit text DEFAULT 'METER';
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS secondary_unit text DEFAULT 'ROLL';
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS cost_price_per_meter numeric(15, 2) DEFAULT 0;
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS price_per_meter numeric(15, 2) DEFAULT 0;
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS cost_price_per_roll numeric(15, 2);
+      ALTER TABLE categories ADD COLUMN IF NOT EXISTS price_per_roll numeric(15, 2);
     `);
-    logger.info("Session table ready");
+    logger.info("Database schema and session table verified ready");
   } catch (err) {
-    // Tabel mungkin sudah ada dengan collation berbeda — abaikan, server tetap jalan
-    logger.warn({ err }, "Could not ensure session table — using memory store fallback");
+    logger.warn({ err }, "Could not ensure schema / session table — continuing startup");
   }
 }
 
@@ -36,8 +48,8 @@ const server = http.createServer(app);
 setupWebSocket(server);
 startScheduler();
 
-// Tunggu tabel session siap baru listen
-ensureSessionTable().finally(() => {
+// Tunggu schema siap baru listen
+ensureSchema().finally(() => {
   server.listen(port, () => {
     logger.info({ port }, "Server listening with WebSocket support");
   });

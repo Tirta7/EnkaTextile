@@ -23,10 +23,10 @@ const schema = z.object({
   description: z.string().optional(),
   primaryUnit: z.string().default("METER"),
   secondaryUnit: z.string().default("ROLL"),
-  costPricePerMeter: z.number().min(0).default(0),
-  pricePerMeter: z.number().min(0).default(0),
-  costPricePerRoll: z.number().min(0).optional(),
-  pricePerRoll: z.number().min(0).optional(),
+  costPricePerMeter: z.preprocess(v => (v === "" || v === null || v === undefined ? 0 : Number(v)), z.number().min(0, "Harga beli minimal 0").default(0)),
+  pricePerMeter: z.preprocess(v => (v === "" || v === null || v === undefined ? 0 : Number(v)), z.number().min(0, "Harga jual minimal 0").default(0)),
+  costPricePerRoll: z.preprocess(v => (v === "" || v === null || v === undefined ? undefined : Number(v)), z.number().min(0).optional()),
+  pricePerRoll: z.preprocess(v => (v === "" || v === null || v === undefined ? undefined : Number(v)), z.number().min(0).optional()),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -57,6 +57,14 @@ export default function Kategori() {
         queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
         setIsCreateOpen(false);
         toast({ title: "Kategori berhasil ditambahkan" });
+      },
+      onError: (error: any) => {
+        console.error("Gagal tambah kategori:", error);
+        toast({
+          title: "Gagal menyimpan kategori",
+          description: error.data?.error || error.message || "Terjadi kesalahan pada server",
+          variant: "destructive",
+        });
       }
     }
   });
@@ -67,6 +75,14 @@ export default function Kategori() {
         queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
         setEditingCategory(null);
         toast({ title: "Kategori berhasil diperbarui" });
+      },
+      onError: (error: any) => {
+        console.error("Gagal update kategori:", error);
+        toast({
+          title: "Gagal memperbarui kategori",
+          description: error.data?.error || error.message || "Terjadi kesalahan pada server",
+          variant: "destructive",
+        });
       }
     }
   });
@@ -103,6 +119,16 @@ export default function Kategori() {
     } else {
       createMutation.mutate({ data });
     }
+  };
+
+  const onInvalid = (errors: any) => {
+    console.warn("Validation error:", errors);
+    const firstError = Object.values(errors)[0] as any;
+    toast({
+      title: "Mohon periksa isian",
+      description: firstError?.message || "Ada data formulir yang belum sesuai",
+      variant: "destructive",
+    });
   };
 
   const openCreate = () => {
@@ -396,7 +422,7 @@ export default function Kategori() {
           </DrawerHeader>
           <div className="overflow-y-auto flex-1 pr-1">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+              <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4 pb-4">
                 <div className="bg-slate-50/70 border border-slate-100 rounded-2xl p-4 space-y-3">
                   <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     Informasi Kategori

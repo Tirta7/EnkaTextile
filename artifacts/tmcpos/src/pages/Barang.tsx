@@ -243,7 +243,7 @@ export default function Barang() {
   const openEdit = (p: any) => {
     form.reset({
       name: p.name,
-      categoryId: p.categoryId,
+      categoryId: p.categoryId ? Number(p.categoryId) : undefined,
       barcode: p.barcode || "",
       primaryUnit: p.primaryUnit || "METER",
       secondaryUnit: p.secondaryUnit || "ROLL",
@@ -784,7 +784,7 @@ export default function Barang() {
                               }
                             }
                           }}
-                          value={field.value?.toString()}
+                          value={field.value !== undefined && field.value !== null ? field.value.toString() : ""}
                         >
                           <FormControl><SelectTrigger className="h-10 bg-white border-slate-200 rounded-xl"><SelectValue placeholder="Pilih kategori" /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -842,7 +842,7 @@ export default function Barang() {
                     <FormField control={form.control} name="primaryUnit" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-semibold text-slate-600">Satuan Utama</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || "METER"}>
                           <FormControl><SelectTrigger className="h-9 bg-white border-slate-200 rounded-xl text-sm"><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
                           <SelectContent>{units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}</SelectContent>
                         </Select>
@@ -878,7 +878,7 @@ export default function Barang() {
                     <FormField control={form.control} name="secondaryUnit" render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs font-semibold text-slate-600">Satuan Tambahan</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || "ROLL"}>
                           <FormControl><SelectTrigger className="h-9 bg-white border-slate-200 rounded-xl text-sm"><SelectValue placeholder="Pilih satuan" /></SelectTrigger></FormControl>
                           <SelectContent>{units?.map(u => <SelectItem key={u.id} value={u.name}>{u.name}</SelectItem>)}</SelectContent>
                         </Select>

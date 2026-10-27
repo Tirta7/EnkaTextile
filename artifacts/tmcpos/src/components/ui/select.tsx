@@ -21,18 +21,35 @@ function useSelect() {
   return context;
 }
 
+function extractItemsFromChildren(children: React.ReactNode, map: Record<string, React.ReactNode> = {}) {
+  React.Children.forEach(children, (child) => {
+    if (!React.isValidElement(child)) return;
+    const props = child.props as any;
+    if (props) {
+      if (props.value !== undefined && props.children !== undefined) {
+        map[String(props.value)] = props.children;
+      }
+      if (props.children) {
+        extractItemsFromChildren(props.children, map);
+      }
+    }
+  });
+  return map;
+}
+
 export function Select({ children, value, onValueChange, disabled, defaultValue }: any) {
   const [open, setOpen] = React.useState(false);
-  const [items, setItems] = React.useState<Record<string, React.ReactNode>>({});
+  const extractedItems = React.useMemo(() => extractItemsFromChildren(children), [children]);
+  const [dynamicItems, setDynamicItems] = React.useState<Record<string, React.ReactNode>>({});
   
   const registerItem = React.useCallback((val: string, label: React.ReactNode) => {
-    setItems(prev => {
-      // Prevent unnecessary renders if the item is already registered
+    setDynamicItems(prev => {
       if (prev[val] === label) return prev;
       return { ...prev, [val]: label };
     });
   }, []);
 
+  const items = React.useMemo(() => ({ ...extractedItems, ...dynamicItems }), [extractedItems, dynamicItems]);
   const currentValue = value !== undefined ? value : defaultValue;
 
   return (
@@ -50,7 +67,8 @@ export const SelectGroup = ({ className, ...props }: any) => (
 
 export const SelectValue = ({ placeholder }: any) => {
   const { value, items } = useSelect();
-  return <span>{value && items[value] ? items[value] : placeholder}</span>
+  const stringValue = value !== undefined && value !== null ? String(value) : "";
+  return <span>{stringValue ? (items[stringValue] ?? stringValue) : placeholder}</span>
 }
 
 export const SelectTrigger = React.forwardRef(({ className, children, ...props }: any, ref: any) => {

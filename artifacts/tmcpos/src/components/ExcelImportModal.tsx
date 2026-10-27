@@ -422,21 +422,44 @@ export function ExcelImportModal({
                           <>
                             <th className="py-2.5 px-3">Invoice & Tanggal</th>
                             <th className="py-2.5 px-3">Supplier</th>
-                          </>
-                        )}
-                        <th className="py-2.5 px-3">Kategori</th>
-                        <th className="py-2.5 px-3">{type === "categories" ? "Satuan" : "Produk / Barang"}</th>
-                        {type !== "categories" && (
-                          <>
+                            <th className="py-2.5 px-3">Kategori</th>
+                            <th className="py-2.5 px-3">Produk / Barang</th>
                             <th className="py-2.5 px-3 text-right">Stok Roll & Qty</th>
                             <th className="py-2.5 px-3 text-right">Harga / Satuan</th>
                             <th className="py-2.5 px-3 text-right">Subtotal</th>
                           </>
                         )}
+                        {type === "products" && (
+                          <>
+                            <th className="py-2.5 px-3">Barang / Produk</th>
+                            <th className="py-2.5 px-3">Kategori</th>
+                            <th className="py-2.5 px-3">Satuan</th>
+                            <th className="py-2.5 px-3 text-right">Stok Roll & Qty</th>
+                            <th className="py-2.5 px-3 text-right">Harga Beli</th>
+                            <th className="py-2.5 px-3 text-right">Harga Jual</th>
+                          </>
+                        )}
                         {type === "categories" && (
                           <>
+                            <th className="py-2.5 px-3">Nama Kategori</th>
+                            <th className="py-2.5 px-3">Satuan Utama / Roll</th>
                             <th className="py-2.5 px-3 text-right">Harga Modal</th>
                             <th className="py-2.5 px-3 text-right">Harga Jual</th>
+                          </>
+                        )}
+                        {type === "suppliers" && (
+                          <>
+                            <th className="py-2.5 px-3">Nama Supplier</th>
+                            <th className="py-2.5 px-3">Kontak Person</th>
+                            <th className="py-2.5 px-3">No. Telepon</th>
+                            <th className="py-2.5 px-3">Alamat</th>
+                          </>
+                        )}
+                        {type === "customers" && (
+                          <>
+                            <th className="py-2.5 px-3">Nama Pelanggan</th>
+                            <th className="py-2.5 px-3">No. Telepon</th>
+                            <th className="py-2.5 px-3">Alamat</th>
                           </>
                         )}
                         <th className="py-2.5 px-3 min-w-[200px]">Keterangan Validasi</th>
@@ -506,84 +529,153 @@ export function ExcelImportModal({
                                       </span>
                                     )}
                                   </td>
-                                </>
-                              )}
-
-                              {/* Kategori Column */}
-                              <td className="py-2 px-3 whitespace-nowrap">
-                                {r.categoryStatus === "not_found" ? (
-                                  <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                                    <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                    {r.categoryName || "(Kosong)"}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-semibold bg-violet-50 text-violet-700 border border-violet-100">
-                                    {r.categoryName}
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Produk / Nama */}
-                              <td className="py-2 px-3">
-                                {type === "categories" ? (
-                                  <span className="font-semibold text-slate-800">
-                                    {r.primaryUnit} / {r.secondaryUnit}
-                                  </span>
-                                ) : (
-                                  <div>
-                                    <span className="font-semibold text-slate-900">{r.productName || r.name}</span>
-                                    {r.productExists === false && (
-                                      <span className="ml-1.5 text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                        Barang Baru
+                                  <td className="py-2 px-3 whitespace-nowrap">
+                                    {r.categoryStatus === "not_found" ? (
+                                      <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                        <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                        {r.categoryName || r.name || "(Kosong)"}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                                        {r.categoryName || r.name}
                                       </span>
                                     )}
-                                    {r.barcode && (
-                                      <div className="text-[10px] text-slate-400 font-mono">{r.barcode}</div>
-                                    )}
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* Roll & Qty / Meters */}
-                              {type !== "categories" && (
-                                <>
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <div>
+                                      <span className="font-semibold text-slate-900">{r.productName || r.name}</span>
+                                      {r.productExists === false && (
+                                        <span className="ml-1.5 text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                          Barang Baru
+                                        </span>
+                                      )}
+                                      {r.barcode && (
+                                        <div className="text-[10px] text-slate-400 font-mono">{r.barcode}</div>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td className="py-2 px-3 text-right whitespace-nowrap">
                                     <div className="font-bold text-slate-800">
-                                      {r.meters?.toLocaleString("id-ID") ?? r.meterStock?.toLocaleString("id-ID") ?? 0}{" "}
+                                      {r.meters?.toLocaleString("id-ID") ?? 0}{" "}
                                       <span className="text-[10px] font-normal text-slate-500">{r.unit}</span>
                                     </div>
                                     <div className="text-[10px] text-slate-400">
-                                      {r.rolls ?? r.rollStock ?? 0} Roll
+                                      {r.rolls ?? 0} Roll
                                     </div>
                                   </td>
-
-                                  {/* Harga */}
                                   <td className="py-2 px-3 text-right whitespace-nowrap">
-                                    {(r.pricePerMeter === 0 || r.costPrice === 0) ? (
+                                    {r.pricePerMeter === 0 ? (
                                       <span className="font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
                                         Rp 0
                                       </span>
                                     ) : (
                                       <span className="font-semibold text-slate-800">
-                                        Rp {(r.pricePerMeter ?? r.costPrice ?? 0).toLocaleString("id-ID")}
+                                        Rp {(r.pricePerMeter ?? 0).toLocaleString("id-ID")}
                                       </span>
                                     )}
                                   </td>
-
-                                  {/* Subtotal */}
                                   <td className="py-2 px-3 text-right whitespace-nowrap font-bold text-slate-900">
                                     Rp {(r.subtotal ?? 0).toLocaleString("id-ID")}
                                   </td>
                                 </>
                               )}
 
-                              {type === "categories" && (
+                              {type === "products" && (
                                 <>
-                                  <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">
-                                    Rp {(r.costPricePerMeter ?? 0).toLocaleString("id-ID")}
+                                  <td className="py-2 px-3">
+                                    <div>
+                                      <span className="font-semibold text-slate-900">{r.name || r.productName}</span>
+                                      {r.productExists === false && (
+                                        <span className="ml-1.5 text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                          Barang Baru
+                                        </span>
+                                      )}
+                                      {r.barcode && (
+                                        <div className="text-[10px] text-slate-400 font-mono">{r.barcode}</div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap">
+                                    {r.categoryStatus === "not_found" ? (
+                                      <span className="inline-flex items-center gap-1 font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                        <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                        {r.categoryName || r.name || "(Kosong)"}
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-semibold bg-violet-50 text-violet-700 border border-violet-100">
+                                        {r.categoryName || r.name}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap">
+                                    <span className="font-medium text-slate-700">{r.unit}</span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right whitespace-nowrap">
+                                    <div className="font-bold text-slate-800">
+                                      {r.meterStock?.toLocaleString("id-ID") ?? 0}{" "}
+                                      <span className="text-[10px] font-normal text-slate-500">{r.unit}</span>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400">
+                                      {r.rollStock ?? 0} Roll
+                                    </div>
                                   </td>
                                   <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">
+                                    Rp {(r.costPrice ?? 0).toLocaleString("id-ID")}
+                                  </td>
+                                  <td className="py-2 px-3 text-right whitespace-nowrap font-semibold">
+                                    Rp {(r.sellPrice ?? 0).toLocaleString("id-ID")}
+                                  </td>
+                                </>
+                              )}
+
+                              {type === "categories" && (
+                                <>
+                                  <td className="py-2 px-3 whitespace-nowrap">
+                                    <span className="font-bold text-slate-900 text-sm">
+                                      {r.categoryName || r.name}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap">
+                                    <span className="font-semibold text-violet-700 bg-violet-50 px-2.5 py-1 rounded-lg border border-violet-200">
+                                      {r.primaryUnit} / {r.secondaryUnit}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right whitespace-nowrap font-semibold text-slate-800">
+                                    Rp {(r.costPricePerMeter ?? 0).toLocaleString("id-ID")}
+                                  </td>
+                                  <td className="py-2 px-3 text-right whitespace-nowrap font-semibold text-slate-800">
                                     Rp {(r.pricePerMeter ?? 0).toLocaleString("id-ID")}
+                                  </td>
+                                </>
+                              )}
+
+                              {type === "suppliers" && (
+                                <>
+                                  <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-900">
+                                    {r.name}
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap text-slate-700">
+                                    {r.contactPerson || "-"}
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap text-slate-700">
+                                    {r.phone || "-"}
+                                  </td>
+                                  <td className="py-2 px-3 text-slate-500">
+                                    {r.address || "-"}
+                                  </td>
+                                </>
+                              )}
+
+                              {type === "customers" && (
+                                <>
+                                  <td className="py-2 px-3 whitespace-nowrap font-bold text-slate-900">
+                                    {r.name}
+                                  </td>
+                                  <td className="py-2 px-3 whitespace-nowrap text-slate-700">
+                                    {r.phone || "-"}
+                                  </td>
+                                  <td className="py-2 px-3 text-slate-500">
+                                    {r.address || "-"}
                                   </td>
                                 </>
                               )}

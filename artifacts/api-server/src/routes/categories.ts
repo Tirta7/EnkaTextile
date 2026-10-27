@@ -216,14 +216,18 @@ router.post("/categories/preview-import", async (req, res): Promise<void> => {
       if (costPricePerMeter === 0 || pricePerMeter === 0) zeroPriceItemsCount++;
 
       const warnings: string[] = [];
+      const notes: string[] = [];
       if (costPricePerMeter === 0) warnings.push("Harga Beli (Modal) Rp 0");
       if (pricePerMeter === 0) warnings.push("Harga Jual Rp 0");
-      if (existing) warnings.push(`Kategori sudah ada ("${existing.name}") — harga & satuan akan diperbarui`);
-      else warnings.push("Kategori baru");
+      if (existing) notes.push(`Kategori sudah ada ("${existing.name}") — harga & satuan akan diperbarui`);
+      else notes.push("Kategori baru");
+
+      const rowStatus: "ready" | "warning" = warnings.length > 0 ? "warning" : "ready";
 
       previewRows.push({
         rowNumber: rowIndex,
         name,
+        categoryName: name,
         primaryUnit,
         secondaryUnit,
         costPricePerMeter,
@@ -233,8 +237,8 @@ router.post("/categories/preview-import", async (req, res): Promise<void> => {
         description,
         isExisting: !!existing,
         matchedName: existing?.name,
-        status: warnings.length > 0 ? "warning" : "ready",
-        keterangan: warnings
+        status: rowStatus,
+        keterangan: [...warnings, ...notes]
       });
     }
 

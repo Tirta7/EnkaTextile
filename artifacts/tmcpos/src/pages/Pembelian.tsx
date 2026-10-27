@@ -16,7 +16,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle, RotateCcw, Download, Upload, FileSpreadsheet, X as XIcon, Save } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingBag, PlusCircle, CheckCircle2, Clock, AlertCircle, ArrowRightCircle, RotateCcw, Download, Upload, FileSpreadsheet, X as XIcon, Save, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
@@ -368,9 +368,12 @@ export default function Pembelian() {
     dateTo,
   );
 
+  const zeroPricePurchasesCount = purchases?.filter(p => Number(p.totalAmount) === 0).length || 0;
+
   const tabFiltered = filtered.filter(p => {
+    if (activeTab === ("perlu_perhatian" as any)) return Number(p.totalAmount) === 0;
     if (activeTab === "semua") return true;
-    if (activeTab === "kredit") return p.status === "unpaid";
+    if (activeTab === "kredit") return p.status === "unpaid" || p.paymentType === "kredit";
     return p.status === activeTab;
   });
 
@@ -391,6 +394,38 @@ export default function Pembelian() {
             <Plus className="mr-2 h-4 w-4" /> Baru
           </Button>
         </div>
+
+        {/* Banner Peringatan Kritis Jika Ada Nota Pembelian Rp 0 */}
+        {zeroPricePurchasesCount > 0 && (
+          <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3 text-rose-900">
+              <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center shrink-0 text-rose-600 shadow-2xs">
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="font-bold text-xs flex items-center gap-1.5">
+                  <span>🚨 Peringatan Keuangan: Hutang Belum Tercatat</span>
+                  <span className="bg-rose-200 text-rose-800 text-[9px] font-black px-1.5 py-0.2 rounded-full">
+                    {zeroPricePurchasesCount} Nota
+                  </span>
+                </div>
+                <div className="text-[11px] text-rose-700 mt-0.5">
+                  Ditemukan <strong>{zeroPricePurchasesCount} faktur pembelian</strong> dengan nilai total <strong>Rp 0</strong> padahal barang sudah masuk gudang. Kewajiban hutang ke supplier belum terbentuk di sistem.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab("perlu_perhatian" as any);
+                setCurrentPage(1);
+              }}
+              className="text-[11px] font-bold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-xl shrink-0 transition-colors shadow-xs self-start sm:self-auto"
+            >
+              Filter {zeroPricePurchasesCount} Nota Perlu Diperbaiki
+            </button>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-3 border-b border-slate-200">
           {(['semua', 'lunas', 'kredit', 'partial'] as const).map((tab) => (
@@ -400,6 +435,16 @@ export default function Pembelian() {
               {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-violet-600" />}
             </button>
           ))}
+          {zeroPricePurchasesCount > 0 && (
+            <button
+              onClick={() => { setActiveTab("perlu_perhatian" as any); setCurrentPage(1); }}
+              className={`pb-2.5 text-sm font-bold whitespace-nowrap transition-colors relative flex items-center gap-1.5 ${activeTab === ("perlu_perhatian" as any) ? 'text-rose-600' : 'text-rose-500 hover:text-rose-700'}`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5 animate-pulse text-rose-500" />
+              <span>Perlu Perhatian ({zeroPricePurchasesCount})</span>
+              {activeTab === ("perlu_perhatian" as any) && <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full bg-rose-600" />}
+            </button>
+          )}
         </div>
         {/* Filter */}
         <div className="flex gap-3">
@@ -472,22 +517,65 @@ export default function Pembelian() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {tabFiltered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                    const isZeroTotal = Number(p.totalAmount) === 0;
+                    const isKreditZero = isZeroTotal && p.paymentType === 'kredit';
                     let badgeBg = "bg-green-100 text-green-700";
-                    if (p.status === 'kredit') badgeBg = "bg-amber-100 text-amber-700";
-                    else if (p.status === 'partial') badgeBg = "bg-blue-100 text-blue-700";
-                    else if (p.status === 'cancelled') badgeBg = "bg-rose-100 text-rose-700";
+                    if (isZeroTotal) {
+                      badgeBg = "bg-rose-100 text-rose-700 border border-rose-300 animate-pulse";
+                    } else if (p.status === 'kredit' || p.paymentType === 'kredit') {
+                      badgeBg = "bg-amber-100 text-amber-700";
+                    } else if (p.status === 'partial') {
+                      badgeBg = "bg-blue-100 text-blue-700";
+                    } else if (p.status === 'cancelled') {
+                      badgeBg = "bg-rose-100 text-rose-700";
+                    }
                     const kurang = p.totalAmount - (p.paidAmount || 0);
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={p.id}
+                        className={`transition-colors ${
+                          isZeroTotal
+                            ? 'bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-l-rose-500'
+                            : 'hover:bg-slate-50/80'
+                        }`}
+                      >
                         <td className="py-2.5 px-3 text-xs text-slate-400 font-mono whitespace-nowrap">{(currentPage - 1) * 20 + idx + 1}</td>
                         <td className="py-2.5 px-3 text-xs text-slate-600 whitespace-nowrap">{formatDate(p.createdAt)}</td>
                         <td className="py-2.5 px-3 text-xs font-mono text-slate-500 whitespace-nowrap">{p.invoiceNumber}</td>
                         <td className="py-2.5 px-3 font-semibold text-slate-800 whitespace-nowrap">{(p as any).supplierName || "Supplier Umum"}</td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeBg}`}>{p.status}</span>
+                          {isZeroTotal ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-300 animate-pulse" title="Harga nota belum diisi, hutang/modal belum terbentuk">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />
+                              {isKreditZero ? "Hutang Rp 0" : "Harga Rp 0"}
+                            </span>
+                          ) : (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${badgeBg}`}>{p.status}</span>
+                          )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-bold text-slate-800 whitespace-nowrap">{formatRupiah(p.totalAmount)}</td>
-                        <td className={`py-2.5 px-3 text-right font-bold ${kurang > 0 ? 'text-amber-600' : 'text-slate-300'}`}>{kurang > 0 ? formatRupiah(kurang) : '—'}</td>
+                        <td className="py-2.5 px-3 text-right font-bold whitespace-nowrap">
+                          {isZeroTotal ? (
+                            <div className="inline-flex flex-col items-end">
+                              <span className="text-xs font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                                Rp 0
+                              </span>
+                              <span className="text-[9px] text-rose-500 font-bold">⚠️ Belum Ada Harga</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-800">{formatRupiah(p.totalAmount)}</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-bold whitespace-nowrap">
+                          {isZeroTotal ? (
+                            <span className="text-xs font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                              ⚠️ Belum Diset
+                            </span>
+                          ) : kurang > 0 ? (
+                            <span className="text-amber-600">{formatRupiah(kurang)}</span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-3 text-center whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5">
                             <button className="w-7 h-7 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 flex items-center justify-center transition-colors" title="Lihat Detail" onClick={() => setViewDetailId(p.id)}>

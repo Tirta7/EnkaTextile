@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { formatRupiah, formatDate } from "@/lib/utils";
-import { CheckCircle2, Clock, AlertCircle, ShoppingBag, Package, Calendar } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, ShoppingBag, Package, Calendar, AlertTriangle } from "lucide-react";
 
 interface PurchaseDetailModalProps {
   purchaseId: number | null;
@@ -22,11 +22,16 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
 
   if (!isOpen) return null;
 
+  const isZeroTotal = purchase ? Number(purchase.totalAmount) === 0 : false;
   let StatusIcon = CheckCircle2;
   let iconColor = "text-green-500";
   let badgeBg = "bg-green-100 text-green-700";
 
-  if (purchase?.status === 'kredit') {
+  if (isZeroTotal) {
+    StatusIcon = AlertTriangle;
+    iconColor = "text-rose-500";
+    badgeBg = "bg-rose-100 text-rose-700 border border-rose-300 animate-pulse";
+  } else if (purchase?.status === 'kredit' || purchase?.paymentType === 'kredit') {
     StatusIcon = Clock;
     iconColor = "text-amber-500";
     badgeBg = "bg-amber-100 text-amber-700";
@@ -53,8 +58,13 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
               )}
             </div>
             {purchase && (
-              <Badge className={`${badgeBg} uppercase tracking-wider text-[10px] px-2 py-0.5 border-0 font-bold`}>
-                {purchase.status}
+              <Badge className={`${badgeBg} uppercase tracking-wider text-[10px] px-2.5 py-1 border font-bold flex items-center gap-1`}>
+                <StatusIcon className="w-3 h-3" />
+                {isZeroTotal
+                  ? purchase.paymentType === 'kredit'
+                    ? "Hutang Tidak Tercatat (Rp 0)"
+                    : "Harga Belum Diisi (Rp 0)"
+                  : purchase.status}
               </Badge>
             )}
           </div>
@@ -91,6 +101,27 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                   </div>
                 )}
               </div>
+
+              {/* Alert Box jika total nota Rp 0 */}
+              {isZeroTotal && (
+                <div className="bg-rose-50 border-2 border-rose-200 rounded-xl p-4 flex items-start gap-3 shadow-xs">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center shrink-0 text-rose-600 mt-0.5">
+                    <AlertTriangle className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-xs text-rose-900 flex items-center gap-1.5">
+                      <span>Peringatan Bahaya Keuangan: Transaksi {purchase.paymentType === 'kredit' ? 'Kredit Tanpa Nilai Hutang' : 'Bernilai Rp 0'}</span>
+                    </div>
+                    <p className="text-[11px] text-rose-700 leading-relaxed">
+                      Barang fisik pada faktur ini sudah masuk ke stok gudang, namun harga beli tercatat <strong>Rp 0</strong>.
+                      {purchase.paymentType === 'kredit' ? (
+                        <> Akibatnya, <strong>kewajiban hutang toko kepada {purchase.supplierName || 'supplier'} tidak terbentuk di menu Hutang</strong>.</>
+                      ) : null}
+                      {' '}Harap segera periksa nota fisik dari supplier dan lengkapi harga modal barang agar pembukuan kas & hutang akurat.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Tabel Item */}
               <div>
@@ -130,12 +161,22 @@ export function PurchaseDetailModal({ purchaseId, isOpen, onClose }: PurchaseDet
                           <div className="col-span-4 md:col-span-2 flex flex-col text-right">
                             <span className="text-[10px] text-slate-400 md:hidden uppercase font-semibold">Qty</span>
                             <span className="font-semibold text-slate-700">{Number(item.meters)}</span>
-                            <span className="text-[10px] text-slate-500">@ {formatRupiah(item.pricePerMeter)}</span>
+                            {Number(item.pricePerMeter) === 0 ? (
+                              <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200 mt-0.5">
+                                @ Rp 0 (Belum diset)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-500">@ {formatRupiah(item.pricePerMeter)}</span>
+                            )}
                           </div>
                           
                           <div className="col-span-4 md:col-span-3 flex flex-col text-right">
                             <span className="text-[10px] text-slate-400 md:hidden uppercase font-semibold">Subtotal</span>
-                            <span className="font-bold text-violet-700">{formatRupiah(item.subtotal)}</span>
+                            {Number(item.subtotal) === 0 ? (
+                              <span className="font-bold text-rose-600 text-xs">Rp 0 (Belum ada harga)</span>
+                            ) : (
+                              <span className="font-bold text-violet-700">{formatRupiah(item.subtotal)}</span>
+                            )}
                           </div>
                         </div>
                         

@@ -21,7 +21,7 @@ router.get("/categories", async (req, res) => {
       costPricePerRoll: sql<number | null>`${categoriesTable.costPricePerRoll}::numeric`.as("cost_price_per_roll"),
       pricePerRoll: sql<number | null>`${categoriesTable.pricePerRoll}::numeric`.as("price_per_roll"),
       createdAt: categoriesTable.createdAt,
-      productCount: sql<number>`(select count(*) from ${productsTable} where ${productsTable.categoryId} = ${categoriesTable.id})`.as("product_count"),
+      productCount: sql<number>`coalesce((select count(*) from ${productsTable} where ${productsTable.categoryId} = ${categoriesTable.id}), 0)::integer`.as("product_count"),
     })
     .from(categoriesTable)
     .orderBy(categoriesTable.name);
@@ -42,7 +42,7 @@ router.get("/categories/export", async (req, res): Promise<void> => {
         pricePerMeter: sql<number>`coalesce(${categoriesTable.pricePerMeter}::numeric, 0)`.as("price_per_meter"),
         costPricePerRoll: sql<number | null>`${categoriesTable.costPricePerRoll}::numeric`.as("cost_price_per_roll"),
         pricePerRoll: sql<number | null>`${categoriesTable.pricePerRoll}::numeric`.as("price_per_roll"),
-        productCount: sql<number>`(select count(*) from ${productsTable} where ${productsTable.categoryId} = ${categoriesTable.id})`.as("product_count"),
+        productCount: sql<number>`coalesce((select count(*) from ${productsTable} where ${productsTable.categoryId} = ${categoriesTable.id}), 0)::integer`.as("product_count"),
       })
       .from(categoriesTable)
       .orderBy(categoriesTable.name);

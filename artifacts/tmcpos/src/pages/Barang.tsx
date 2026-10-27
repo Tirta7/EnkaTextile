@@ -182,6 +182,9 @@ export default function Barang() {
             description: `${data.success} berhasil (${data.meterCount ?? 0} Meter, ${data.yardCount ?? 0} Yard), ${data.failed} gagal.`
           });
           queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
+          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/products"] });
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -267,9 +270,6 @@ export default function Barang() {
   const baseProducts = products?.filter(p => selectedCategoryId === null ? true : p.categoryId === selectedCategoryId) || [];
   
   const filtered = baseProducts.filter(p => {
-    // If global and no filters applied, we return empty so the "Pilih Kategori" placeholder shows
-    if (selectedCategoryId === null && !showLowStock && !search && unitFilter === "ALL") return false;
-    
     if (unitFilter === "METER" && isYardProd(p.primaryUnit)) return false;
     if (unitFilter === "YARD" && !isYardProd(p.primaryUnit)) return false;
 
@@ -279,7 +279,7 @@ export default function Barang() {
   });
 
   // Calculate summary based on current category (or global if null)
-  const summaryProducts = (selectedCategoryId === null && !showLowStock && !search && unitFilter === "ALL") ? baseProducts : filtered;
+  const summaryProducts = filtered;
   const lowStockCount = baseProducts.filter(p => p.isLowStock).length;
 
   const meterTotal = summaryProducts
@@ -477,15 +477,7 @@ export default function Barang() {
 
       {/* List Area */}
       <div>
-        {selectedCategoryId === null && !search && !showLowStock ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-              <Package className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-base font-bold text-slate-700">Pilih Kategori</h3>
-            <p className="text-sm text-slate-400 mt-1">Pilih kategori di atas untuk melihat barang.</p>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="space-y-2 p-1">
             {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
           </div>
@@ -495,7 +487,13 @@ export default function Barang() {
               <Package className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
             </div>
             <h3 className="text-base font-bold text-slate-700">Tidak ada barang</h3>
-            <p className="text-sm text-slate-400 mt-1">Kata kunci tidak cocok atau kategori kosong.</p>
+            <p className="text-sm text-slate-400 mt-1">
+              {search
+                ? "Kata kunci tidak cocok."
+                : selectedCategoryId !== null
+                ? "Kategori ini belum memiliki barang."
+                : "Belum ada data barang."}
+            </p>
           </div>
         ) : (
           <>

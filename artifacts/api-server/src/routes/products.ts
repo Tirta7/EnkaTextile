@@ -5,6 +5,7 @@ import { eq, ilike, and, lte, sql, inArray, desc } from "drizzle-orm";
 import { CreateProductBody, UpdateProductBody, CreateProductRollBody, UpdateProductRollBody } from "@workspace/api-zod";
 import { pushService } from "../lib/push";
 import * as XLSX from "xlsx";
+import { broadcastRefresh } from "../lib/websocket";
 
 const router = Router();
 
@@ -640,6 +641,8 @@ router.post("/products/import", async (req, res): Promise<void> => {
       }
     }
 
+    broadcastRefresh();
+
     res.json({
       success: successCount,
       failed: errors.length,
@@ -692,6 +695,8 @@ router.post("/products", async (req, res): Promise<void> => {
       await db.insert(productRollsTable).values(rollsToInsert);
     }
     
+    broadcastRefresh();
+
   res.status(201).json({
     ...prod,
     costPricePerMeter: parseFloat(prod.costPricePerMeter ?? "0"),
@@ -836,6 +841,8 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
     console.error("Failed to send push notification:", err);
   }
 
+  broadcastRefresh();
+
   res.json({
     ...prod,
     costPricePerMeter: parseFloat(prod.costPricePerMeter ?? "0"),
@@ -854,6 +861,7 @@ router.delete("/products/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await db.delete(productsTable).where(eq(productsTable.id, id));
+    broadcastRefresh();
     res.status(204).send();
   } catch (error: any) {
     res.status(400).json({ error: "Gagal menghapus barang. Pastikan barang tidak memiliki riwayat transaksi/mutasi." });

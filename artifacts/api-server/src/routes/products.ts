@@ -315,6 +315,342 @@ router.get("/products/export", async (req, res): Promise<void> => {
   }
 });
 
+// ─── POST /products/preview-import ───────────────────────────────────────────
+router.post("/products/preview-import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" }); return;
+    }
+
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_f, file) => {
+        fileReceived = true;
+        file.on("data", (c: Buffer) => chunks.push(c));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan" }); return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+
+    const hasProductCol = (row: any) => {
+      if (!row) return false;
+      const keys = Object.keys(row).map(k => k.toLowerCase().trim());
+      return keys.some(k =>
+        k.includes("nama barang") ||
+        k.includes("produk / barang") ||
+        k.includes("produk") ||
+        k.includes("nama produk") ||
+        k === "barang" ||
+        k === "item" ||
+        k === "nama"
+      );
+    };
+
+    const allSheetNames = wb.SheetNames;
+    const combinedSheet = allSheetNames.find(n => {
+      const l = n.toLowerCase().trim();
+      return l === "semua barang" || l === "semua" || l === "all" || l === "all products";
+    });
+
+    let sheetsToProcess: string[] = [];
+    if (combinedSheet) {
+      sheetsToProcess = [combinedSheet];
+    } else {
+      sheetsToProcess = allSheetNames.filter(name => {
+        const s = wb.Sheets[name];
+        if (!s) return false;
+        const sampleRows: any[] = XLSX.utils.sheet_to_json(s, { defval: "" });
+        return sampleRows.length > 0 && hasProductCol(sampleRows[0]);
+      });
+      if (sheetsToProcess.length === 0 && allSheetNames.length > 0) {
+        sheetsToProcess = [allSheetNames[0]];
+      }
+    }
+
+    const allCategories = await db.select().from(categoriesTable);
+    const allProducts = await db.select().from(productsTable);
+
+    function cleanStr(s: string): string {
+      return (s || "")
+        .toLowerCase()
+        .replace(/[_\-\.\,\/\(\)\[\]\+]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function levenshteinDistance(a: string, b: string): number {
+      if (a === b) return 0;
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      const matrix: number[][] = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    function isSimilarName(nameA: string, nameB: string): boolean {
+      const a = cleanStr(nameA);
+      const b = cleanStr(nameB);
+      if (!a || !b) return false;
+      if (a === b) return true;
+      const aNoSpace = a.replace(/\s/g, "");
+      const bNoSpace = b.replace(/\s/g, "");
+      if (aNoSpace === bNoSpace) return true;
+      const aWords = a.split(" ").sort().join(" ");
+      const bWords = b.split(" ").sort().join(" ");
+      if (aWords === bWords) return true;
+      const maxLen = Math.max(a.length, b.length);
+      const dist = levenshteinDistance(a, b);
+      if (maxLen > 7 && dist <= 2) return true;
+      if (maxLen >= 5 && dist <= 1) return true;
+      return false;
+    }
+
+    const findCategory = (name: string): { category: any | null; status: "exact" | "fuzzy" | "not_found" } => {
+      const n = name?.trim();
+      if (!n) return { category: null, status: "not_found" };
+      const exact = allCategories.find(c => c.name.toLowerCase() === n.toLowerCase());
+      if (exact) return { category: exact, status: "exact" };
+      const fuzzy = allCategories.find(c => cleanStr(c.name) === cleanStr(n) || isSimilarName(c.name, n));
+      if (fuzzy) return { category: fuzzy, status: "fuzzy" };
+      return { category: null, status: "not_found" };
+    };
+
+    const findProduct = (name: string, barcode?: string, targetCategoryId?: number | null) => {
+      const bc = barcode?.trim();
+      if (bc) {
+        const byBc = allProducts.find(p => p.barcode && p.barcode.toLowerCase() === bc.toLowerCase());
+        if (byBc) return byBc;
+      }
+      const rawName = name?.trim();
+      if (!rawName) return undefined;
+      const nLower = rawName.toLowerCase();
+      const exact = allProducts.find(p => p.name.toLowerCase() === nLower);
+      if (exact) return exact;
+      const cleanInput = cleanStr(rawName);
+      const cleanMatch = allProducts.find(p => cleanStr(p.name) === cleanInput);
+      if (cleanMatch) return cleanMatch;
+      if (targetCategoryId) {
+        const catProducts = allProducts.filter(p => p.categoryId === targetCategoryId);
+        const fuzzyInCat = catProducts.find(p => isSimilarName(p.name, rawName));
+        if (fuzzyInCat) return fuzzyInCat;
+      }
+      const fuzzyGlobal = allProducts.find(p => isSimilarName(p.name, rawName));
+      if (fuzzyGlobal) return fuzzyGlobal;
+      return undefined;
+    };
+
+    const getVal = (row: any, ...keys: string[]) => {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          return row[k];
+        }
+      }
+      const rowKeys = Object.keys(row);
+      for (const k of keys) {
+        const found = rowKeys.find(rk => rk.toLowerCase().trim() === k.toLowerCase().trim());
+        if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== "") {
+          return row[found];
+        }
+      }
+      return "";
+    };
+
+    const previewRows: any[] = [];
+    const processedBarcodesOrNames = new Set<string>();
+
+    let newProductsCount = 0;
+    let existingProductsCount = 0;
+    let unknownCategoriesCount = 0;
+    let zeroPriceItemsCount = 0;
+    let totalMetersSum = 0;
+    let totalRollsSum = 0;
+
+    let rowIndex = 0;
+    for (const sheetName of sheetsToProcess) {
+      const ws = wb.Sheets[sheetName];
+      if (!ws) continue;
+      const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      if (rawRows.length === 0) continue;
+
+      const sheetLower = sheetName.toLowerCase().trim();
+      const sheetDefaultUnit: "YARD" | "METER" | null =
+        sheetLower.includes("yard") || sheetLower.includes("yd")
+          ? "YARD"
+          : sheetLower.includes("meter") || sheetLower.includes("mtr")
+          ? "METER"
+          : null;
+
+      for (const row of rawRows) {
+        rowIndex++;
+        const name = String(getVal(row, "Nama Barang", "Produk / Barang", "Produk", "Nama Produk", "Barang", "Item", "Nama") || "").trim();
+        if (!name) continue;
+
+        const rawBarcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim();
+        const dedupeKey = rawBarcode ? `bc:${rawBarcode}` : `name:${name.toLowerCase()}`;
+        if (processedBarcodesOrNames.has(dedupeKey)) continue;
+        processedBarcodesOrNames.add(dedupeKey);
+
+        const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
+        const catCheck = catName ? findCategory(catName) : { category: null, status: "not_found" as const };
+
+        const existingProd = findProduct(name, rawBarcode, catCheck.category?.id);
+
+        const rawUnit = String(getVal(row, "Satuan", "Unit 1", "Satuan 1", "Unit", "Jenis Satuan", "Satuan Barang") || "").trim().toLowerCase();
+        let unit = "METER";
+        if (rawUnit.includes("yard") || rawUnit.includes("yd") || rawUnit.includes("yds") || rawUnit.startsWith("yar")) {
+          unit = "YARD";
+        } else if (rawUnit.includes("meter") || rawUnit.includes("mtr") || rawUnit === "m") {
+          unit = "METER";
+        } else if (rawUnit.includes("kg") || rawUnit.includes("kilogram")) {
+          unit = "KG";
+        } else if (sheetDefaultUnit) {
+          unit = sheetDefaultUnit;
+        } else if (existingProd?.primaryUnit) {
+          unit = existingProd.primaryUnit;
+        } else if (catCheck.category?.primaryUnit) {
+          unit = catCheck.category.primaryUnit;
+        }
+
+        const isYard = isYardUnit(unit);
+
+        let rollLengths: number[] = [];
+        for (const key of Object.keys(row)) {
+          if (key.startsWith("Roll ") && key !== "Roll") {
+            const val = parseFloat(String(row[key]).replace(",", "."));
+            if (!isNaN(val) && val > 0) {
+              const rollIndexStr = key.replace("Roll ", "").trim();
+              const rollIdx = parseInt(rollIndexStr, 10);
+              if (!isNaN(rollIdx) && rollIdx > 0) rollLengths[rollIdx - 1] = val;
+            }
+          }
+        }
+        const cleanRollLengths = rollLengths.filter(r => r !== undefined);
+
+        let rawRolls = parseFloat(String(getVal(row, "Roll", "Stok Roll", "Jumlah Roll", "Stok (Roll)") || "0").replace(",", ".")) || 0;
+        if (rawRolls === 0 && cleanRollLengths.length > 0) rawRolls = cleanRollLengths.length;
+
+        let rawMeters = 0;
+        if (isYard) {
+          rawMeters = parseFloat(String(getVal(row, "Stok (Yard)", "Yard", "Stok Yard", "Meter/Yard", "Qty (YARD)", "Panjang (Yard)", "Total Yard") || "0").replace(",", ".")) || 0;
+        } else {
+          rawMeters = parseFloat(String(getVal(row, "Stok (Meter)", "Meter", "Stok Meter", "Meter/Yard", "Qty (METER)", "Panjang (Meter)", "Total Meter", "Panjang (M)") || "0").replace(",", ".")) || 0;
+        }
+        let metersCalculated = false;
+        if (rawMeters === 0 && cleanRollLengths.length > 0) {
+          rawMeters = cleanRollLengths.reduce((a, b) => a + b, 0);
+          metersCalculated = true;
+        }
+
+        let costPrice = 0;
+        let sellPrice = 0;
+        if (isYard) {
+          costPrice = parseFloat(String(getVal(row, "Harga Beli (Yard)", "Harga / Yard", "Harga Beli / Yard", "Harga Beli", "Harga Modal") || "0").replace(",", ".")) || 0;
+          sellPrice = parseFloat(String(getVal(row, "Harga Jual (Yard)", "Harga Jual / Yard", "Harga Jual", "Harga") || "0").replace(",", ".")) || 0;
+        } else {
+          costPrice = parseFloat(String(getVal(row, "Harga Beli (Meter)", "Harga / Meter", "Harga Beli / Meter", "Harga Beli (M)", "Harga Beli", "Harga Modal") || "0").replace(",", ".")) || 0;
+          sellPrice = parseFloat(String(getVal(row, "Harga Jual (Meter)", "Harga Jual / Meter", "Harga Jual (M)", "Harga Jual", "Harga") || "0").replace(",", ".")) || 0;
+        }
+
+        if (costPrice === 0 && catCheck.category?.costPricePerMeter) costPrice = parseFloat(String(catCheck.category.costPricePerMeter)) || 0;
+        if (sellPrice === 0 && catCheck.category?.pricePerMeter) sellPrice = parseFloat(String(catCheck.category.pricePerMeter)) || 0;
+
+        if (existingProd) existingProductsCount++;
+        else newProductsCount++;
+
+        if (catName && catCheck.status === "not_found") unknownCategoriesCount++;
+        if (costPrice === 0 || sellPrice === 0) zeroPriceItemsCount++;
+
+        totalMetersSum += rawMeters;
+        totalRollsSum += rawRolls;
+
+        const warnings: string[] = [];
+        const errors: string[] = [];
+
+        if (catName && catCheck.status === "not_found") {
+          warnings.push(`Kategori "${catName}" tidak ada di Master Kategori (akan dibuat baru)`);
+        }
+        if (costPrice === 0) {
+          warnings.push("Harga Beli (Modal) Rp 0 / belum diisi");
+        }
+        if (sellPrice === 0) {
+          warnings.push("Harga Jual Rp 0 / belum diisi");
+        }
+        if (existingProd) {
+          warnings.push(`Barang sudah ada (${existingProd.name}) — stok dan harga akan diperbarui`);
+        } else {
+          warnings.push("Barang baru — akan didaftarkan ke Master Barang");
+        }
+        if (metersCalculated) {
+          warnings.push(`Panjang (${rawMeters.toLocaleString("id-ID")} ${unit}) dihitung otomatis dari akumulasi roll`);
+        }
+
+        let status: "ready" | "warning" | "error" = "ready";
+        if (errors.length > 0) status = "error";
+        else if (warnings.length > 0) status = "warning";
+
+        previewRows.push({
+          rowNumber: rowIndex,
+          sheetName,
+          name,
+          barcode: rawBarcode || (existingProd?.barcode ?? `PRD-AUTO`),
+          categoryName: catName || "-",
+          categoryStatus: catCheck.status,
+          matchedCategoryName: catCheck.category?.name,
+          unit,
+          rollStock: rawRolls,
+          meterStock: rawMeters,
+          costPrice,
+          sellPrice,
+          productExists: !!existingProd,
+          status,
+          keterangan: [...errors, ...warnings]
+        });
+      }
+    }
+
+    res.json({
+      summary: {
+        totalRows: previewRows.length,
+        newProducts: newProductsCount,
+        existingProducts: existingProductsCount,
+        unknownCategories: unknownCategoriesCount,
+        zeroPriceItems: zeroPriceItemsCount,
+        totalMeters: Math.round(totalMetersSum * 100) / 100,
+        totalRolls: Math.round(totalRollsSum * 100) / 100,
+      },
+      rows: previewRows
+    });
+  } catch (err: any) {
+    console.error("Preview products import error:", err);
+    res.status(500).json({ error: err.message || "Gagal memproses preview file Excel barang" });
+  }
+});
+
 // ─── POST /products/import ────────────────────────────────────────────────────
 router.post("/products/import", async (req, res): Promise<void> => {
   try {

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, Search, Users, User, MoreVertical, Download, Upload, FileSpreadsheet, X as XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ExcelImportModal } from "@/components/ExcelImportModal";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -378,153 +379,37 @@ export default function Pelanggan() {
         </DrawerContent>
       </Drawer>
 
-      {/* ─── Modal Import Pelanggan ─────────────────────────────────── */}
-      <Dialog
-        open={importOpen}
-        onOpenChange={(o) => {
-          if (!isImporting) {
-            setImportOpen(o);
-            if (!o) {
-              setImportFile(null);
-              setImportResult(null);
-            }
-          }
+      {/* ─── Modal Import Pelanggan with Interactive Preview ────────── */}
+      <ExcelImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: getListCustomersQueryKey({}) });
+          toast({ title: "Import Berhasil", description: "Data pelanggan telah berhasil diperbarui." });
         }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-900">
-              <FileSpreadsheet className="w-5 h-5 text-violet-600" />
-              Import Data Pelanggan dari Excel
-            </DialogTitle>
-          </DialogHeader>
-
-          {!importResult ? (
-            <div className="space-y-4">
-              <div className="bg-violet-50/70 border border-violet-100 rounded-xl p-3 text-xs text-violet-900 space-y-1.5">
-                <p className="font-semibold flex items-center gap-1.5 text-violet-800">
-                  📋 Panduan Format Excel:
-                </p>
-                <p className="text-slate-600">
-                  Gunakan file hasil <strong>Export</strong> sebagai backup & template data, atau buat file Excel baru dengan kolom berikut:
-                </p>
-                <ul className="list-disc ml-4 space-y-0.5 text-slate-600">
-                  <li><strong>Nama Pelanggan</strong> — wajib diisi</li>
-                  <li><strong>No. Telepon</strong> — nomor telepon / WhatsApp (opsional)</li>
-                  <li><strong>Alamat</strong> — alamat pelanggan (opsional)</li>
-                  <li><strong>Limit Kredit</strong> — batas plafon kredit/tempo dalam angka (opsional)</li>
-                </ul>
-                <p className="text-[11px] text-violet-700 pt-0.5">
-                  💡 <em>Pelanggan dengan nama yang sudah ada otomatis akan diperbarui datanya.</em>
-                </p>
-              </div>
-
-              {/* Upload Dropzone */}
-              <div
-                className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-violet-400 hover:bg-violet-50/20 transition-all"
-                onClick={() => importFileRef.current?.click()}
-              >
-                {importFile ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <FileSpreadsheet className="w-7 h-7 text-emerald-600 shrink-0" />
-                    <div className="text-left min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{importFile.name}</p>
-                      <p className="text-xs text-slate-400">{(importFile.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImportFile(null);
-                      }}
-                      className="ml-2 p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
-                    >
-                      <XIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload className="mx-auto w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-700">Klik untuk memilih file Excel</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Mendukung format .xlsx dan .xls (maks. 10MB)</p>
-                  </div>
-                )}
-                <input
-                  ref={importFileRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) setImportFile(f);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setImportOpen(false)}>
-                  Batal
-                </Button>
-                <Button
-                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-                  disabled={!importFile || isImporting}
-                  onClick={handleStartImport}
-                >
-                  {isImporting ? (
-                    <>
-                      <span className="h-3.5 w-3.5 mr-1.5 rounded-full border-2 border-white border-t-transparent animate-spin inline-block" />
-                      Mengimpor...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-1.5 h-3.5 w-3.5" />
-                      Mulai Import
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2.5">
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-black text-emerald-700">{importResult.created ?? 0}</p>
-                  <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Pelanggan Baru</p>
-                </div>
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-black text-blue-700">{importResult.updated ?? 0}</p>
-                  <p className="text-[11px] text-blue-600 font-semibold mt-0.5">Diperbarui</p>
-                </div>
-                <div className={`rounded-xl p-3 text-center border ${importResult.failed > 0 ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-                  <p className={`text-2xl font-black ${importResult.failed > 0 ? 'text-rose-700' : 'text-slate-500'}`}>{importResult.failed ?? 0}</p>
-                  <p className={`text-[11px] font-semibold mt-0.5 ${importResult.failed > 0 ? 'text-rose-600' : 'text-slate-400'}`}>Gagal / Error</p>
-                </div>
-              </div>
-
-              {importResult.errors && importResult.errors.length > 0 && (
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 max-h-32 overflow-y-auto space-y-1">
-                  <p className="text-xs font-bold text-rose-800">Detail Kendala:</p>
-                  {importResult.errors.map((err: string, idx: number) => (
-                    <p key={idx} className="text-[11px] text-rose-700">{err}</p>
-                  ))}
-                </div>
-              )}
-
-              <Button
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl"
-                onClick={() => {
-                  setImportOpen(false);
-                  setImportFile(null);
-                  setImportResult(null);
-                }}
-              >
-                Selesai
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        type="customers"
+        title="Import Data Pelanggan dari Excel"
+        previewUrl="/api/customers/preview-import"
+        importUrl="/api/customers/import"
+        descriptionNode={
+          <div className="bg-violet-50/70 border border-violet-100 rounded-xl p-4 text-xs text-violet-900 space-y-2">
+            <p className="font-bold flex items-center gap-1.5 text-violet-800 text-sm">
+              📋 Panduan Format File Excel Pelanggan:
+            </p>
+            <p className="text-slate-600">
+              Gunakan file hasil <strong>Export</strong> sebagai template data, atau buat file Excel baru dengan kolom berikut:
+            </p>
+            <ul className="list-disc ml-5 space-y-1 text-slate-700">
+              <li><strong>Nama Pelanggan</strong> — nama perorangan / toko (wajib diisi)</li>
+              <li><strong>No. Telepon</strong> — nomor telepon / WhatsApp (opsional)</li>
+              <li><strong>Alamat</strong> — alamat pelanggan (opsional)</li>
+            </ul>
+            <p className="text-[11px] text-violet-700 pt-1.5 border-t border-violet-200/60 font-medium">
+              💡 Sebelum disimpan, sistem akan menampilkan preview dan mengecek apakah pelanggan sudah terdaftar atau baru.
+            </p>
+          </div>
+        }
+      />
     </div>
   );
 }

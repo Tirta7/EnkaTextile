@@ -21,6 +21,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatRupiah, formatNumber } from "@/lib/utils";
 import { ProductRollsModal } from "@/components/ProductRollsModal";
+import { ExcelImportModal } from "@/components/ExcelImportModal";
 
 const API_BASE = window.location.origin;
 
@@ -56,6 +57,7 @@ export default function Barang() {
   const [viewRollsName, setViewRollsName] = useState<string>("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const isYardProd = (unit?: string | null) => {
     if (!unit) return false;
@@ -334,11 +336,10 @@ export default function Barang() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button onClick={() => document.getElementById("import-file-product")?.click()} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600">
+            <Button onClick={() => setIsImportModalOpen(true)} variant="outline" size="sm" className="h-8 px-2.5 rounded-xl text-xs font-semibold border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
               <PlusCircle className="h-3.5 w-3.5 sm:mr-1.5" />
               <span className="hidden sm:inline">Import</span>
             </Button>
-            <input type="file" id="import-file-product" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
             <Button onClick={openCreate} size="sm" className="h-8 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-xs font-bold shadow-sm">
               <Plus className="h-3.5 w-3.5 mr-1" /> Tambah
             </Button>
@@ -1058,6 +1059,40 @@ export default function Barang() {
         productName={viewRollsName} 
         isOpen={!!viewRollsId} 
         onClose={() => setViewRollsId(null)} 
+      />
+
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey({}) });
+          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+          toast({ title: "Import Berhasil", description: "Data barang telah berhasil diperbarui." });
+        }}
+        type="products"
+        title="Import Master Barang dari Excel"
+        previewUrl={`${API_BASE}/api/products/preview-import`}
+        importUrl={`${API_BASE}/api/products/import`}
+        descriptionNode={
+          <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 text-xs text-violet-900 space-y-2">
+            <p className="font-bold flex items-center gap-1.5 text-violet-800 text-sm">
+              📋 Format Import Master Barang:
+            </p>
+            <p className="text-slate-600">Gunakan file template hasil Export Excel (Semua, Meter, atau Yard), atau file dengan susunan kolom:</p>
+            <ul className="list-disc ml-5 space-y-1 text-slate-700">
+              <li><strong>Nama Barang</strong> / <strong>Produk</strong> — nama kain/motif</li>
+              <li><strong>Kategori</strong> — nama kategori (sesuai Master Kategori)</li>
+              <li><strong>Satuan</strong> — METER atau YARD</li>
+              <li><strong>Roll</strong>, <strong>Stok (Meter/Yard)</strong></li>
+              <li><strong>Harga Beli (Modal)</strong>, <strong>Harga Jual</strong></li>
+            </ul>
+            <p className="text-violet-700 text-[11px] pt-1.5 border-t border-violet-200/60 font-medium">
+              💡 Sistem akan memvalidasi apakah nama kategori cocok, apakah ada harga Rp 0, dan apakah produk sudah ada di database sebelum disimpan.
+            </p>
+          </div>
+        }
       />
     </div>
   );

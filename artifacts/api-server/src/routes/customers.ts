@@ -89,6 +89,125 @@ router.get("/customers/export", async (req, res): Promise<void> => {
   }
 });
 
+// ─── POST /customers/preview-import ─────────────────────────────────────────
+router.post("/customers/preview-import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" });
+      return;
+    }
+
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_f, file) => {
+        fileReceived = true;
+        file.on("data", (c: Buffer) => chunks.push(c));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan" });
+      return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    for (const name of wb.SheetNames) {
+      if (name.toLowerCase().includes("pelanggan") || name.toLowerCase().includes("customer")) {
+        ws = wb.Sheets[name];
+        break;
+      }
+    }
+
+    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    const getVal = (row: any, ...keys: string[]) => {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          return String(row[k]).trim();
+        }
+      }
+      const rowKeys = Object.keys(row);
+      for (const k of keys) {
+        const found = rowKeys.find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+        if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== "") {
+          return String(row[found]).trim();
+        }
+      }
+      return "";
+    };
+
+    if (rawRows.length === 0) {
+      res.json({
+        summary: { totalRows: 0, newCustomers: 0, existingCustomers: 0 },
+        rows: []
+      });
+      return;
+    }
+
+    const allCustomers = await db.select().from(customersTable);
+
+    const previewRows: any[] = [];
+    let newCustomersCount = 0;
+    let existingCustomersCount = 0;
+
+    let rowIndex = 0;
+    for (const row of rawRows) {
+      rowIndex++;
+      const name = getVal(row, "Nama Pelanggan", "Nama", "Pelanggan", "Customer", "Customer Name");
+      if (!name) continue;
+
+      const phone = getVal(row, "No. Telepon", "Telepon", "No Telepon", "No HP", "Phone", "Telp", "HP") || null;
+      const email = getVal(row, "Email", "E-mail") || null;
+      const address = getVal(row, "Alamat", "Address") || null;
+
+      const existing = allCustomers.find(c => c.name.toLowerCase() === name.toLowerCase());
+
+      if (existing) existingCustomersCount++;
+      else newCustomersCount++;
+
+      const warnings: string[] = [];
+      if (existing) warnings.push(`Pelanggan sudah ada ("${existing.name}") — data kontak akan diperbarui`);
+      else warnings.push("Pelanggan baru");
+
+      previewRows.push({
+        rowNumber: rowIndex,
+        name,
+        phone,
+        email,
+        address,
+        isExisting: !!existing,
+        status: warnings.length > 0 ? "warning" : "ready",
+        keterangan: warnings
+      });
+    }
+
+    res.json({
+      summary: {
+        totalRows: previewRows.length,
+        newCustomers: newCustomersCount,
+        existingCustomers: existingCustomersCount,
+      },
+      rows: previewRows
+    });
+  } catch (err: any) {
+    console.error("Preview customers import error:", err);
+    res.status(500).json({ error: err.message || "Gagal memproses preview file Excel pelanggan" });
+  }
+});
+
 // ─── POST /customers/import ─────────────────────────────────────────────────
 router.post("/customers/import", async (req, res): Promise<void> => {
   try {

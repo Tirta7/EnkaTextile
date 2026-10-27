@@ -93,6 +93,166 @@ router.get("/categories/export", async (req, res): Promise<void> => {
   }
 });
 
+// ─── POST /categories/preview-import ─────────────────────────────────────────
+router.post("/categories/preview-import", async (req, res): Promise<void> => {
+  try {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.includes("multipart/form-data")) {
+      res.status(400).json({ error: "Content-Type harus multipart/form-data" });
+      return;
+    }
+
+    const busboy = (await import("busboy")).default;
+    const bb = busboy({ headers: req.headers, limits: { fileSize: 10 * 1024 * 1024 } });
+    const chunks: Buffer[] = [];
+    let fileReceived = false;
+
+    await new Promise<void>((resolve, reject) => {
+      bb.on("file", (_f, file) => {
+        fileReceived = true;
+        file.on("data", (c: Buffer) => chunks.push(c));
+        file.on("end", () => {});
+        file.on("error", reject);
+      });
+      bb.on("finish", resolve);
+      bb.on("error", reject);
+      req.pipe(bb);
+    });
+
+    if (!fileReceived || chunks.length === 0) {
+      res.status(400).json({ error: "File Excel tidak ditemukan" });
+      return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const wb = XLSX.read(buffer, { type: "buffer" });
+
+    let ws = wb.Sheets[wb.SheetNames[0]];
+    for (const name of wb.SheetNames) {
+      if (name.toLowerCase().includes("kategori") || name.toLowerCase().includes("category")) {
+        ws = wb.Sheets[name];
+        break;
+      }
+    }
+
+    const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    const getVal = (row: any, ...keys: string[]) => {
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          return String(row[k]).trim();
+        }
+      }
+      const rowKeys = Object.keys(row);
+      for (const k of keys) {
+        const found = rowKeys.find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+        if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim() !== "") {
+          return String(row[found]).trim();
+        }
+      }
+      return "";
+    };
+
+    if (rawRows.length === 0) {
+      res.json({
+        summary: { totalRows: 0, newCategories: 0, existingCategories: 0, zeroPriceCount: 0 },
+        rows: []
+      });
+      return;
+    }
+
+    const allCategories = await db.select().from(categoriesTable);
+
+    function cleanStr(s: string): string {
+      return (s || "")
+        .toLowerCase()
+        .replace(/[_\-\.\,\/\(\)\[\]\+]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function isSimilarName(nameA: string, nameB: string): boolean {
+      const a = cleanStr(nameA);
+      const b = cleanStr(nameB);
+      if (!a || !b) return false;
+      if (a === b) return true;
+      if (a.replace(/\s/g, "") === b.replace(/\s/g, "")) return true;
+      return false;
+    }
+
+    const previewRows: any[] = [];
+    let newCategoriesCount = 0;
+    let existingCategoriesCount = 0;
+    let zeroPriceItemsCount = 0;
+
+    let rowIndex = 0;
+    for (const row of rawRows) {
+      rowIndex++;
+      const name = getVal(row, "Nama Kategori", "Nama", "Kategori", "Category", "Category Name");
+      if (!name) continue;
+
+      const rawUnit = getVal(row, "Satuan Utama", "Satuan", "Primary Unit", "Unit", "Unit Utama").toUpperCase();
+      let primaryUnit = "METER";
+      if (rawUnit.includes("YARD") || rawUnit.includes("YD")) primaryUnit = "YARD";
+      else if (rawUnit.includes("KG") || rawUnit.includes("KILOGRAM")) primaryUnit = "KG";
+
+      const secondaryUnit = getVal(row, "Satuan Roll", "Satuan Sekunder", "Secondary Unit") || "ROLL";
+
+      const costPricePerMeter = parseFloat(getVal(row, "Harga Beli", "Harga Beli / Meter", "Harga Beli / Yard", "Modal").replace(",", ".")) || 0;
+      const pricePerMeter = parseFloat(getVal(row, "Harga Jual", "Harga Jual / Meter", "Harga Jual / Yard", "Harga").replace(",", ".")) || 0;
+      const costPricePerRoll = parseFloat(getVal(row, "Harga Beli (Roll)", "Harga Beli Roll", "Modal Roll").replace(",", ".")) || null;
+      const pricePerRoll = parseFloat(getVal(row, "Harga Jual (Roll)", "Harga Jual Roll").replace(",", ".")) || null;
+      const description = getVal(row, "Deskripsi", "Keterangan", "Description") || null;
+
+      const existing = allCategories.find(c =>
+        c.name.toLowerCase() === name.toLowerCase() ||
+        cleanStr(c.name) === cleanStr(name) ||
+        isSimilarName(c.name, name)
+      );
+
+      if (existing) existingCategoriesCount++;
+      else newCategoriesCount++;
+
+      if (costPricePerMeter === 0 || pricePerMeter === 0) zeroPriceItemsCount++;
+
+      const warnings: string[] = [];
+      if (costPricePerMeter === 0) warnings.push("Harga Beli (Modal) Rp 0");
+      if (pricePerMeter === 0) warnings.push("Harga Jual Rp 0");
+      if (existing) warnings.push(`Kategori sudah ada ("${existing.name}") — harga & satuan akan diperbarui`);
+      else warnings.push("Kategori baru");
+
+      previewRows.push({
+        rowNumber: rowIndex,
+        name,
+        primaryUnit,
+        secondaryUnit,
+        costPricePerMeter,
+        pricePerMeter,
+        costPricePerRoll,
+        pricePerRoll,
+        description,
+        isExisting: !!existing,
+        matchedName: existing?.name,
+        status: warnings.length > 0 ? "warning" : "ready",
+        keterangan: warnings
+      });
+    }
+
+    res.json({
+      summary: {
+        totalRows: previewRows.length,
+        newCategories: newCategoriesCount,
+        existingCategories: existingCategoriesCount,
+        zeroPriceCount: zeroPriceItemsCount
+      },
+      rows: previewRows
+    });
+  } catch (err: any) {
+    console.error("Preview categories import error:", err);
+    res.status(500).json({ error: err.message || "Gagal memproses preview file Excel kategori" });
+  }
+});
+
 // ─── POST /categories/import ────────────────────────────────────────────────
 router.post("/categories/import", async (req, res): Promise<void> => {
   try {

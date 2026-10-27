@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatRupiah, formatDate, generateSequentialInvoiceNumber } from "@/lib/utils";
 import { DateRangeFilter, filterByDateRange } from "@/components/DateRangeFilter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ExcelImportModal } from "@/components/ExcelImportModal";
 import { useRef } from "react";
 
 type PurchaseItem = { categoryId?: number; productId: number; productName: string; rolls: number | ""; meters: number | ""; pricePerMeter: number | ""; subtotal: number; primaryUnit?: string; secondaryUnit?: string; barcode?: string; rollLengths?: number[]; };
@@ -725,121 +726,41 @@ export default function Pembelian() {
         onClose={() => setViewDetailId(null)} 
       />
 
-      {/* ─── Import Excel Modal ─────────────────────────────────────── */}
-      <Dialog open={importOpen} onOpenChange={(o) => { if (!isImporting) { setImportOpen(o); if (!o) { setImportFile(null); setImportResult(null); } } }}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
-              Import Pembelian dari Excel
-            </DialogTitle>
-          </DialogHeader>
-
-          {!importResult ? (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800 space-y-1">
-                <p className="font-semibold">📋 Format Excel yang dibutuhkan:</p>
-                <p>Gunakan file hasil <strong>Export Excel</strong> sebagai template, atau buat file dengan kolom:</p>
-                <ul className="list-disc ml-4 space-y-0.5 mt-1">
-                  <li><strong>No Invoice</strong> — nomor nota / faktur pembelian (wajib)</li>
-                  <li><strong>Tanggal</strong> — format dd/mm/yyyy</li>
-                  <li><strong>Supplier</strong> — nama supplier (otomatis dibuat jika belum ada)</li>
-                  <li><strong>Produk / Barang</strong> — nama barang (otomatis didaftarkan ke Master Barang jika belum ada)</li>
-                  <li><strong>Roll</strong>, <strong>Meter/Yard</strong>, <strong>Harga / Meter</strong>, <strong>Subtotal</strong></li>
-                  <li><strong>Metode Bayar</strong> — tunai / kredit / tempo (otomatis mencatat beban hutang)</li>
-                </ul>
-                <p className="text-blue-600 mt-1">💡 Invoice yang sudah ada di sistem akan dilewati otomatis agar stok tidak ganda.</p>
-              </div>
-
-              <div
-                className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 transition-colors"
-                onClick={() => importFileRef.current?.click()}
-              >
-                {importFile ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
-                    <div className="text-left">
-                      <p className="text-sm font-semibold text-slate-800">{importFile.name}</p>
-                      <p className="text-xs text-slate-500">{(importFile.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                    <button onClick={(e) => { e.stopPropagation(); setImportFile(null); }} className="ml-2 text-slate-400 hover:text-red-500">
-                      <XIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <Upload className="mx-auto w-8 h-8 text-slate-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-600">Klik untuk pilih file Excel</p>
-                    <p className="text-xs text-slate-400">.xlsx, .xls — maks 10MB</p>
-                  </div>
-                )}
-                <input
-                  ref={importFileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) setImportFile(f); e.target.value = ""; }}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setImportOpen(false)}>Batal</Button>
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  disabled={!importFile || isImporting}
-                  onClick={async () => {
-                    if (!importFile) return;
-                    setIsImporting(true);
-                    try {
-                      const form = new FormData();
-                      form.append("file", importFile);
-                      const res = await fetch("/api/purchases/import", { method: "POST", body: form, credentials: "include" });
-                      const data = await res.json();
-                      if (!res.ok) throw new Error(data.error || "Import gagal");
-                      setImportResult(data);
-                      queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey({}) });
-                    } catch (err: any) {
-                      alert(err.message || "Gagal mengimport file");
-                    } finally {
-                      setIsImporting(false);
-                    }
-                  }}
-                >
-                  {isImporting
-                    ? <><span className="h-3.5 w-3.5 mr-1.5 rounded-full border-2 border-white border-t-transparent animate-spin inline-block" />Mengimport...</>
-                    : <><Upload className="mr-1.5 h-3.5 w-3.5" />Mulai Import</>}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-black text-emerald-700">{importResult.success}</p>
-                  <p className="text-xs text-emerald-600 font-medium">Berhasil</p>
-                </div>
-                <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-black text-amber-700">{importResult.skipped}</p>
-                  <p className="text-xs text-amber-600 font-medium">Dilewati</p>
-                </div>
-                <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 text-center">
-                  <p className="text-2xl font-black text-rose-700">{importResult.failed}</p>
-                  <p className="text-xs text-rose-600 font-medium">Gagal</p>
-                </div>
-              </div>
-              <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-lg divide-y divide-slate-100">
-                {importResult.details?.map((d: any, i: number) => (
-                  <div key={i} className="flex items-start gap-2 px-3 py-2 text-xs">
-                    <span className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${d.status === "ok" ? "bg-emerald-500" : d.status === "skip" ? "bg-amber-400" : "bg-rose-500"}`} />
-                    <div className="min-w-0">
-                      <p className="font-mono font-semibold text-slate-700 truncate">{d.invoice}</p>
-                      <p className={d.status === "error" ? "text-rose-600" : "text-slate-500"}>{d.message}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Button className="w-full" onClick={() => { setImportOpen(false); setImportFile(null); setImportResult(null); }}>Tutup</Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* ─── Import Excel Modal with Interactive Preview ───────────── */}
+      <ExcelImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey({}) });
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+          toast({ title: "Import Berhasil", description: "Data pembelian telah berhasil dicatat ke sistem." });
+        }}
+        type="purchases"
+        title="Import Pembelian dari Excel"
+        previewUrl="/api/purchases/preview-import"
+        importUrl="/api/purchases/import"
+        descriptionNode={
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-900 space-y-2">
+            <p className="font-bold flex items-center gap-1.5 text-blue-800 text-sm">
+              📋 Format File Excel yang Dibutuhkan:
+            </p>
+            <p className="text-slate-600">Gunakan file template hasil Export Excel, atau buat file dengan susunan kolom:</p>
+            <ul className="list-disc ml-5 space-y-1 text-slate-700">
+              <li><strong>No Invoice</strong> — nomor nota / faktur pembelian</li>
+              <li><strong>Tanggal</strong> — tanggal transaksi (dd/mm/yyyy)</li>
+              <li><strong>Supplier</strong> — nama supplier</li>
+              <li><strong>Kategori</strong> — nama kategori (sesuai Master Kategori)</li>
+              <li><strong>Produk / Barang</strong> — nama kain / motif barang</li>
+              <li><strong>Roll</strong>, <strong>Meter/Yard</strong>, <strong>Harga / Satuan</strong>, <strong>Subtotal</strong></li>
+            </ul>
+            <p className="text-blue-700 text-[11px] pt-1.5 border-t border-blue-200/60 font-medium">
+              💡 Sebelum data masuk, preview lengkap dan status validasi akan ditampilkan sehingga Anda dapat melihat peringatan jika ada harga Rp 0 atau kategori yang tidak sesuai.
+            </p>
+          </div>
+        }
+      />
     </div>
 
   );

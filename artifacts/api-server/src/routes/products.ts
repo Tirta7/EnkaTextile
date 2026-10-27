@@ -388,7 +388,93 @@ router.post("/products/import", async (req, res): Promise<void> => {
     }
 
     const allCategories = await db.select().from(categoriesTable);
-    const findCategory = (name: string) => allCategories.find(c => c.name.toLowerCase() === name?.trim().toLowerCase());
+    const allProducts = await db.select().from(productsTable);
+
+    function cleanStr(s: string): string {
+      return (s || "")
+        .toLowerCase()
+        .replace(/[_\-\.\,\/\(\)\[\]\+]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function levenshteinDistance(a: string, b: string): number {
+      if (a === b) return 0;
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      const matrix: number[][] = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    function isSimilarName(nameA: string, nameB: string): boolean {
+      const a = cleanStr(nameA);
+      const b = cleanStr(nameB);
+      if (!a || !b) return false;
+      if (a === b) return true;
+      const aNoSpace = a.replace(/\s/g, "");
+      const bNoSpace = b.replace(/\s/g, "");
+      if (aNoSpace === bNoSpace) return true;
+      const aWords = a.split(" ").sort().join(" ");
+      const bWords = b.split(" ").sort().join(" ");
+      if (aWords === bWords) return true;
+      const maxLen = Math.max(a.length, b.length);
+      const dist = levenshteinDistance(a, b);
+      if (maxLen > 7 && dist <= 2) return true;
+      if (maxLen >= 5 && dist <= 1) return true;
+      return false;
+    }
+
+    const findCategory = (name: string) => {
+      const n = name?.trim();
+      if (!n) return undefined;
+      const exact = allCategories.find(c => c.name.toLowerCase() === n.toLowerCase());
+      if (exact) return exact;
+      return allCategories.find(c => cleanStr(c.name) === cleanStr(n) || isSimilarName(c.name, n));
+    };
+
+    const findProduct = (name: string, barcode?: string, targetCategoryId?: number | null) => {
+      const bc = barcode?.trim();
+      if (bc) {
+        const byBc = allProducts.find(p => p.barcode && p.barcode.toLowerCase() === bc.toLowerCase());
+        if (byBc) return byBc;
+      }
+      const rawName = name?.trim();
+      if (!rawName) return undefined;
+
+      const nLower = rawName.toLowerCase();
+      const exact = allProducts.find(p => p.name.toLowerCase() === nLower);
+      if (exact) return exact;
+
+      const cleanInput = cleanStr(rawName);
+      const cleanMatch = allProducts.find(p => cleanStr(p.name) === cleanInput);
+      if (cleanMatch) return cleanMatch;
+
+      if (targetCategoryId) {
+        const catProducts = allProducts.filter(p => p.categoryId === targetCategoryId);
+        const fuzzyInCat = catProducts.find(p => isSimilarName(p.name, rawName));
+        if (fuzzyInCat) return fuzzyInCat;
+      }
+
+      const fuzzyGlobal = allProducts.find(p => isSimilarName(p.name, rawName));
+      if (fuzzyGlobal) return fuzzyGlobal;
+
+      return undefined;
+    };
 
     const getVal = (row: any, ...keys: string[]) => {
       for (const k of keys) {
@@ -457,12 +543,7 @@ router.post("/products/import", async (req, res): Promise<void> => {
 
           const barcode = rawBarcode || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           
-          let existingProd = null;
-          if (rawBarcode) {
-            existingProd = (await db.select().from(productsTable).where(eq(productsTable.barcode, rawBarcode)))[0];
-          } else {
-            existingProd = (await db.select().from(productsTable).where(eq(productsTable.name, name)))[0];
-          }
+          let existingProd = findProduct(name, rawBarcode, categoryId);
 
           // ─── DETEKSI SATUAN (YARD vs METER) ───
           const rawUnit = String(getVal(row, "Satuan", "Unit 1", "Satuan 1", "Unit", "Jenis Satuan", "Satuan Barang") || "").trim().toLowerCase();

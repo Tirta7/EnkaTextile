@@ -247,29 +247,114 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
       res.json({ success: 0, failed: 0, skipped: 0, total: 0, details: [] }); return;
     }
 
-    const allProducts = await db.select({ id: productsTable.id, name: productsTable.name, barcode: productsTable.barcode, primaryUnit: productsTable.primaryUnit }).from(productsTable);
+    const allProducts = await db.select({
+      id: productsTable.id,
+      name: productsTable.name,
+      barcode: productsTable.barcode,
+      primaryUnit: productsTable.primaryUnit,
+      categoryId: productsTable.categoryId,
+      costPricePerMeter: productsTable.costPricePerMeter,
+      pricePerMeter: productsTable.pricePerMeter,
+    }).from(productsTable);
     const allSuppliers = await db.select({ id: suppliersTable.id, name: suppliersTable.name }).from(suppliersTable);
     const allCategories = await db.select().from(categoriesTable);
 
-    const findProduct = (name: string, barcode?: string) => {
+    function cleanStr(s: string): string {
+      return (s || "")
+        .toLowerCase()
+        .replace(/[_\-\.\,\/\(\)\[\]\+]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function levenshteinDistance(a: string, b: string): number {
+      if (a === b) return 0;
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      const matrix: number[][] = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1];
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
+          }
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    function isSimilarName(nameA: string, nameB: string): boolean {
+      const a = cleanStr(nameA);
+      const b = cleanStr(nameB);
+      if (!a || !b) return false;
+      if (a === b) return true;
+      const aNoSpace = a.replace(/\s/g, "");
+      const bNoSpace = b.replace(/\s/g, "");
+      if (aNoSpace === bNoSpace) return true;
+      const aWords = a.split(" ").sort().join(" ");
+      const bWords = b.split(" ").sort().join(" ");
+      if (aWords === bWords) return true;
+      const maxLen = Math.max(a.length, b.length);
+      const dist = levenshteinDistance(a, b);
+      if (maxLen > 7 && dist <= 2) return true;
+      if (maxLen >= 5 && dist <= 1) return true;
+      return false;
+    }
+
+    const findProduct = (name: string, barcode?: string, targetCategoryId?: number | null) => {
       const bc = barcode?.trim();
       if (bc) {
         const byBc = allProducts.find(p => p.barcode && p.barcode.toLowerCase() === bc.toLowerCase());
         if (byBc) return byBc;
       }
-      const n = name?.trim().toLowerCase();
-      if (n) {
-        return allProducts.find(p => p.name.toLowerCase() === n);
+      const rawName = name?.trim();
+      if (!rawName) return undefined;
+
+      // 1. Exact match (case-insensitive)
+      const nLower = rawName.toLowerCase();
+      const exact = allProducts.find(p => p.name.toLowerCase() === nLower);
+      if (exact) return exact;
+
+      // 2. Normalized match (abaikan tanda baca & spasi)
+      const cleanInput = cleanStr(rawName);
+      const cleanMatch = allProducts.find(p => cleanStr(p.name) === cleanInput);
+      if (cleanMatch) return cleanMatch;
+
+      // 3. Typo-tolerant match dalam kategori yang sama
+      if (targetCategoryId) {
+        const catProducts = allProducts.filter(p => p.categoryId === targetCategoryId);
+        const fuzzyInCat = catProducts.find(p => isSimilarName(p.name, rawName));
+        if (fuzzyInCat) return fuzzyInCat;
       }
+
+      // 4. Global typo-tolerant match
+      const fuzzyGlobal = allProducts.find(p => isSimilarName(p.name, rawName));
+      if (fuzzyGlobal) return fuzzyGlobal;
+
       return undefined;
     };
+
     const findSupplier = (name: string) => {
-      const n = name?.trim().toLowerCase();
-      return allSuppliers.find(s => s.name.toLowerCase() === n);
+      const n = name?.trim();
+      if (!n) return undefined;
+      const exact = allSuppliers.find(s => s.name.toLowerCase() === n.toLowerCase());
+      if (exact) return exact;
+      return allSuppliers.find(s => cleanStr(s.name) === cleanStr(n) || isSimilarName(s.name, n));
     };
+
     const findCategory = (name: string) => {
-      const n = name?.trim().toLowerCase();
-      return allCategories.find(c => c.name.toLowerCase() === n);
+      const n = name?.trim();
+      if (!n) return undefined;
+      const exact = allCategories.find(c => c.name.toLowerCase() === n.toLowerCase());
+      if (exact) return exact;
+      return allCategories.find(c => cleanStr(c.name) === cleanStr(n) || isSimilarName(c.name, n));
     };
 
     // Group rows by invoice number + supplier (carry over if blank)
@@ -412,8 +497,12 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
           const prodName = String(getVal(row, "Produk / Barang", "Nama Barang", "Produk", "Nama Produk", "Barang", "Item", "Nama") || "").trim();
           if (!prodName) continue;
 
+          // Deteksi kategori terlebih dahulu agar bisa dipakai untuk pencarian produk & fallback harga
+          const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
+          let cat = catName ? findCategory(catName) : null;
+
           const rawBarcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim();
-          let prod = findProduct(prodName, rawBarcode);
+          let prod = findProduct(prodName, rawBarcode, cat?.id);
 
           // Deteksi satuan METER vs YARD
           const rawUnit = String(getVal(row, "Satuan", "Unit", "Satuan Barang", "Unit 1") || "").trim().toLowerCase();
@@ -426,6 +515,18 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
             detectedUnit = "YARD";
           } else if (prod?.primaryUnit) {
             detectedUnit = prod.primaryUnit;
+          } else if (cat?.primaryUnit) {
+            detectedUnit = cat.primaryUnit;
+          }
+
+          if (!cat && catName) {
+            const [newCat] = await db.insert(categoriesTable).values({ 
+              name: catName,
+              primaryUnit: detectedUnit || "METER",
+              secondaryUnit: "ROLL",
+            }).returning();
+            allCategories.push(newCat);
+            cat = newCat;
           }
 
           let rollsCount = parseFloat(String(getVal(row, "Roll", "Jumlah Roll", "Stok (Roll)", "Stok Roll", "Qty Roll") || "0").replace(",", ".")) || 0;
@@ -451,44 +552,38 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
 
           let meters = parseFloat(String(getVal(row, "Meter/Yard", "Qty (YARD)", "Qty (METER)", "Qty (Yard)", "Qty (Meter)", "Yard", "Meter", "Qty", "Jumlah", "Panjang", "Total Panjang", "Stok Meter", "Stok Yard") || "0").replace(",", ".")) || 0;
 
-          // Jika total panjang belum diisi tapi detail roll ada, hitung otomatis dari total roll
+          // 1. JIKA KOLOM METER/YARD KOSONG: Hitung otomatis dari akumulasi panjang roll (Roll 1 + Roll 2 + ...)
           if (meters === 0 && cleanRollLengths.length > 0) {
             meters = parseFloat(cleanRollLengths.reduce((a, b) => a + b, 0).toFixed(3));
           }
 
           let pricePerMeter = parseFloat(String(getVal(row, "Harga / Satuan", "Harga / Meter", "Harga / Yard", "Harga Satuan", "Harga Beli", "Harga / Qty", "Harga") || "0").replace(",", ".")) || 0;
 
-          // Koreksi kolom bergeser jika harga kosong
+          // 2. JIKA KOLOM HARGA / SATUAN KOSONG: Ambil otomatis dari master barang atau master kategori
           if (!pricePerMeter || pricePerMeter === 0) {
-            const itemRowKeys = Object.keys(row);
-            const itemMethodKey = itemRowKeys.find(k => ["kredit", "tunai", "tempo"].includes(String(row[k]).toLowerCase().trim()));
-            if (itemMethodKey && itemMethodKey.startsWith("Roll ")) {
-              const mIdx = itemRowKeys.indexOf(itemMethodKey);
-              if (mIdx >= 5) {
-                const detectedP = parseFloat(String(row[itemRowKeys[mIdx - 5]] || "0").replace(",", "."));
-                if (detectedP > 0) pricePerMeter = detectedP;
-              }
-            } else {
-              const afterRolls = Math.round(rollsCount);
-              for (let r = afterRolls + 1; r <= afterRolls + 10; r++) {
-                const val = parseFloat(String(row[`Roll ${r}`] || "0").replace(",", "."));
-                if (val > 100) { pricePerMeter = val; break; }
-              }
+            if (prod?.costPricePerMeter && parseFloat(String(prod.costPricePerMeter)) > 0) {
+              pricePerMeter = parseFloat(String(prod.costPricePerMeter));
+            } else if (cat?.costPricePerMeter && parseFloat(String(cat.costPricePerMeter)) > 0) {
+              pricePerMeter = parseFloat(String(cat.costPricePerMeter));
+            } else if (cat?.pricePerMeter && parseFloat(String(cat.pricePerMeter)) > 0) {
+              pricePerMeter = parseFloat(String(cat.pricePerMeter));
             }
           }
 
-          const subtotal = parseFloat(String(getVal(row, "Subtotal", "Total", "Jumlah Harga") || "0").replace(",", ".")) || Math.round(meters * pricePerMeter);
+          // 3. JIKA SUBTOTAL KOSONG: Hitung otomatis (Meter/Yard x Harga/Satuan)
+          const rawSubtotal = parseFloat(String(getVal(row, "Subtotal", "Total", "Jumlah Harga") || "0").replace(",", ".")) || 0;
+          const subtotal = rawSubtotal > 0 ? rawSubtotal : Math.round(meters * pricePerMeter);
 
           if (!prod) {
-            // Otomatis daftarkan produk baru ke master barang dari nota pembelian
-            const catName = String(getVal(row, "Kategori", "Category", "Jenis") || "").trim();
-            let categoryId: number | null = null;
-            let cat: any = null;
-            if (catName) {
-              cat = findCategory(catName);
-              if (!cat) {
+            // Otomatis daftarkan produk baru ke master barang jika belum pernah ada
+            let categoryId = cat?.id;
+            if (!categoryId) {
+              if (allCategories.length > 0) {
+                cat = allCategories[0];
+                categoryId = cat.id;
+              } else {
                 const [newCat] = await db.insert(categoriesTable).values({ 
-                  name: catName,
+                  name: "Kain",
                   primaryUnit: detectedUnit || "METER",
                   secondaryUnit: "ROLL",
                   costPricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
@@ -496,33 +591,11 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
                 }).returning();
                 allCategories.push(newCat);
                 cat = newCat;
+                categoryId = newCat.id;
               }
-              categoryId = cat.id;
-            } else if (allCategories.length > 0) {
-              cat = allCategories[0];
-              categoryId = cat.id;
-            } else {
-              const [newCat] = await db.insert(categoriesTable).values({ 
-                name: "Kain",
-                primaryUnit: detectedUnit || "METER",
-                secondaryUnit: "ROLL",
-                costPricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
-                pricePerMeter: pricePerMeter > 0 ? pricePerMeter.toString() : "0",
-              }).returning();
-              allCategories.push(newCat);
-              cat = newCat;
-              categoryId = newCat.id;
             }
 
-            // Fallback unit dan harga dari kategori jika di baris tidak ada
-            if (cat?.primaryUnit && (!rawUnit || detectedUnit === "METER")) {
-              detectedUnit = cat.primaryUnit;
-            }
-            if ((!pricePerMeter || pricePerMeter === 0) && cat?.costPricePerMeter) {
-              pricePerMeter = parseFloat(cat.costPricePerMeter) || 0;
-            }
-
-            const barcode = String(getVal(row, "Barcode", "Kode Barang", "Kode", "SKU") || "").trim() || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+            const barcode = rawBarcode || `PRD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
             const costPriceStr = pricePerMeter > 0 ? pricePerMeter.toString() : (cat?.costPricePerMeter || "0");
 
             const [newProd] = await db.insert(productsTable).values({
@@ -538,10 +611,18 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
               minStock: "0",
             }).returning();
 
-            prod = newProd;
-            allProducts.push(newProd);
-          } else if (pricePerMeter > 0) {
-            // Update harga beli dan pastikan satuan sesuai jika sebelumnya belum diset
+            prod = {
+              id: newProd.id,
+              name: newProd.name,
+              barcode: newProd.barcode,
+              primaryUnit: newProd.primaryUnit,
+              categoryId: newProd.categoryId,
+              costPricePerMeter: newProd.costPricePerMeter,
+              pricePerMeter: newProd.pricePerMeter,
+            };
+            allProducts.push(prod);
+          } else if (pricePerMeter > 0 && parseFloat(String(prod.costPricePerMeter || "0")) === 0) {
+            // Update harga beli di database produk jika sebelumnya masih 0
             await db.update(productsTable)
               .set({
                 costPricePerMeter: pricePerMeter.toString(),
@@ -549,6 +630,7 @@ router.post("/purchases/import", async (req, res): Promise<void> => {
                 updatedAt: new Date()
               })
               .where(eq(productsTable.id, prod.id));
+            prod.costPricePerMeter = pricePerMeter.toString();
           }
 
           items.push({

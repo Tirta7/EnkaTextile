@@ -372,7 +372,7 @@ export default function Barang() {
             items={(categories ?? [])
               .slice()
               .sort((a, b) => a.name.localeCompare(b.name))
-              .map(c => ({ value: c.id.toString(), label: `${c.name} (${products?.filter(p => p.categoryId === c.id).length || 0})` }))}
+              .map(c => ({ value: c.id.toString(), label: `${c.name} (${(c as any).productCount ?? products?.filter(p => p.categoryId === c.id).length ?? 0})` }))}
             value={selectedCategoryId?.toString() ?? ""}
             onValueChange={(v) => { setSelectedCategoryId(v ? parseInt(v) : null); setCurrentPage(1); }}
             placeholder="Pilih Kategori..."

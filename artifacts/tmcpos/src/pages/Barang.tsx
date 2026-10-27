@@ -524,8 +524,11 @@ export default function Barang() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-slate-800 text-sm leading-tight truncate">{p.name}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100">
+                          {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
+                        </span>
                         {isLowStock && (
                           <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 uppercase tracking-wide">Tipis</span>
                         )}
@@ -586,6 +589,7 @@ export default function Barang() {
                     <tr>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 w-10">#</th>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Barang</th>
+                      <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Kategori</th>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Harga Jual</th>
                       <th className="h-9 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Harga Beli</th>
                       <th className="h-9 px-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">Stok</th>
@@ -609,6 +613,11 @@ export default function Barang() {
                                 <div className="text-[10px] text-slate-400">{p.barcode || p.lotNumber || '—'}</div>
                               </div>
                             </div>
+                          </td>
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-violet-50 text-violet-700 border border-violet-200/70">
+                              {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
+                            </span>
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>

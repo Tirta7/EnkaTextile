@@ -51,6 +51,7 @@ export default function Barang() {
   const [unitFilter, setUnitFilter] = useState<"ALL" | "METER" | "YARD">("ALL");
   const [search, setSearch] = useState("");
   const [showLowStock, setShowLowStock] = useState(false);
+  const [showIssuesOnly, setShowIssuesOnly] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [viewRollsId, setViewRollsId] = useState<number | null>(null);
@@ -63,6 +64,29 @@ export default function Barang() {
     if (!unit) return false;
     const u = unit.toUpperCase().trim();
     return u === "YARD" || u === "YD" || u === "YDS" || u.startsWith("YAR");
+  };
+
+  // Helper untuk mendeteksi data barang yang belum lengkap / perlu perhatian
+  const getProductStatus = (p: any) => {
+    const cost = Number(p.costPricePerMeter) || 0;
+    const price = Number(p.pricePerMeter) || 0;
+    const isZeroBoth = price === 0 && cost === 0;
+    const isZeroPrice = price === 0;
+    const isZeroCost = cost === 0;
+    const hasNoCategory = !p.categoryId && !p.categoryName;
+    const meterStock = Number(p.meterStock) || 0;
+    const isOut = meterStock <= 0;
+    const isLow = p.isLowStock;
+
+    const warnings: string[] = [];
+    if (isZeroBoth) warnings.push("Harga Jual & Beli Rp 0");
+    else if (isZeroPrice) warnings.push("Harga Jual Rp 0");
+    else if (isZeroCost) warnings.push("Harga Beli Rp 0");
+
+    if (hasNoCategory) warnings.push("Tanpa Kategori");
+
+    const hasIssue = warnings.length > 0;
+    return { cost, price, isZeroBoth, isZeroPrice, isZeroCost, hasNoCategory, isOut, isLow, hasIssue, warnings };
   };
 
   const handleImageUpload = async (file: File) => {
@@ -277,12 +301,14 @@ export default function Barang() {
 
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.lotNumber && p.lotNumber.toLowerCase().includes(search.toLowerCase()));
     const matchesLowStock = !showLowStock || p.isLowStock;
-    return matchesSearch && matchesLowStock;
+    const matchesIssues = !showIssuesOnly || getProductStatus(p).hasIssue;
+    return matchesSearch && matchesLowStock && matchesIssues;
   });
 
   // Calculate summary based on current category (or global if null)
   const summaryProducts = filtered;
   const lowStockCount = baseProducts.filter(p => p.isLowStock).length;
+  const issueProductsCount = baseProducts.filter(p => getProductStatus(p).hasIssue).length;
 
   const meterTotal = summaryProducts
     ?.filter(p => !isYardProd(p.primaryUnit))
@@ -424,8 +450,8 @@ export default function Barang() {
           </div>
         </div>
 
-        {/* Row 4: Summary strip — 4-col compact, no shadow */}
-        <div className="grid grid-cols-4 gap-1.5">
+        {/* Row 4: Summary strip — responsive grid with Perlu Perhatian indicator */}
+        <div className={`grid ${issueProductsCount > 0 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-4'} gap-1.5`}>
           <div className="bg-white border border-slate-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
             <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.5} />
             <div className="min-w-0">
@@ -433,18 +459,53 @@ export default function Barang() {
               <p className="text-xs font-black text-slate-800 leading-tight truncate">{summaryProducts?.length || 0} item</p>
             </div>
           </div>
+
+          {issueProductsCount > 0 && (
+            <button
+              onClick={() => {
+                setShowIssuesOnly(!showIssuesOnly);
+                if (!showIssuesOnly) setShowLowStock(false);
+                setCurrentPage(1);
+              }}
+              className={`border rounded-xl px-2.5 py-2 flex items-center gap-1.5 text-left transition-all ${
+                showIssuesOnly
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                  : 'bg-rose-50 border-rose-200 hover:bg-rose-100/70'
+              }`}
+            >
+              <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${showIssuesOnly ? 'text-white' : 'text-rose-600 animate-pulse'}`} strokeWidth={2} />
+              <div className="min-w-0">
+                <p className={`text-[8px] font-bold uppercase tracking-wider ${showIssuesOnly ? 'text-rose-100' : 'text-rose-600'}`}>
+                  Perlu Perhatian
+                </p>
+                <p className={`text-xs font-black leading-tight ${showIssuesOnly ? 'text-white' : 'text-rose-700'}`}>
+                  {issueProductsCount} item
+                </p>
+              </div>
+            </button>
+          )}
+
           <button
-            onClick={() => { setShowLowStock(!showLowStock); setCurrentPage(1); }}
+            onClick={() => {
+              setShowLowStock(!showLowStock);
+              if (!showLowStock) setShowIssuesOnly(false);
+              setCurrentPage(1);
+            }}
             className={`border rounded-xl px-2.5 py-2 flex items-center gap-1.5 text-left transition-colors ${
-              showLowStock ? 'bg-amber-50 border-amber-200' : lowStockCount > 0 ? 'bg-amber-50/50 border-amber-100' : 'bg-white border-slate-100'
+              showLowStock
+                ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                : lowStockCount > 0
+                ? 'bg-amber-50/50 border-amber-100'
+                : 'bg-white border-slate-100'
             }`}
           >
-            <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-300'}`} strokeWidth={1.5} />
+            <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${showLowStock ? 'text-white' : lowStockCount > 0 ? 'text-amber-500' : 'text-slate-300'}`} strokeWidth={1.5} />
             <div className="min-w-0">
-              <p className={`text-[8px] font-bold uppercase tracking-wider ${lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Tipis</p>
-              <p className={`text-xs font-black leading-tight ${lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} item</p>
+              <p className={`text-[8px] font-bold uppercase tracking-wider ${showLowStock ? 'text-amber-100' : lowStockCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>Tipis</p>
+              <p className={`text-xs font-black leading-tight ${showLowStock ? 'text-white' : lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>{lowStockCount} item</p>
             </div>
           </button>
+
           <div className="bg-white border border-slate-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
             <LayoutGrid className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={1.5} />
             <div className="min-w-0">
@@ -454,6 +515,7 @@ export default function Barang() {
               </p>
             </div>
           </div>
+
           <div className="bg-violet-50 border border-violet-100 rounded-xl px-2.5 py-2 flex items-center gap-1.5">
             <Ruler className="w-3.5 h-3.5 text-violet-400 shrink-0" strokeWidth={1.5} />
             <div className="min-w-0">
@@ -474,6 +536,39 @@ export default function Barang() {
             </div>
           </div>
         </div>
+
+        {/* Warning Banner when there are products with issues */}
+        {issueProductsCount > 0 && !showIssuesOnly && (
+          <div className="bg-rose-50 border border-rose-200/80 rounded-xl px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-rose-900">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>
+                <strong>Perhatian:</strong> Ditemukan <strong>{issueProductsCount} barang</strong> dengan data belum lengkap (Harga Rp 0). Harap lengkapi harga jual/beli agar perhitungan kasir akurat.
+              </span>
+            </div>
+            <button
+              onClick={() => { setShowIssuesOnly(true); setShowLowStock(false); setCurrentPage(1); }}
+              className="px-2.5 py-1 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-lg shrink-0 transition-colors shadow-xs self-start sm:self-auto"
+            >
+              Filter {issueProductsCount} Barang Bermasalah
+            </button>
+          </div>
+        )}
+
+        {showIssuesOnly && (
+          <div className="bg-rose-100/70 border border-rose-300 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs text-rose-900">
+            <span className="font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+              Menampilkan {issueProductsCount} barang yang membutuhkan pengaturan harga / kategori
+            </span>
+            <button
+              onClick={() => { setShowIssuesOnly(false); setCurrentPage(1); }}
+              className="text-[11px] font-bold text-rose-700 hover:text-rose-900 underline ml-2"
+            >
+              Tampilkan Semua
+            </button>
+          </div>
+        )}
       </div>
 
       {/* List Area */}
@@ -501,6 +596,7 @@ export default function Barang() {
             {/* ─── MOBILE: Seamless list (divider style) ─── */}
             <div className="md:hidden bg-white rounded-2xl border border-slate-100">
               {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                const st = getProductStatus(p);
                 const isLowStock = p.isLowStock;
                 return (
                   <div
@@ -508,7 +604,7 @@ export default function Barang() {
                     className={`px-3.5 py-3 flex items-center gap-3 ${
                       idx > 0 ? 'border-t border-slate-50' : ''
                     } ${
-                      isLowStock ? 'bg-amber-50/30' : 'bg-white'
+                      st.hasIssue ? 'bg-rose-50/40' : isLowStock ? 'bg-amber-50/30' : 'bg-white'
                     } active:bg-slate-50 transition-colors`}
                   >
                     {/* No */}
@@ -518,19 +614,38 @@ export default function Barang() {
 
                     {/* Icon */}
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                      isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-100 text-slate-400'
+                      st.hasIssue
+                        ? 'bg-rose-50 border-rose-200 text-rose-500'
+                        : isLowStock
+                        ? 'bg-amber-50 border-amber-100 text-amber-400'
+                        : 'bg-slate-50 border-slate-100 text-slate-400'
                     }`}>
-                      <Package className="w-5 h-5" strokeWidth={1.5} />
+                      {st.hasIssue ? (
+                        <AlertTriangle className="w-5 h-5" strokeWidth={2} />
+                      ) : (
+                        <Package className="w-5 h-5" strokeWidth={1.5} />
+                      )}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-slate-800 text-sm leading-tight truncate">{p.name}</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100">
-                          {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
-                        </span>
-                        {isLowStock && (
+                        {st.hasNoCategory ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                            Tanpa Kategori
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 border border-violet-100">
+                            {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
+                          </span>
+                        )}
+                        {st.hasIssue && (
+                          <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 uppercase tracking-wide">
+                            {st.warnings[0]}
+                          </span>
+                        )}
+                        {!st.hasIssue && isLowStock && (
                           <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 uppercase tracking-wide">Tipis</span>
                         )}
                       </div>
@@ -541,12 +656,18 @@ export default function Barang() {
                           isLowStock ? 'text-amber-500' : 'text-slate-500'
                         }`}>{formatNumber(p.rollStock)} roll</span>
                         <span className="text-[10px] text-slate-200">·</span>
-                        <span className="text-[11px] font-bold text-violet-700">
-                          {formatRupiah(p.pricePerMeter)}
-                          <span className="text-[9px] text-slate-400 font-normal ml-0.5">
-                            /{isYardProd(p.primaryUnit) ? 'yd' : (p.primaryUnit?.toLowerCase() || 'm')}
+                        {st.price === 0 ? (
+                          <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">
+                            Jual Rp 0 (Belum diset)
                           </span>
-                        </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-violet-700">
+                            {formatRupiah(p.pricePerMeter)}
+                            <span className="text-[9px] text-slate-400 font-normal ml-0.5">
+                              /{isYardProd(p.primaryUnit) ? 'yd' : (p.primaryUnit?.toLowerCase() || 'm')}
+                            </span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -600,54 +721,136 @@ export default function Barang() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filtered?.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                      const st = getProductStatus(p);
                       const isLowStock = p.isLowStock;
                       return (
-                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                        <tr
+                          key={p.id}
+                          className={`transition-colors ${
+                            st.hasIssue
+                              ? 'bg-rose-50/30 hover:bg-rose-50/60'
+                              : 'hover:bg-slate-50/50'
+                          }`}
+                        >
                           <td className="py-2.5 px-4 text-[11px] text-slate-400 font-medium">{(currentPage - 1) * 20 + idx + 1}</td>
                           <td className="py-2.5 px-4">
                             <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${isLowStock ? 'bg-amber-50 border-amber-100 text-amber-400' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-                                <Package className="w-3.5 h-3.5" strokeWidth={1.5} />
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center border shrink-0 ${
+                                st.hasIssue
+                                  ? 'bg-rose-50 border-rose-200 text-rose-500'
+                                  : isLowStock
+                                  ? 'bg-amber-50 border-amber-100 text-amber-400'
+                                  : 'bg-slate-50 border-slate-200 text-slate-400'
+                              }`}>
+                                {st.hasIssue ? (
+                                  <AlertTriangle className="w-3.5 h-3.5" strokeWidth={2} />
+                                ) : (
+                                  <Package className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                )}
                               </div>
                               <div>
-                                <div className="font-bold text-slate-800 text-xs">{p.name}</div>
+                                <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                  <span>{p.name}</span>
+                                  {st.hasIssue && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 border border-rose-200">
+                                      Perlu Diisi
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-slate-400">{p.barcode || p.lotNumber || '—'}</div>
                               </div>
                             </div>
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-violet-50 text-violet-700 border border-violet-200/70">
-                              {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
-                            </span>
+                            {st.hasNoCategory ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                Tanpa Kategori
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[11px] font-bold bg-violet-50 text-violet-700 border border-violet-200/70">
+                                {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
-                            <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                            {st.price === 0 ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 text-xs" title="Harga jual belum ditentukan">
+                                <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
+                                Rp 0
+                                <span className="text-[9px] font-medium text-rose-500">(Belum diset)</span>
+                              </span>
+                            ) : (
+                              <>
+                                <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
+                                <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                              </>
+                            )}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
-                            <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                            {st.cost === 0 ? (
+                              <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 text-xs" title="Harga beli/modal belum ditentukan">
+                                <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                                Rp 0
+                                <span className="text-[9px] font-medium text-amber-600">(Belum diset)</span>
+                              </span>
+                            ) : (
+                              <>
+                                <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
+                                <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                              </>
+                            )}
                           </td>
                           <td className="py-2.5 px-4 text-center">
-                            <div className={`font-bold text-xs ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
+                            <div className={`font-bold text-xs ${st.isOut ? 'text-rose-600' : isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
                               {formatNumber(p.meterStock)} {isYardProd(p.primaryUnit) ? 'Yd' : 'M'}
                             </div>
                             <div className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</div>
                           </td>
                           <td className="py-2.5 px-4 text-center">
-                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${isLowStock ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-                              {isLowStock ? 'Tipis' : 'Aman'}
-                            </span>
+                            {st.hasIssue ? (
+                              <div className="inline-flex flex-col items-center">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+                                  <AlertTriangle className="w-2.5 h-2.5 text-rose-500" />
+                                  Periksa
+                                </span>
+                                <span className="text-[8px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
+                                  {st.warnings[0]}
+                                </span>
+                              </div>
+                            ) : st.isOut ? (
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                Habis
+                              </span>
+                            ) : isLowStock ? (
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border bg-amber-50 text-amber-600 border-amber-200">
+                                Tipis
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border bg-emerald-50 text-emerald-600 border-emerald-200">
+                                Aman
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-4 text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-violet-600 hover:bg-violet-50 rounded-md" onClick={() => openViewRolls(p)}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-violet-600 hover:bg-violet-50 rounded-md" onClick={() => openViewRolls(p)} title="Lihat Roll">
                                 <LayoutGrid className="h-3 w-3" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:bg-slate-100 rounded-md" onClick={() => openEdit(p)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`h-6 w-6 rounded-md ${
+                                  st.hasIssue
+                                    ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold ring-1 ring-rose-200'
+                                    : 'text-slate-500 hover:bg-slate-100'
+                                }`}
+                                onClick={() => openEdit(p)}
+                                title={st.hasIssue ? "Lengkapi Harga & Data" : "Edit Barang"}
+                              >
                                 <Pencil className="h-3 w-3" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:bg-rose-50 rounded-md" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500 hover:bg-rose-50 rounded-md" onClick={() => { if (confirm('Hapus barang ini?')) deleteMutation.mutate({ id: p.id }); }} title="Hapus Barang">
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>

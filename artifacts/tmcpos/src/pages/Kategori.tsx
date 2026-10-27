@@ -303,9 +303,9 @@ export default function Kategori() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <span>Beli: <strong className="text-slate-700">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</strong></span>
+                        <span>Beli: {Number((cat as any).costPricePerMeter || 0) === 0 ? <strong className="text-amber-600 bg-amber-50 px-1 rounded border border-amber-200">Rp 0 (Belum diset)</strong> : <strong className="text-slate-700">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</strong>}</span>
                         <span>•</span>
-                        <span>Jual: <strong className="text-slate-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</strong></span>
+                        <span>Jual: {Number((cat as any).pricePerMeter || 0) === 0 ? <strong className="text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">Rp 0 (Belum diset)</strong> : <strong className="text-slate-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</strong>}</span>
                       </div>
                       {cat.description && <div className="text-[10px] text-slate-400 truncate">{cat.description}</div>}
                     </div>
@@ -361,11 +361,19 @@ export default function Kategori() {
                             <div className="text-xs space-y-0.5">
                               <div className="flex items-center justify-between text-slate-600 gap-2">
                                 <span className="text-[10px] text-slate-400">Beli:</span>
-                                <span className="font-semibold text-slate-800">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</span>
+                                {Number((cat as any).costPricePerMeter || 0) === 0 ? (
+                                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1 rounded border border-amber-200">Rp 0 (Belum diset)</span>
+                                ) : (
+                                  <span className="font-semibold text-slate-800">{formatRupiah(Number((cat as any).costPricePerMeter || 0))}</span>
+                                )}
                               </div>
                               <div className="flex items-center justify-between text-slate-600 gap-2">
                                 <span className="text-[10px] text-slate-400">Jual:</span>
-                                <span className="font-bold text-violet-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</span>
+                                {Number((cat as any).pricePerMeter || 0) === 0 ? (
+                                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">Rp 0 (Belum diset)</span>
+                                ) : (
+                                  <span className="font-bold text-violet-700">{formatRupiah(Number((cat as any).pricePerMeter || 0))}</span>
+                                )}
                               </div>
                             </div>
                           </td>

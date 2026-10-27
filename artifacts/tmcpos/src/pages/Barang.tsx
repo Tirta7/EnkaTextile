@@ -66,29 +66,6 @@ export default function Barang() {
     return u === "YARD" || u === "YD" || u === "YDS" || u.startsWith("YAR");
   };
 
-  // Helper untuk mendeteksi data barang yang belum lengkap / perlu perhatian
-  const getProductStatus = (p: any) => {
-    const cost = Number(p.costPricePerMeter) || 0;
-    const price = Number(p.pricePerMeter) || 0;
-    const isZeroBoth = price === 0 && cost === 0;
-    const isZeroPrice = price === 0;
-    const isZeroCost = cost === 0;
-    const hasNoCategory = !p.categoryId && !p.categoryName;
-    const meterStock = Number(p.meterStock) || 0;
-    const isOut = meterStock <= 0;
-    const isLow = p.isLowStock;
-
-    const warnings: string[] = [];
-    if (isZeroBoth) warnings.push("Harga Jual & Beli Rp 0");
-    else if (isZeroPrice) warnings.push("Harga Jual Rp 0");
-    else if (isZeroCost) warnings.push("Harga Beli Rp 0");
-
-    if (hasNoCategory) warnings.push("Tanpa Kategori");
-
-    const hasIssue = warnings.length > 0;
-    return { cost, price, isZeroBoth, isZeroPrice, isZeroCost, hasNoCategory, isOut, isLow, hasIssue, warnings };
-  };
-
   const handleImageUpload = async (file: File) => {
     setUploadingImage(true);
     try {
@@ -115,6 +92,78 @@ export default function Barang() {
   const { data: units } = useListUnits({ query: { queryKey: getListUnitsQueryKey() } });
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Helper untuk mendeteksi data barang yang belum lengkap / perlu perhatian / deviasi harga patokan kategori
+  const getProductStatus = (p: any) => {
+    const cost = Number(p.costPricePerMeter) || 0;
+    const price = Number(p.pricePerMeter) || 0;
+    const isZeroBoth = price === 0 && cost === 0;
+    const isZeroPrice = price === 0;
+    const isZeroCost = cost === 0;
+    const hasNoCategory = !p.categoryId && !p.categoryName;
+    const meterStock = Number(p.meterStock) || 0;
+    const isOut = meterStock <= 0;
+    const isLow = p.isLowStock;
+
+    // Perbandingan dengan Patokan Kategori
+    const cat = categories?.find(c => c.id === p.categoryId);
+    const catCost = Number((cat as any)?.costPricePerMeter) || 0;
+    const catPrice = Number((cat as any)?.pricePerMeter) || 0;
+
+    // 1. Jual Rugi (Loss Selling)
+    const effectiveCost = cost > 0 ? cost : catCost;
+    const isLossSelling = price > 0 && effectiveCost > 0 && price < effectiveCost;
+    const lossDiff = isLossSelling ? effectiveCost - price : 0;
+
+    // 2. Deviasi dari Patokan Kategori
+    const isPriceDifferentFromCategory = Boolean(catPrice > 0 && price > 0 && price !== catPrice);
+    const isCostDifferentFromCategory = Boolean(catCost > 0 && cost > 0 && cost !== catCost);
+    const hasCategoryPricePatokan = Boolean(price === 0 && catPrice > 0);
+    const hasCategoryCostPatokan = Boolean(cost === 0 && catCost > 0);
+
+    const warnings: string[] = [];
+    if (isLossSelling) {
+      warnings.push(`Jual Rugi (-${formatRupiah(lossDiff)})`);
+    } else if (isZeroBoth) {
+      warnings.push(catPrice > 0 ? "Harga Rp 0 (Ada Patokan)" : "Harga Jual & Beli Rp 0");
+    } else if (isZeroPrice) {
+      warnings.push(catPrice > 0 ? "Harga Jual Rp 0 (Ada Patokan)" : "Harga Jual Rp 0");
+    } else if (isZeroCost) {
+      warnings.push(catCost > 0 ? "Harga Beli Rp 0 (Ada Patokan)" : "Harga Beli Rp 0");
+    }
+
+    if (hasNoCategory) {
+      warnings.push("Tanpa Kategori");
+    } else if (isPriceDifferentFromCategory && !isLossSelling) {
+      const diff = price - catPrice;
+      const sign = diff > 0 ? "+" : "";
+      warnings.push(`Beda Kat: ${sign}${formatRupiah(diff)}`);
+    }
+
+    const hasIssue = isLossSelling || isZeroBoth || isZeroPrice || isZeroCost || hasNoCategory;
+
+    return {
+      cost,
+      price,
+      isZeroBoth,
+      isZeroPrice,
+      isZeroCost,
+      hasNoCategory,
+      isOut,
+      isLow,
+      cat,
+      catCost,
+      catPrice,
+      isLossSelling,
+      lossDiff,
+      isPriceDifferentFromCategory,
+      isCostDifferentFromCategory,
+      hasCategoryPricePatokan,
+      hasCategoryCostPatokan,
+      hasIssue,
+      warnings
+    };
+  };
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -543,7 +592,7 @@ export default function Barang() {
             <div className="flex items-center gap-2 text-rose-900">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>
-                <strong>Perhatian:</strong> Ditemukan <strong>{issueProductsCount} barang</strong> dengan data belum lengkap (Harga Rp 0). Harap lengkapi harga jual/beli agar perhitungan kasir akurat.
+                <strong>Perhatian:</strong> Ditemukan <strong>{issueProductsCount} barang</strong> dengan data perlu perhatian (Harga Rp 0, Jual Rugi, atau Beda Patokan Kategori). Harap lengkapi harga jual/beli agar perhitungan kasir akurat.
               </span>
             </div>
             <button
@@ -559,7 +608,7 @@ export default function Barang() {
           <div className="bg-rose-100/70 border border-rose-300 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs text-rose-900">
             <span className="font-semibold flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
-              Menampilkan {issueProductsCount} barang yang membutuhkan pengaturan harga / kategori
+              Menampilkan {issueProductsCount} barang dengan harga Rp 0, jual rugi, atau deviasi patokan kategori
             </span>
             <button
               onClick={() => { setShowIssuesOnly(false); setCurrentPage(1); }}
@@ -640,14 +689,21 @@ export default function Barang() {
                             {p.categoryName || categories?.find(c => c.id === p.categoryId)?.name || 'Tanpa Kategori'}
                           </span>
                         )}
-                        {st.hasIssue && (
+                        {st.isLossSelling ? (
+                          <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-rose-600 text-white border border-rose-700 uppercase tracking-wide animate-pulse">
+                            🚨 Jual Rugi (-{formatRupiah(st.lossDiff)})
+                          </span>
+                        ) : st.hasIssue ? (
                           <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 uppercase tracking-wide">
                             {st.warnings[0]}
                           </span>
-                        )}
-                        {!st.hasIssue && isLowStock && (
+                        ) : st.isPriceDifferentFromCategory ? (
+                          <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
+                            Patokan Kat: {formatRupiah(st.catPrice)}
+                          </span>
+                        ) : isLowStock ? (
                           <span className="shrink-0 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 uppercase tracking-wide">Tipis</span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[10px] text-slate-400 font-mono truncate max-w-[100px]">{p.barcode || p.lotNumber || '—'}</span>
@@ -658,10 +714,10 @@ export default function Barang() {
                         <span className="text-[10px] text-slate-200">·</span>
                         {st.price === 0 ? (
                           <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1 rounded border border-rose-200">
-                            Jual Rp 0 (Belum diset)
+                            Jual Rp 0 {st.catPrice > 0 ? `(Patokan: ${formatRupiah(st.catPrice)})` : '(Belum diset)'}
                           </span>
                         ) : (
-                          <span className="text-[11px] font-bold text-violet-700">
+                          <span className={`text-[11px] font-bold ${st.isLossSelling ? 'text-rose-700 font-black' : 'text-violet-700'}`}>
                             {formatRupiah(p.pricePerMeter)}
                             <span className="text-[9px] text-slate-400 font-normal ml-0.5">
                               /{isYardProd(p.primaryUnit) ? 'yd' : (p.primaryUnit?.toLowerCase() || 'm')}
@@ -774,31 +830,75 @@ export default function Barang() {
                             )}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            {st.price === 0 ? (
-                              <span className="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 text-xs" title="Harga jual belum ditentukan">
-                                <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
-                                Rp 0
-                                <span className="text-[9px] font-medium text-rose-500">(Belum diset)</span>
-                              </span>
+                            {st.isLossSelling ? (
+                              <div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-black text-rose-700 text-xs">{formatRupiah(p.pricePerMeter)}</span>
+                                  <span className="text-[9px] text-slate-400 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                                </div>
+                                <div className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 text-[10px] font-black animate-pulse">
+                                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                                  Jual Rugi (-{formatRupiah(st.lossDiff)})
+                                </div>
+                                {st.catPrice > 0 && (
+                                  <div className="text-[9px] text-slate-400 mt-0.5">
+                                    Patokan: {formatRupiah(st.catPrice)}
+                                  </div>
+                                )}
+                              </div>
+                            ) : st.price === 0 ? (
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span className="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 text-xs" title="Harga jual belum ditentukan">
+                                  <AlertTriangle className="w-3 h-3 text-rose-500 shrink-0" />
+                                  Rp 0
+                                  <span className="text-[9px] font-medium text-rose-500">(Belum diset)</span>
+                                </span>
+                                {st.catPrice > 0 && (
+                                  <span className="text-[10px] font-semibold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded border border-violet-200 mt-0.5">
+                                    Patokan Kat: {formatRupiah(st.catPrice)}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
-                              <>
-                                <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
-                                <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
-                              </>
+                              <div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-bold text-slate-800 text-xs">{formatRupiah(p.pricePerMeter)}</span>
+                                  <span className="text-[9px] text-slate-400 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                                </div>
+                                {st.isPriceDifferentFromCategory && (
+                                  <div className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-bold" title={`Harga patokan kategori: ${formatRupiah(st.catPrice)}`}>
+                                    <span>Patokan Kat: {formatRupiah(st.catPrice)}</span>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             {st.cost === 0 ? (
-                              <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 text-xs" title="Harga beli/modal belum ditentukan">
-                                <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
-                                Rp 0
-                                <span className="text-[9px] font-medium text-amber-600">(Belum diset)</span>
-                              </span>
+                              <div className="flex flex-col items-start gap-0.5">
+                                <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 text-xs" title="Harga beli/modal belum ditentukan">
+                                  <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />
+                                  Rp 0
+                                  <span className="text-[9px] font-medium text-amber-600">(Belum diset)</span>
+                                </span>
+                                {st.catCost > 0 && (
+                                  <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 mt-0.5">
+                                    Patokan Kat: {formatRupiah(st.catCost)}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
-                              <>
-                                <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
-                                <span className="text-[9px] text-slate-400 ml-1 font-semibold">/{p.primaryUnit || 'METER'}</span>
-                              </>
+                              <div>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-semibold text-slate-600 text-xs">{formatRupiah((p as any).costPricePerMeter)}</span>
+                                  <span className="text-[9px] text-slate-400 font-semibold">/{p.primaryUnit || 'METER'}</span>
+                                </div>
+                                {st.isCostDifferentFromCategory && (
+                                  <div className="text-[9px] text-slate-400 mt-0.5" title={`Harga beli patokan kategori: ${formatRupiah(st.catCost)}`}>
+                                    Patokan Kat: {formatRupiah(st.catCost)}
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="py-2.5 px-4 text-center">
@@ -808,7 +908,17 @@ export default function Barang() {
                             <div className="text-[9px] text-slate-400">{formatNumber(p.rollStock)} Roll</div>
                           </td>
                           <td className="py-2.5 px-4 text-center">
-                            {st.hasIssue ? (
+                            {st.isLossSelling ? (
+                              <div className="inline-flex flex-col items-center">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-600 text-white shadow-sm animate-pulse">
+                                  <AlertTriangle className="w-2.5 h-2.5" />
+                                  Jual Rugi
+                                </span>
+                                <span className="text-[8px] font-bold text-rose-700 mt-0.5 whitespace-nowrap">
+                                  Rugi {formatRupiah(st.lossDiff)}
+                                </span>
+                              </div>
+                            ) : st.hasIssue ? (
                               <div className="inline-flex flex-col items-center">
                                 <span className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
                                   <AlertTriangle className="w-2.5 h-2.5 text-rose-500" />
@@ -816,6 +926,15 @@ export default function Barang() {
                                 </span>
                                 <span className="text-[8px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
                                   {st.warnings[0]}
+                                </span>
+                              </div>
+                            ) : st.isPriceDifferentFromCategory ? (
+                              <div className="inline-flex flex-col items-center">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                                  Beda Kat
+                                </span>
+                                <span className="text-[8px] font-medium text-amber-600 mt-0.5 whitespace-nowrap">
+                                  Patokan: {formatRupiah(st.catPrice)}
                                 </span>
                               </div>
                             ) : st.isOut ? (
@@ -1044,6 +1163,81 @@ export default function Barang() {
                     ✨ Otomatis dari Kategori
                   </span>
                 </div>
+
+                {/* Helper Sinkronisasi Patokan Kategori & Deteksi Jual Rugi */}
+                {(() => {
+                  const selectedCatId = form.watch("categoryId");
+                  const selectedCat = categories?.find(c => c.id === selectedCatId);
+                  const curPrice = Number(form.watch("pricePerMeter")) || 0;
+                  const curCost = Number(form.watch("costPricePerMeter")) || 0;
+                  const catPrice = Number((selectedCat as any)?.pricePerMeter) || 0;
+                  const catCost = Number((selectedCat as any)?.costPricePerMeter) || 0;
+                  const isLoss = curPrice > 0 && curCost > 0 && curPrice < curCost;
+                  const isDiffPrice = catPrice > 0 && curPrice > 0 && curPrice !== catPrice;
+                  const isDiffCost = catCost > 0 && curCost > 0 && curCost !== catCost;
+
+                  return (
+                    <div className="space-y-2">
+                      {/* Peringatan Jual Rugi jika harga jual < modal */}
+                      {isLoss && (
+                        <div className="bg-rose-50 border border-rose-300 rounded-xl p-3 flex items-start gap-2.5 text-xs text-rose-900 shadow-2xs">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="font-bold text-rose-700">🚨 Peringatan Jual Rugi!</p>
+                            <p className="mt-0.5 text-rose-600 leading-relaxed">
+                              Harga jual ({formatRupiah(curPrice)}) lebih kecil dari modal ({formatRupiah(curCost)}).
+                              Setiap transaksi berpotensi <strong>rugi {formatRupiah(curCost - curPrice)}</strong> per satuan.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Info Patokan Kategori & Tombol Samakan */}
+                      {selectedCat && (catPrice > 0 || catCost > 0) && (
+                        <div className="bg-violet-50/70 border border-violet-200/80 rounded-xl p-3 text-xs">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div>
+                              <div className="font-bold text-violet-900 flex items-center gap-1.5">
+                                <span>Patokan Kategori: {selectedCat.name}</span>
+                                {(isDiffPrice || isDiffCost) && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                                    Harga Berbeda
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-600 mt-0.5 flex items-center gap-2.5 flex-wrap">
+                                {catPrice > 0 && <span>Jual: <strong>{formatRupiah(catPrice)}</strong></span>}
+                                {catCost > 0 && <span>Modal: <strong>{formatRupiah(catCost)}</strong></span>}
+                                {(selectedCat as any)?.pricePerRoll > 0 && <span>Grosir: <strong>{formatRupiah((selectedCat as any).pricePerRoll)}</strong></span>}
+                              </div>
+                            </div>
+
+                            {(isDiffPrice || isDiffCost || curPrice === 0 || curCost === 0) && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (catPrice > 0) form.setValue("pricePerMeter", catPrice);
+                                  if (catCost > 0) form.setValue("costPricePerMeter", catCost);
+                                  if ((selectedCat as any)?.pricePerRoll) form.setValue("pricePerRoll", Number((selectedCat as any).pricePerRoll));
+                                  if ((selectedCat as any)?.costPricePerRoll) form.setValue("costPricePerRoll", Number((selectedCat as any).costPricePerRoll));
+                                  toast({
+                                    title: "Harga Disamakan",
+                                    description: `Harga eceran & modal disesuaikan dengan patokan ${selectedCat.name}`
+                                  });
+                                }}
+                                className="h-7 px-2.5 text-[11px] font-bold text-violet-700 bg-white border-violet-300 hover:bg-violet-100 rounded-lg shadow-2xs"
+                              >
+                                ✨ Samakan dengan Kategori
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Eceran */}
